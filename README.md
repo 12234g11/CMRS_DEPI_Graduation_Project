@@ -75,8 +75,6 @@ The system supports multiple user roles:
 - **Travel Agencies**: Register on the platform, manage travel packages, define installment options, and track customer bookings.
 - **Administrators**: Manage users and agencies, oversee system operations, and monitor performance.
 
-The platform integrates with external payment gateways to securely process installment payments and includes a notification system to inform users about payment schedules, offers, and recommended travel opportunities based on their budget.
-
 ---
 
 ## Technologies Used
@@ -89,8 +87,8 @@ The platform integrates with external payment gateways to securely process insta
 ---
 
 # Contributors
-Ibrahim Mohamed Saad - [Ibrahim-Mohamed12](https://github.com/Ibrahim-Mohamed12)
+**Ibrahim Mohamed Saad** - [Ibrahim-Mohamed12](https://github.com/Ibrahim-Mohamed12)
 
-Rahma Bahgat - [RahmaBahgat](https://github.com/RahmaBahgat)
+**Rahma Bahgat** - [RahmaBahgat](https://github.com/RahmaBahgat)
 
-Bassant Hatem - [Basant-Hatem](https://github.com/Basant-Hatem)
+**Bassant Hatem** - [Basant-Hatem](https://github.com/Basant-Hatem)
