@@ -1,88 +1,126 @@
-# Travel Agency Management System
+# 📌 Smart City Reporting System
 
-## Overview
-The rapid growth of the tourism industry and the increasing reliance on digital platforms have significantly transformed how travelers plan and book their trips. Traditional travel agencies often face challenges in managing offers, reaching customers, and providing flexible payment options. At the same time, travelers struggle to find trips that align with their budgets and personal preferences.
+## 🧠 Overview
+Smart City Reporting System is a platform that connects citizens with responsible authorities to report public issues such as road damage, water leaks, electricity problems, and more.
 
-The **Travel Agency Management System** is a centralized web-based platform designed to bridge the gap between travelers and travel agencies. It simplifies travel planning, improves access to travel services, and enhances the user experience through smart budget-based recommendations and installment-based booking options.
-
----
-
-## System Purpose
-The primary purpose of this system is to provide an integrated and user-friendly platform that enables travelers to efficiently discover, plan, and book travel experiences.
-
-The system allows users to explore a wide range of travel services, including:
-- Hotels
-- Tourist destinations
-- Events
-- Safaris
-- Yacht rentals
-- Complete travel packages
-
-These services are offered by registered travel agencies through a unified digital marketplace.
-
-To enhance affordability, the system supports **installment-based payment plans** and **trip savings features**. For travel agencies, it provides tools to promote services, manage travel packages, define installment plans, and interact with customers. Administrators are responsible for system governance, user management, agency approvals, and overall system security.
+The system acts as a **bridge between citizens and service providers**, improving communication and response time.
 
 ---
 
-## Objectives
-- Enable users to plan trips efficiently through personalized recommendations  
-- Provide flexible installment-based booking options to improve affordability  
-- Allow users to save and track funds for future trips  
-- Enable travel agencies to manage offerings and installment plans effectively  
-- Ensure system integrity, security, and reliability through administrative controls  
+## 🎯 Objective
+- Improve city maintenance
+- Enable fast reporting of issues
+- Help companies prioritize problems
+- Provide real-time tracking for users
 
 ---
 
-## Benefits to Users and Stakeholders
+## 👥 User Roles
 
-### Travelers
-- Simplified trip planning process  
-- Cost-effective booking options  
-- Financial goal tracking for future trips  
-
-### Travel Agencies
-- Increased visibility of services  
-- Efficient management of travel packages and bookings  
-- Improved customer engagement  
-
-### Administrators
-- Centralized system oversight  
-- User and agency management  
-- Enhanced security and system monitoring  
+### 👤 Citizen
+- Register & login
+- Submit reports (image + location + description)
+- Track report status
+- Rate reports ⭐
+- Receive notifications
 
 ---
 
-## Key Features
-- Advanced travel search with filters for budget, location, and preferences  
-- Trip booking with installment-based payment plans  
-- Notifications for special offers, discounts, and payment deadlines  
-- Trip savings and financial goal management  
-- Dedicated dashboards for travel agencies and system administrators  
+### 🛠️ Admin
+- Review reports
+- Accept / Reject reports
+- Manage users
+- Approve companies
 
 ---
 
-## System Overview
-The Travel Agency Management System is a **web-based application** developed using **Full Stack .NET technologies**. It follows a **layered architecture**, separating:
-
-- Presentation Layer  
-- Business Logic Layer  
-- Data Access Layer  
-
-This architectural approach ensures scalability, maintainability, and security.
-
-The system supports multiple user roles:
-- **Travelers**: Create accounts, set budgets, receive personalized recommendations, save for future trips, and book travel packages using installment plans.
-- **Travel Agencies**: Register on the platform, manage travel packages, define installment options, and track customer bookings.
-- **Administrators**: Manage users and agencies, oversee system operations, and monitor performance.
+### 🏢 Company
+- Login based on service (Electricity, Water, etc.)
+- View filtered reports
+- Assign tasks internally
+- Update report status
+- Upload proof after fixing
 
 ---
 
-## Technologies Used
-- **Backend:** ASP.NET Core (.NET)
-- **Frontend:** HTML, CSS, JavaScript
-- **Database:** SQL Server
-- **Architecture:** Layered Architecture
-- **Notifications:** Email / In-app notifications
+## 🔄 Workflow
+
+1. User submits report
+2. Status → **Under Review**
+3. Admin reviews:
+   - Accept → Verified
+   - Reject → Removed
+4. Report يظهر على الخريطة
+5. Company تستلم البلاغ
+6. يتم الحل
+7. Status → **Solved**
+8. إشعار للمستخدم
+
+---
+
+## 🗺️ Features
+
+### 📍 Reporting
+- Upload image
+- Select location (map or GPS)
+- Choose category
+- Add description
+
+---
+
+### 🗺️ Map
+- Shows all reports
+- Color system:
+  - 🟡 Under Review
+  - 🔵 Not Solved
+  - 🟢 Solved
+
+---
+
+### ⭐ Rating System
+- Users rate importance
+- Helps prioritize reports
+
+---
+
+### 🔔 Notifications
+- Report accepted
+- Report solved
+- Updates on followed reports
+
+---
+
+### 👤 Profile
+- User data
+- Reports count
+- Solved reports
+- Points / rating
+
+---
+
+### 📊 Analytics
+- Reports over time
+- Categories distribution
+- Heatmap
+- Company performance
+
+---
+
+## 🧱 Tech Stack
+
+- Frontend: HTML, CSS, JavaScript
+- Backend: (حدد حسب مشروعك)
+- Database: (MySQL / MongoDB)
+- Maps: Google Maps API / Leaflet
+
+---
+
+## 🚀 Installation
+
+git clone https://github.com/your-username/smart-city.git
+cd smart-city
+npm install
+npm start
 
 ---
 
@@ -96,4 +134,6 @@ The system supports multiple user roles:
 **Abdulrahman Mahmoud** - [Abdulrahman Mahmoud](https://github.com/3bdoo04)
 
 **Yasser Khaled** - [Yasser Khaled](https://github.com/12234g11)
+
+```bash
 
