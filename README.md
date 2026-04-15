@@ -1,127 +1,131 @@
 # 📌 Smart City Reporting System
 
 ## 🧠 Overview
-Smart City Reporting System is a platform that connects citizens with responsible authorities to report public issues such as road damage, water leaks, electricity problems, and more.
+Smart City Reporting System is a platform that connects citizens with responsible authorities to report and resolve public infrastructure issues such as road damage, water leaks, electricity faults, and more.
 
-The system acts as a **bridge between citizens and service providers**, improving communication and response time.
+The system serves as a **bridge between citizens and service providers**, enabling faster issue detection, prioritization, and resolution.
 
 ---
 
-## 🎯 Objective
-- Improve city maintenance
-- Enable fast reporting of issues
-- Help companies prioritize problems
-- Provide real-time tracking for users
+## 🎯 Objectives
+- Improve communication between citizens and service providers  
+- Reduce response time for public issues  
+- Provide a centralized reporting platform  
+- Support data-driven decision making  
 
 ---
 
 ## 👥 User Roles
 
 ### 👤 Citizen
-- Register & login
-- Submit reports (image + location + description)
-- Track report status
-- Rate reports ⭐
-- Receive notifications
+- Sign up and log in  
+- Submit reports (image, location, description)  
+- Track report status  
+- Rate report importance ⭐  
+- Receive notifications  
 
 ---
 
 ### 🛠️ Admin
-- Review reports
-- Accept / Reject reports
-- Manage users
-- Approve companies
+- Review submitted reports  
+- Accept or reject reports  
+- Manage users  
+- Approve service providers (companies)  
 
 ---
 
-### 🏢 Company
-- Login based on service (Electricity, Water, etc.)
-- View filtered reports
-- Assign tasks internally
-- Update report status
-- Upload proof after fixing
+### 🏢 Service Provider (Company)
+- Log in with service type (Electricity, Water, Gas, etc.)  
+- View filtered reports (by category and location)  
+- Assign tasks internally  
+- Update report status (Solved / Not Solved)  
+- Upload proof after resolution  
 
 ---
 
-## 🔄 Workflow
+## 🔄 System Workflow
 
-1. User submits report
-2. Status → **Under Review**
-3. Admin reviews:
-   - Accept → Verified
-   - Reject → Removed
-4. Report يظهر على الخريطة
-5. Company تستلم البلاغ
-6. يتم الحل
-7. Status → **Solved**
-8. إشعار للمستخدم
+1. Citizen submits a report (image + location + category)  
+2. Report status → **Under Review**  
+3. Admin reviews the report:  
+   - Accept → becomes **Verified**  
+   - Reject → removed  
+4. Report appears on the map  
+5. Company receives relevant reports (filtered automatically)  
+6. Company resolves the issue  
+7. Status → **Solved**  
+8. Citizen receives a notification  
 
 ---
 
 ## 🗺️ Features
 
-### 📍 Reporting
-- Upload image
-- Select location (map or GPS)
-- Choose category
-- Add description
+### 📍 Reporting System
+- Upload image  
+- Automatic or manual location selection  
+- Category selection  
+- Optional description  
 
 ---
 
-### 🗺️ Map
-- Shows all reports
-- Color system:
-  - 🟡 Under Review
-  - 🔵 Not Solved
-  - 🟢 Solved
+### 🗺️ Interactive Map
+- Displays all reports  
+- Color-coded markers:  
+  - 🟡 Under Review  
+  - 🔵 Not Solved  
+  - 🟢 Solved  
 
 ---
 
 ### ⭐ Rating System
-- Users rate importance
-- Helps prioritize reports
+- Users can rate report importance  
+- Helps prioritize critical issues  
 
 ---
 
-### 🔔 Notifications
-- Report accepted
-- Report solved
-- Updates on followed reports
+### 🔔 Notification System
+- Report accepted  
+- Report resolved  
+- Updates on followed reports  
 
 ---
 
-### 👤 Profile
-- User data
-- Reports count
-- Solved reports
-- Points / rating
+### 👤 User Profile
+- Personal information  
+- Total reports  
+- Solved reports  
+- Points / rating  
+- Activity history  
 
 ---
 
-### 📊 Analytics
-- Reports over time
-- Categories distribution
-- Heatmap
-- Company performance
+### 📊 Analytics Dashboard
+- Total reports  
+- Reports by category  
+- Resolution time analysis  
+- Heatmap of issues  
+- Company performance  
 
 ---
 
 ## 🧱 Tech Stack
 
-- Frontend: HTML, CSS, JavaScript
-- Backend: (حدد حسب مشروعك)
-- Database: (MySQL / MongoDB)
-- Maps: Google Maps API / Leaflet
+- Frontend: HTML, CSS, JavaScript / React  
+- Backend: (Specify your backend, e.g., Node.js / .NET / Django)  
+- Database: (MySQL / MongoDB)  
+- Maps Integration: Google Maps API / Leaflet  
+- Authentication: JWT  
 
 ---
 
 ## 🚀 Installation
 
-git clone https://github.com/your-username/smart-city.git
-cd smart-city
+```bash
+git clone https://github.com/your-username/smart-city-reporting.git
+cd smart-city-reporting
 npm install
 npm start
-
+```
 ---
 
 # Contributors
@@ -134,6 +138,3 @@ npm start
 **Abdulrahman Mahmoud** - [Abdulrahman Mahmoud](https://github.com/3bdoo04)
 
 **Yasser Khaled** - [Yasser Khaled](https://github.com/12234g11)
-
-```bash
-
