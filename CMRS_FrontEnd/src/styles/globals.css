@@ -1,0 +1,47 @@
+body {
+  font-family: var(--font-family-base);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.65;
+  direction: rtl;
+}
+::selection {
+  background: rgba(var(--color-primary-rgb), 0.18);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+main {
+  overflow: hidden;
+}
+
+section[id] {
+  scroll-margin-top: 90px;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  outline: none;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+input:focus,
+textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(var(--color-primary-rgb), 0.12);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(var(--color-primary-rgb), 0.25);
+  outline-offset: 3px;
+}

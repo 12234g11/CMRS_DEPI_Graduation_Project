@@ -1,0 +1,28 @@
+:root {
+  --font-family-base: "Inter", "Cairo", sans-serif;
+  --font-family-display: "Inter", "Cairo", sans-serif;
+
+  --color-primary: #025f48;
+  --color-primary-dark: #014535;
+  --color-primary-light: #e8ffe8;
+  --color-secondary: #f6fff6;
+  --color-subtitle: #929292;
+  --color-card: #e8ffe8;
+  --color-bg: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-text: #08352b;
+  --color-text-soft: #6f6f6f;
+  --color-border: rgba(2, 95, 72, 0.35);
+  --color-white: #f1f1f1;
+
+  --shadow-sm: 0 4px 14px rgba(2, 95, 72, 0.08);
+  --shadow-md: 0 12px 30px rgba(0, 0, 0, 0.12);
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 30px;
+
+  --transition-base: 220ms ease;
+  --section-space: 96px;
+}
