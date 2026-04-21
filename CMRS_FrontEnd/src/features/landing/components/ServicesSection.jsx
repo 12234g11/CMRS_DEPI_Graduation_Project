@@ -1,3 +1,4 @@
+import { motion } from 'motion/react';
 import SectionHeading from './SectionHeading';
 
 const TOP_ROW = [
@@ -60,17 +61,50 @@ const BOTTOM_ROW = [
   },
 ];
 
+const rowVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.12,
+    },
+  },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 36 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.7,
+      ease: [0.22, 1, 0.36, 1],
+    },
+  },
+};
+
 function ServicesShowcaseCard({ title, tone, items }) {
   return (
-    <article className={`services-showcase__card services-showcase__card--${tone}`}>
+    <motion.article
+      className={`services-showcase__card services-showcase__card--${tone}`}
+      variants={cardVariants}
+      whileHover={{ y: -4 }}
+    >
       <h3>{title}</h3>
 
       <ul>
-        {items.map((item) => (
-          <li key={item}>{item}</li>
+        {items.map((item, index) => (
+          <motion.li
+            key={item}
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.5 }}
+            transition={{ duration: 0.45, delay: index * 0.06 }}
+          >
+            {item}
+          </motion.li>
         ))}
       </ul>
-    </article>
+    </motion.article>
   );
 }
 
@@ -84,17 +118,29 @@ function ServicesSection() {
         />
 
         <div className="services-showcase">
-          <div className="services-showcase__row services-showcase__row--top">
+          <motion.div
+            className="services-showcase__row services-showcase__row--top"
+            variants={rowVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.15 }}
+          >
             {TOP_ROW.map((card) => (
               <ServicesShowcaseCard key={card.title} {...card} />
             ))}
-          </div>
+          </motion.div>
 
-          <div className="services-showcase__row services-showcase__row--bottom">
+          <motion.div
+            className="services-showcase__row services-showcase__row--bottom"
+            variants={rowVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.15 }}
+          >
             {BOTTOM_ROW.map((card) => (
               <ServicesShowcaseCard key={card.title} {...card} />
             ))}
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>

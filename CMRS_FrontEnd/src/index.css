@@ -3,3 +3,4 @@
 @import './styles/utilities.css';
 @import './styles/globals.css';
 @import './features/landing/landing.css';
+@import './features/auth/auth.css';

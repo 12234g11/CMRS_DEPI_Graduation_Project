@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { motion } from 'motion/react';
 import {
   FaFacebookF,
   FaInstagram,
@@ -27,65 +27,128 @@ const SOCIAL_LINKS = [
   { icon: FaLinkedinIn, href: '#', label: 'LinkedIn' },
 ];
 
+const gridVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.12,
+    },
+  },
+};
+
+const columnVariants = {
+  hidden: { opacity: 0, y: 28 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.65,
+      ease: [0.22, 1, 0.36, 1],
+    },
+  },
+};
+
 function Footer() {
   return (
-    <footer className="landing-footer">
-      <div className="container landing-footer__grid">
-        <div className="landing-footer__brand">
-          <div className="landing-footer__logo-mark">CM</div>
+    <motion.footer
+      className="landing-footer"
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: false, amount: 0.15 }}
+    >
+      <motion.div className="container landing-footer__grid" variants={gridVariants}>
+        <motion.div className="landing-footer__brand" variants={columnVariants}>
+          <motion.div
+            className="landing-footer__logo-mark"
+            initial={{ scale: 0.9, opacity: 0 }}
+            whileInView={{ scale: 1, opacity: 1 }}
+            viewport={{ once: false, amount: 0.4 }}
+            transition={{ duration: 0.45 }}
+          >
+            CM
+          </motion.div>
 
           <p>
             منصة ذكية لتسهيل الإبلاغ عن الأعطال والخدمات العامة
             ومتابعة حالتها لحظة بلحظة.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="landing-footer__column">
+        <motion.div className="landing-footer__column" variants={columnVariants}>
           <h3>روابط سريعة</h3>
 
           <ul className="landing-footer__links">
-            {QUICK_LINKS.map((item) => (
-              <li key={item.label}>
+            {QUICK_LINKS.map((item, index) => (
+              <motion.li
+                key={item.label}
+                initial={{ opacity: 0, x: 12 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: false, amount: 0.4 }}
+                transition={{ duration: 0.45, delay: index * 0.06 }}
+              >
                 <a href={item.href}>{item.label}</a>
-              </li>
+              </motion.li>
             ))}
           </ul>
-        </div>
+        </motion.div>
 
-        <div className="landing-footer__column">
+        <motion.div className="landing-footer__column" variants={columnVariants}>
           <h3>معلومات التواصل</h3>
 
           <ul className="landing-footer__contact-list">
-            {CONTACT_ITEMS.map(({ icon: Icon, text, href }) => (
-              <li key={text}>
+            {CONTACT_ITEMS.map(({ icon: Icon, text, href }, index) => (
+              <motion.li
+                key={text}
+                initial={{ opacity: 0, x: 12 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: false, amount: 0.4 }}
+                transition={{ duration: 0.45, delay: index * 0.07 }}
+              >
                 <a href={href} className="landing-footer__contact-item">
                   <span className="landing-footer__contact-icon">
                     <Icon size={16} />
                   </span>
                   <span>{text}</span>
                 </a>
-              </li>
+              </motion.li>
             ))}
           </ul>
-        </div>
+        </motion.div>
 
-        <div className="landing-footer__column">
+        <motion.div className="landing-footer__column" variants={columnVariants}>
           <h3>تابعنا على</h3>
 
           <div className="landing-footer__socials">
-            {SOCIAL_LINKS.map(({ icon: Icon, href, label }) => (
-              <a key={label} href={href} aria-label={label} title={label}>
+            {SOCIAL_LINKS.map(({ icon: Icon, href, label }, index) => (
+              <motion.a
+                key={label}
+                href={href}
+                aria-label={label}
+                title={label}
+                initial={{ opacity: 0, scale: 0.85 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: false, amount: 0.5 }}
+                transition={{ duration: 0.35, delay: index * 0.08 }}
+                whileHover={{ y: -3, scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
+              >
                 <Icon size={18} />
-              </a>
+              </motion.a>
             ))}
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
-      <div className="landing-footer__bottom">
+      <motion.div
+        className="landing-footer__bottom"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: false, amount: 0.7 }}
+        transition={{ duration: 0.6, delay: 0.15 }}
+      >
         CMRS 2026. جميع الحقوق محفوظة.
-      </div>
-    </footer>
+      </motion.div>
+    </motion.footer>
   );
 }
 
