@@ -7,8 +7,9 @@ section[id] {
   position: sticky;
   top: 0;
   z-index: 30;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.94);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   border-bottom: 1px solid rgba(2, 95, 72, 0.08);
 }
 
@@ -72,7 +73,7 @@ section[id] {
   justify-content: center;
   gap: 6px;
   color: #333333;
-  transition: color var(--transition-base), transform var(--transition-base);
+  transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .landing-navbar__nav-link:hover {
@@ -115,6 +116,7 @@ section[id] {
   flex-direction: column;
   gap: 5px;
   flex-shrink: 0;
+  transition: transform 0.18s ease, background 0.18s ease;
 }
 
 .landing-navbar__toggle span {
@@ -122,7 +124,7 @@ section[id] {
   height: 2px;
   border-radius: 999px;
   background: var(--color-primary);
-  transition: transform var(--transition-base), opacity var(--transition-base);
+  transition: transform 0.22s ease, opacity 0.18s ease;
 }
 
 .landing-navbar__toggle.is-active span:nth-child(1) {
@@ -183,9 +185,10 @@ section[id] {
   min-height: calc(100vh - 76px);
   display: flex;
   align-items: center;
+  background-color: #12342d;
   background:
     linear-gradient(90deg, rgba(3, 20, 16, 0.45), rgba(3, 20, 16, 0.2)),
-    url('./images/hero-city.png') center/cover no-repeat;
+    url('./images/hero-city.webp') center/cover no-repeat;
 }
 
 .hero-section__overlay {
@@ -225,7 +228,7 @@ section[id] {
 
 .hero-section__title span {
   color: #025f48;
-    text-shadow: 0 0px 3px rgba(0, 0, 0, 67.38), 0 0 6px rgba(0, 0, 0, 2.22);
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.65), 0 0 6px rgba(0, 0, 0, 0.22);
 }
 
 .hero-section__subtitle {
@@ -520,7 +523,7 @@ section[id] {
   border-radius: 22px;
   background:
     linear-gradient(0deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.12)),
-    url('./images/problem-example.png') center/cover no-repeat;
+    url('./images/problem-example.webp') center/cover no-repeat;
   box-shadow: var(--shadow-md);
   position: relative;
 }
@@ -871,6 +874,12 @@ section[id] {
     scroll-margin-top: 88px;
   }
 
+  .landing-navbar {
+    background: rgba(255, 255, 255, 0.98);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+  }
+
   .landing-navbar__inner {
     min-height: 84px;
     gap: 14px;
@@ -901,15 +910,10 @@ section[id] {
 
   .landing-navbar__mobile-menu {
     display: block;
-    max-height: 0;
     overflow: hidden;
     border-top: 1px solid rgba(2, 95, 72, 0.08);
-    background: rgba(255, 255, 255, 0.98);
-    transition: max-height 0.3s ease;
-  }
-
-  .landing-navbar__mobile-menu.is-open {
-    max-height: 520px;
+    background: rgba(255, 255, 255, 0.97);
+    will-change: transform, opacity;
   }
 
   .landing-navbar__mobile-inner {
@@ -932,6 +936,11 @@ section[id] {
     color: var(--color-text);
     background: rgba(2, 95, 72, 0.04);
     font-weight: 700;
+    transition: background 0.18s ease, transform 0.18s ease;
+  }
+
+  .landing-navbar__mobile-link:active {
+    transform: scale(0.985);
   }
 
   .landing-navbar__mobile-link-icon {

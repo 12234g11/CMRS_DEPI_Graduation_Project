@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import SignupForm from '../components/SignupForm';
-import authImage from '../images/auth.png';
+import authImage from '../images/auth.webp'
 
 function SignupPage() {
   return (

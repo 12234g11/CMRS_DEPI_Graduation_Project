@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import {
@@ -23,19 +23,70 @@ const navContainerVariants = {
   hidden: {},
   visible: {
     transition: {
-      staggerChildren: 0.06,
-      delayChildren: 0.08,
+      staggerChildren: 0.035,
+      delayChildren: 0.03,
     },
   },
 };
 
 const navItemVariants = {
-  hidden: { opacity: 0, y: -16 },
+  hidden: { opacity: 0, y: -10 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.45,
+      duration: 0.24,
+      ease: [0.22, 1, 0.36, 1],
+    },
+  },
+};
+
+const mobileMenuVariants = {
+  hidden: {
+    opacity: 0,
+    y: -10,
+    scaleY: 0.98,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scaleY: 1,
+    transition: {
+      duration: 0.2,
+      ease: [0.22, 1, 0.36, 1],
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: -8,
+    scaleY: 0.98,
+    transition: {
+      duration: 0.16,
+      ease: [0.4, 0, 1, 1],
+    },
+  },
+};
+
+const mobileItemVariants = {
+  hidden: { opacity: 0, x: 14 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      duration: 0.22,
+      ease: [0.22, 1, 0.36, 1],
+    },
+  },
+};
+
+const mobileActionsVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.22,
+      delay: 0.04,
       ease: [0.22, 1, 0.36, 1],
     },
   },
@@ -43,6 +94,51 @@ const navItemVariants = {
 
 function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navbarRef = useRef(null);
+
+  const closeMenu = useCallback(() => {
+    setIsMenuOpen(false);
+  }, []);
+
+  const toggleMenu = useCallback(() => {
+    setIsMenuOpen((prev) => !prev);
+  }, []);
+
+  const scrollToSection = useCallback((sectionId) => {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    const navbarHeight = navbarRef.current?.offsetHeight || 0;
+    const extraOffset = 14;
+
+    const sectionTop =
+      section.getBoundingClientRect().top +
+      window.pageYOffset -
+      navbarHeight -
+      extraOffset;
+
+    window.scrollTo({
+      top: sectionTop,
+      behavior: 'smooth',
+    });
+  }, []);
+
+  const handleNavClick = useCallback(
+    (event, sectionId) => {
+      event.preventDefault();
+
+      if (isMenuOpen) {
+        closeMenu();
+        window.setTimeout(() => {
+          scrollToSection(sectionId);
+        }, 180);
+        return;
+      }
+
+      scrollToSection(sectionId);
+    },
+    [isMenuOpen, closeMenu, scrollToSection]
+  );
 
   useEffect(() => {
     const handleResize = () => {
@@ -51,50 +147,17 @@ function Navbar() {
       }
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', handleResize, { passive: true });
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const closeMenu = () => setIsMenuOpen(false);
-  const toggleMenu = () => setIsMenuOpen((prev) => !prev);
-
-  const scrollToSection = (sectionId) => {
-    const section = document.getElementById(sectionId);
-    const navbar = document.querySelector('.landing-navbar');
-
-    if (!section) return;
-
-    const navbarHeight = navbar ? navbar.offsetHeight : 0;
-    const extraOffset = 14;
-    const sectionTop =
-      section.getBoundingClientRect().top + window.pageYOffset - navbarHeight - extraOffset;
-
-    window.scrollTo({
-      top: sectionTop,
-      behavior: 'smooth',
-    });
-  };
-
-  const handleNavClick = (event, sectionId) => {
-    event.preventDefault();
-
-    if (isMenuOpen) {
-      closeMenu();
-      setTimeout(() => {
-        scrollToSection(sectionId);
-      }, 260);
-      return;
-    }
-
-    scrollToSection(sectionId);
-  };
-
   return (
     <motion.header
+      ref={navbarRef}
       className="landing-navbar"
-      initial={{ y: -28, opacity: 0 }}
+      initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
     >
       <motion.div
         className="container landing-navbar__inner"
@@ -103,7 +166,12 @@ function Navbar() {
         animate="visible"
       >
         <motion.div variants={navItemVariants}>
-          <Link to="/" className="landing-navbar__brand" aria-label="CMRS Home" onClick={closeMenu}>
+          <Link
+            to="/"
+            className="landing-navbar__brand"
+            aria-label="CMRS Home"
+            onClick={closeMenu}
+          >
             <div className="landing-navbar__logo-mark">CM</div>
 
             <div className="landing-navbar__brand-text">
@@ -126,7 +194,7 @@ function Navbar() {
               onClick={(event) => handleNavClick(event, id)}
               variants={navItemVariants}
               whileHover={{ y: -2 }}
-              whileTap={{ scale: 0.97 }}
+              whileTap={{ scale: 0.98 }}
             >
               <span className="landing-navbar__nav-icon">
                 <Icon size={21} strokeWidth={1.8} />
@@ -137,17 +205,13 @@ function Navbar() {
         </motion.nav>
 
         <motion.div className="landing-navbar__actions" variants={navItemVariants}>
-          <motion.div whileHover={{ y: -2, scale: 1.01 }} whileTap={{ scale: 0.98 }}>
-            <Link to="/signup" className="landing-btn landing-btn--ghost">
-              حساب جديد
-            </Link>
-          </motion.div>
+          <Link to="/signup" className="landing-btn landing-btn--ghost">
+            حساب جديد
+          </Link>
 
-          <motion.div whileHover={{ y: -2, scale: 1.01 }} whileTap={{ scale: 0.98 }}>
-            <Link to="/login" className="landing-btn landing-btn--primary">
-              تسجيل دخول
-            </Link>
-          </motion.div>
+          <Link to="/login" className="landing-btn landing-btn--primary">
+            تسجيل دخول
+          </Link>
         </motion.div>
 
         <motion.button
@@ -155,6 +219,7 @@ function Navbar() {
           className={`landing-navbar__toggle ${isMenuOpen ? 'is-active' : ''}`}
           aria-label={isMenuOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
           aria-expanded={isMenuOpen}
+          aria-controls="mobile-navigation"
           onClick={toggleMenu}
           variants={navItemVariants}
           whileTap={{ scale: 0.94 }}
@@ -168,18 +233,23 @@ function Navbar() {
       <AnimatePresence initial={false}>
         {isMenuOpen && (
           <motion.div
+            id="mobile-navigation"
             className="landing-navbar__mobile-menu is-open"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
-            style={{ overflow: 'hidden' }}
+            variants={mobileMenuVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            style={{
+              transformOrigin: 'top',
+              overflow: 'hidden',
+              willChange: 'transform, opacity',
+            }}
           >
             <motion.div
               className="container landing-navbar__mobile-inner"
+              variants={navContainerVariants}
               initial="hidden"
               animate="visible"
-              variants={navContainerVariants}
             >
               <nav className="landing-navbar__mobile-nav" aria-label="Mobile Navigation">
                 {NAV_ITEMS.map(({ id, label, Icon }) => (
@@ -188,17 +258,7 @@ function Navbar() {
                     href={`#${id}`}
                     className="landing-navbar__mobile-link"
                     onClick={(event) => handleNavClick(event, id)}
-                    variants={{
-                      hidden: { opacity: 0, x: 18 },
-                      visible: {
-                        opacity: 1,
-                        x: 0,
-                        transition: {
-                          duration: 0.35,
-                          ease: [0.22, 1, 0.36, 1],
-                        },
-                      },
-                    }}
+                    variants={mobileItemVariants}
                     whileTap={{ scale: 0.98 }}
                   >
                     <span className="landing-navbar__mobile-link-icon">
@@ -211,34 +271,23 @@ function Navbar() {
 
               <motion.div
                 className="landing-navbar__mobile-actions"
-                variants={{
-                  hidden: { opacity: 0, y: 12 },
-                  visible: {
-                    opacity: 1,
-                    y: 0,
-                    transition: { duration: 0.35, delay: 0.08 },
-                  },
-                }}
+                variants={mobileActionsVariants}
               >
-                <motion.div whileTap={{ scale: 0.98 }}>
-                  <Link
-                    to="/login"
-                    className="landing-btn landing-btn--primary"
-                    onClick={closeMenu}
-                  >
-                    تسجيل دخول
-                  </Link>
-                </motion.div>
+                <Link
+                  to="/login"
+                  className="landing-btn landing-btn--primary"
+                  onClick={closeMenu}
+                >
+                  تسجيل دخول
+                </Link>
 
-                <motion.div whileTap={{ scale: 0.98 }}>
-                  <Link
-                    to="/signup"
-                    className="landing-btn landing-btn--ghost"
-                    onClick={closeMenu}
-                  >
-                    حساب جديد
-                  </Link>
-                </motion.div>
+                <Link
+                  to="/signup"
+                  className="landing-btn landing-btn--ghost"
+                  onClick={closeMenu}
+                >
+                  حساب جديد
+                </Link>
               </motion.div>
             </motion.div>
           </motion.div>
@@ -248,4 +297,4 @@ function Navbar() {
   );
 }
 
-export default Navbar;
+export default memo(Navbar);

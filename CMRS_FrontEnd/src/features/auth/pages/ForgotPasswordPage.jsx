@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import ForgotPasswordForm from '../components/ForgotPasswordForm';
-import authImage from '../images/auth.png';
+import authImage from '../images/auth.webp'
 
 function ForgotPasswordPage() {
   return (

@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import CompanyLoginForm from '../components/CompanyLoginForm';
-import authImage from '../images/auth.png';
+import authImage from '../images/auth.webp'
 
 function CompanyLoginPage() {
   return (
