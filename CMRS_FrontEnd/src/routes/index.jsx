@@ -11,16 +11,20 @@ import LoginPage from '../features/auth/pages/LoginPage';
 import SignupPage from '../features/auth/pages/SignupPage';
 import CompanyLoginPage from '../features/auth/pages/CompanyLoginPage';
 import ForgotPasswordPage from '../features/auth/pages/ForgotPasswordPage';
-import AddReportPage from '../features/reports/pages/AddReportPage';
-import MyReportsPage from '../features/reports/pages/MyReportsPage';
-import NearbyIssuesPage from '../features/map/pages/NearbyIssuesPage';
-import NotificationsPage from '../features/notifications/pages/NotificationsPage';
-import ProfilePage from '../features/profile/pages/ProfilePage';
-import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
-import ReviewReportsPage from '../features/admin/pages/ReviewReportsPage';
-import CompanyApprovalPage from '../features/admin/pages/CompanyApprovalPage';
-import CompanyDashboardPage from '../features/company/pages/CompanyDashboardPage';
-import CompanyReportsPage from '../features/company/pages/CompanyReportsPage';
+import AddReportPage from '../features/user/add-report/pages/AddReportPage';
+import MyReportsPage from '../features/user/reports/pages/MyReportsPage';
+import NearbyIssuesPage from '../features/user/nearby-issues/pages/NearbyIssuesPage';
+import UserNotificationsPage from '../features/user/notifications/pages/UserNotificationsPage';
+import CompanyNotificationsPage from '../features/company/notifications/pages/CompanyNotificationsPage';
+import UserProfilePage from '../features/user/profile/pages/UserProfilePage';
+import AdminProfilePage from '../features/admin/profile/pages/AdminProfilePage';
+import CompanyProfilePage from '../features/company/profile/pages/CompanyProfilePage';
+import UserDashboardPage from '../features/user/dashboard/pages/UserDashboardPage';
+import AdminDashboardPage from '../features/admin/dashboard/pages/AdminDashboardPage';
+import ReviewReportsPage from '../features/admin/reports/pages/ReviewReportsPage';
+import CompanyApprovalPage from '../features/admin/companies/pages/CompanyApprovalPage';
+import CompanyDashboardPage from '../features/company/dashboard/pages/CompanyDashboardPage';
+import CompanyReportsPage from '../features/company/reports/pages/CompanyReportsPage';
 import NotFoundPage from '../features/common/pages/NotFoundPage';
 import UnauthorizedPage from '../features/common/pages/UnauthorizedPage';
 import { ROLES } from '../shared/constants/roles';
@@ -40,12 +44,15 @@ function AppRouter() {
       </Route>
 
       <Route element={<ProtectedRoute />}>
-        <Route element={<DashboardLayout />}>
-          <Route path={ROUTES.ADD_REPORT} element={<AddReportPage />} />
-          <Route path={ROUTES.MY_REPORTS} element={<MyReportsPage />} />
-          <Route path={ROUTES.NEARBY_ISSUES} element={<NearbyIssuesPage />} />
-          <Route path={ROUTES.NOTIFICATIONS} element={<NotificationsPage />} />
-          <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
+        <Route element={<RoleRoute allowedRoles={[ROLES.USER]} />}>
+          <Route element={<DashboardLayout />}>
+            <Route path={ROUTES.DASHBOARD} element={<UserDashboardPage />} />
+            <Route path={ROUTES.ADD_REPORT} element={<AddReportPage />} />
+            <Route path={ROUTES.MY_REPORTS} element={<MyReportsPage />} />
+            <Route path={ROUTES.NEARBY_ISSUES} element={<NearbyIssuesPage />} />
+            <Route path={ROUTES.NOTIFICATIONS} element={<UserNotificationsPage />} />
+            <Route path={ROUTES.PROFILE} element={<UserProfilePage />} />
+          </Route>
         </Route>
       </Route>
 
@@ -55,6 +62,7 @@ function AppRouter() {
             <Route path={ROUTES.ADMIN_DASHBOARD} element={<AdminDashboardPage />} />
             <Route path={ROUTES.ADMIN_REVIEW_REPORTS} element={<ReviewReportsPage />} />
             <Route path={ROUTES.ADMIN_COMPANY_REQUESTS} element={<CompanyApprovalPage />} />
+            <Route path={ROUTES.ADMIN_PROFILE} element={<AdminProfilePage />} />
           </Route>
         </Route>
       </Route>
@@ -64,6 +72,8 @@ function AppRouter() {
           <Route element={<DashboardLayout />}>
             <Route path={ROUTES.COMPANY_DASHBOARD} element={<CompanyDashboardPage />} />
             <Route path={ROUTES.COMPANY_REPORTS} element={<CompanyReportsPage />} />
+            <Route path={ROUTES.COMPANY_NOTIFICATIONS} element={<CompanyNotificationsPage />} />
+            <Route path={ROUTES.COMPANY_PROFILE} element={<CompanyProfilePage />} />
           </Route>
         </Route>
       </Route>

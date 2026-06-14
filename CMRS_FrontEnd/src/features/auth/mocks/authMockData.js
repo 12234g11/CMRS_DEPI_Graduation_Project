@@ -40,6 +40,36 @@ export const authMockUsers = [
   },
 ];
 
+export const authMockAdmins = [
+  {
+    id: 201,
+    fullName: 'أدمن القاهرة',
+    email: 'admin.cairo@test.com',
+    phone: '01000000001',
+    password: '12345678',
+    city: 'القاهرة',
+    role: 'admin',
+  },
+  {
+    id: 202,
+    fullName: 'أدمن الجيزة',
+    email: 'admin.giza@test.com',
+    phone: '01000000002',
+    password: '12345678',
+    city: 'الجيزة',
+    role: 'admin',
+  },
+  {
+    id: 203,
+    fullName: 'أدمن القليوبية',
+    email: 'admin.qalyubia@test.com',
+    phone: '01000000003',
+    password: '12345678',
+    city: 'القليوبية',
+    role: 'admin',
+  },
+];
+
 export const authMockCities = [
   'القاهرة',
   'الجيزة',

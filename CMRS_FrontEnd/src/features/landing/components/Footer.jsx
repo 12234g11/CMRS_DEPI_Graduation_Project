@@ -59,18 +59,22 @@ function Footer() {
       <motion.div className="container landing-footer__grid" variants={gridVariants}>
         <motion.div className="landing-footer__brand" variants={columnVariants}>
           <motion.div
-            className="landing-footer__logo-mark"
+            className="landing-footer__logo-wrap"
             initial={{ scale: 0.9, opacity: 0 }}
             whileInView={{ scale: 1, opacity: 1 }}
             viewport={{ once: false, amount: 0.4 }}
             transition={{ duration: 0.45 }}
           >
-            CM
+            <img
+              src="/images/AppLogo2.webp"
+              alt="CMRS Programs Logo"
+              className="landing-footer__logo-image"
+            />
           </motion.div>
 
           <p>
-            منصة ذكية لتسهيل الإبلاغ عن الأعطال والخدمات العامة
-            ومتابعة حالتها لحظة بلحظة.
+            نحن نقدم أفضل الحلول والخدمات المبتكرة لعملائنا، هدفنا هو تحقيق
+            التميز والجودة في كل ما نقدمه.
           </p>
         </motion.div>
 
@@ -118,6 +122,8 @@ function Footer() {
         <motion.div className="landing-footer__column" variants={columnVariants}>
           <h3>تابعنا على</h3>
 
+          <p>تواصل معنا عبر منصات التواصل الاجتماعي</p>
+
           <div className="landing-footer__socials">
             {SOCIAL_LINKS.map(({ icon: Icon, href, label }, index) => (
               <motion.a
@@ -129,8 +135,6 @@ function Footer() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: false, amount: 0.5 }}
                 transition={{ duration: 0.35, delay: index * 0.08 }}
-                whileHover={{ y: -3, scale: 1.06 }}
-                whileTap={{ scale: 0.94 }}
               >
                 <Icon size={18} />
               </motion.a>
@@ -146,7 +150,7 @@ function Footer() {
         viewport={{ once: false, amount: 0.7 }}
         transition={{ duration: 0.6, delay: 0.15 }}
       >
-        CMRS 2026. جميع الحقوق محفوظة.
+        جميع الحقوق محفوظة. CMRS 2026
       </motion.div>
     </motion.footer>
   );

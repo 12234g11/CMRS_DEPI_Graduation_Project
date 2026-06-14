@@ -1,4 +1,8 @@
-import { authMockUsers, authMockCompanies } from '../mocks/authMockData';
+import {
+  authMockUsers,
+  authMockAdmins,
+  authMockCompanies,
+} from '../mocks/authMockData';
 
 function wait(ms = 700) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -21,12 +25,25 @@ function sanitizeUser(user) {
   };
 }
 
+function sanitizeAdmin(admin) {
+  return {
+    id: admin.id,
+    fullName: admin.fullName,
+    name: admin.fullName,
+    phone: admin.phone,
+    email: admin.email,
+    city: admin.city,
+    role: admin.role,
+  };
+}
+
 function sanitizeCompany(company) {
   return {
     id: company.id,
     companyName: company.companyName,
     name: company.companyName,
     email: company.officialEmail,
+    officialEmail: company.officialEmail,
     commercialRegistration: company.commercialRegistration,
     serviceType: company.serviceType,
     governorate: company.governorate,
@@ -41,18 +58,29 @@ export async function loginUser(credentials) {
   const email = normalizeEmail(credentials.email);
   const password = credentials.password;
 
+  const admin = authMockAdmins.find(
+    (item) => normalizeEmail(item.email) === email && item.password === password
+  );
+
+  if (admin) {
+    return {
+      token: `mock-admin-token-${admin.id}`,
+      user: sanitizeAdmin(admin),
+    };
+  }
+
   const user = authMockUsers.find(
     (item) => normalizeEmail(item.email) === email && item.password === password
   );
 
-  if (!user) {
-    throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة.');
+  if (user) {
+    return {
+      token: `mock-token-${user.id}`,
+      user: sanitizeUser(user),
+    };
   }
 
-  return {
-    token: `mock-token-${user.id}`,
-    user: sanitizeUser(user),
-  };
+  throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة.');
 }
 
 export async function registerUser(payload) {
@@ -61,7 +89,9 @@ export async function registerUser(payload) {
   const email = normalizeEmail(payload.email);
   const phone = payload.phone.trim();
 
-  const existingUserByEmail = authMockUsers.find(
+  const allPeopleAccounts = [...authMockUsers, ...authMockAdmins];
+
+  const existingUserByEmail = allPeopleAccounts.find(
     (item) => normalizeEmail(item.email) === email
   );
 
@@ -69,7 +99,7 @@ export async function registerUser(payload) {
     throw new Error('هذا البريد الإلكتروني مستخدم بالفعل.');
   }
 
-  const existingUserByPhone = authMockUsers.find((item) => item.phone === phone);
+  const existingUserByPhone = allPeopleAccounts.find((item) => item.phone === phone);
 
   if (existingUserByPhone) {
     throw new Error('رقم الهاتف مستخدم بالفعل.');
@@ -99,11 +129,14 @@ export async function requestPasswordReset(email) {
 
   const normalizedEmail = normalizeEmail(email);
 
-  const user = authMockUsers.find(
-    (item) => normalizeEmail(item.email) === normalizedEmail
-  );
+  const allAccounts = [...authMockUsers, ...authMockAdmins, ...authMockCompanies];
 
-  if (!user) {
+  const account = allAccounts.find((item) => {
+    const accountEmail = item.email || item.officialEmail;
+    return normalizeEmail(accountEmail) === normalizedEmail;
+  });
+
+  if (!account) {
     throw new Error('لا يوجد حساب مرتبط بهذا البريد الإلكتروني.');
   }
 
