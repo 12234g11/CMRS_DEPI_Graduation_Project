@@ -2,7 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { FiMenu } from 'react-icons/fi';
 import { useAuth } from '../../features/auth/hooks/useAuth';
-import { DASHBOARD_LAYOUT_CONFIG } from '../../shared/constants/dashboardLayoutConfig';
+import { DASHBOARD_LAYOUT_CONFIG } from '../../shared/navigation';
 import DashboardSidebar from './DashboardSidebar';
 import './dashboard-layout.css';
 

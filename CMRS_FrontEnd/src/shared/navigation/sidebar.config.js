@@ -1,4 +1,4 @@
-import { ROUTES } from '../../routes/routePaths';
+import { ROUTES } from './routes';
 import { ROLES } from './roles';
 
 export const DASHBOARD_LAYOUT_CONFIG = {

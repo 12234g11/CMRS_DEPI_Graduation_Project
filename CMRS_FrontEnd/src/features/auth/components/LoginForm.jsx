@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ROUTES } from '../../../routes/routePaths';
+import { ROUTES, getPostLoginRedirectPath } from '../../../shared/navigation';
 import { useAuth } from '../hooks/useAuth';
 import { loginUser } from '../api/authApi';
 
@@ -40,7 +40,7 @@ function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const from = location.state?.from?.pathname || ROUTES.HOME;
+  const from = location.state?.from?.pathname;
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -74,7 +74,12 @@ function LoginForm() {
         userData: response.user,
       });
 
-      navigate(from, { replace: true });
+      const redirectPath = getPostLoginRedirectPath({
+        role: response.user.role,
+        requestedPath: from,
+      });
+
+      navigate(redirectPath, { replace: true });
     } catch (error) {
       setErrorMessage(error?.message || 'حدث خطأ أثناء تسجيل الدخول.');
     } finally {

@@ -1,7 +1,8 @@
 import { Routes, Route } from 'react-router-dom';
-import { ROUTES } from './routePaths';
+import { ROUTES, ROLES } from '../shared/navigation';
 import ProtectedRoute from './guards/ProtectedRoute';
 import RoleRoute from './guards/RoleRoute';
+import GuestRoute from './guards/GuestRoute';
 import MainLayout from '../layouts/MainLayout/MainLayout';
 import AuthLayout from '../layouts/AuthLayout/AuthLayout';
 import DashboardLayout from '../layouts/DashboardLayout/DashboardLayout';
@@ -22,12 +23,12 @@ import CompanyProfilePage from '../features/company/profile/pages/CompanyProfile
 import UserDashboardPage from '../features/user/dashboard/pages/UserDashboardPage';
 import AdminDashboardPage from '../features/admin/dashboard/pages/AdminDashboardPage';
 import ReviewReportsPage from '../features/admin/reports/pages/ReviewReportsPage';
+import AdminReportDetailsPage from '../features/admin/reports/pages/AdminReportDetailsPage';
 import CompanyApprovalPage from '../features/admin/companies/pages/CompanyApprovalPage';
 import CompanyDashboardPage from '../features/company/dashboard/pages/CompanyDashboardPage';
 import CompanyReportsPage from '../features/company/reports/pages/CompanyReportsPage';
 import NotFoundPage from '../features/common/pages/NotFoundPage';
 import UnauthorizedPage from '../features/common/pages/UnauthorizedPage';
-import { ROLES } from '../shared/constants/roles';
 
 function AppRouter() {
   return (
@@ -36,11 +37,13 @@ function AppRouter() {
         <Route path={ROUTES.HOME} element={<LandingPage />} />
       </Route>
 
-      <Route element={<AuthLayout />}>
-        <Route path={ROUTES.LOGIN} element={<LoginPage />} />
-        <Route path={ROUTES.SIGNUP} element={<SignupPage />} />
-        <Route path={ROUTES.COMPANY_LOGIN} element={<CompanyLoginPage />} />
-        <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
+      <Route element={<GuestRoute />}>
+        <Route element={<AuthLayout />}>
+          <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+          <Route path={ROUTES.SIGNUP} element={<SignupPage />} />
+          <Route path={ROUTES.COMPANY_LOGIN} element={<CompanyLoginPage />} />
+          <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
+        </Route>
       </Route>
 
       <Route element={<ProtectedRoute />}>
@@ -61,6 +64,7 @@ function AppRouter() {
           <Route element={<DashboardLayout />}>
             <Route path={ROUTES.ADMIN_DASHBOARD} element={<AdminDashboardPage />} />
             <Route path={ROUTES.ADMIN_REVIEW_REPORTS} element={<ReviewReportsPage />} />
+            <Route path={ROUTES.ADMIN_REPORT_DETAILS} element={<AdminReportDetailsPage />} />
             <Route path={ROUTES.ADMIN_COMPANY_REQUESTS} element={<CompanyApprovalPage />} />
             <Route path={ROUTES.ADMIN_PROFILE} element={<AdminProfilePage />} />
           </Route>

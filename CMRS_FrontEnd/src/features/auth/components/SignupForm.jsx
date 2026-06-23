@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaMapMarkerAlt } from 'react-icons/fa';
-import { ROUTES } from '../../../routes/routePaths';
+import { ROUTES } from '../../../shared/navigation';
 import { useAuth } from '../hooks/useAuth';
 import { registerUser } from '../api/authApi';
 import { authMockCities } from '../mocks/authMockData';

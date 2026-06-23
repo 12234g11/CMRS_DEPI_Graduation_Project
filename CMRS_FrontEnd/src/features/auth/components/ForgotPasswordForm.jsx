@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { ROUTES } from '../../../routes/routePaths';
+import { ROUTES } from '../../../shared/navigation';
 import { requestPasswordReset } from '../api/authApi';
 
 const initialValues = {

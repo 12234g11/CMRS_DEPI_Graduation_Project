@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { FiLogOut } from 'react-icons/fi';
 import { useAuth } from '../../../features/auth/hooks/useAuth';
-import { ROUTES } from '../../../routes/routePaths';
+import { ROUTES } from '../../../shared/navigation';
 
 function SidebarFooter({ collapsed = false }) {
   const navigate = useNavigate();

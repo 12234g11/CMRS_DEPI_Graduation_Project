@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { ROUTES } from '../routePaths';
+import { ROUTES } from '../../shared/navigation';
 import { useAuth } from '../../features/auth/hooks/useAuth';
 
 function RoleRoute({ allowedRoles = [] }) {

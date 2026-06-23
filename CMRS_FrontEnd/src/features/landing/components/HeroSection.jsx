@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { ROUTES } from '../../../shared/navigation';
 
 const heroContainer = {
   hidden: {},
@@ -125,7 +126,7 @@ function HeroSection() {
               whileTap={{ scale: 0.98 }}
               transition={{ duration: 0.25 }}
             >
-              <Link to="/reports/new" className="landing-btn landing-btn--hero">
+              <Link to={ROUTES.ADD_REPORT} className="landing-btn landing-btn--hero">
                 ابدأ الإبلاغ الآن
               </Link>
             </motion.div>

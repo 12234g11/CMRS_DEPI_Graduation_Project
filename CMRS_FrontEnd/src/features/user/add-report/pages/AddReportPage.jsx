@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../auth/hooks/useAuth';
-import { ROUTES } from '../../../../routes/routePaths';
+import { ROUTES } from '../../../../shared/navigation';
 import {
   ADD_REPORT_CATEGORIES,
   ADD_REPORT_STEPS,

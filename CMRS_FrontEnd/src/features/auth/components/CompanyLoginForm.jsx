@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ROUTES } from '../../../routes/routePaths';
+import { ROUTES } from '../../../shared/navigation';
 import { useAuth } from '../hooks/useAuth';
 import { loginCompany } from '../api/authApi';
 import {

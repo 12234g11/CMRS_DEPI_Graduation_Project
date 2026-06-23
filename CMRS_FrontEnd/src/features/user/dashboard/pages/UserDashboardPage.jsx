@@ -4,7 +4,7 @@ import { FiPlus } from 'react-icons/fi';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import DashboardSectionCard from '../../../../shared/components/dashboard/DashboardSectionCard';
 import PageHeader from '../../../../shared/components/ui/PageHeader';
-import { ROUTES } from '../../../../routes/routePaths';
+import { ROUTES } from '../../../../shared/navigation';
 import MapLegend from '../../../map/components/MapLegend';
 import ReportsMap from '../../../map/components/ReportsMap';
 import NearbyIssuesList from '../../nearby-issues/components/NearbyIssuesList';

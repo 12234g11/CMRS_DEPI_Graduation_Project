@@ -17,6 +17,7 @@ export const ROUTES = {
 
   ADMIN_DASHBOARD: '/admin',
   ADMIN_REVIEW_REPORTS: '/admin/reports/review',
+  ADMIN_REPORT_DETAILS: '/admin/reports/review/:reportId',
   ADMIN_COMPANY_REQUESTS: '/admin/companies/requests',
 
   COMPANY_DASHBOARD: '/company',

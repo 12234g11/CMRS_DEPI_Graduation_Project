@@ -8,7 +8,7 @@ import {
     FiStar,
     FiX,
 } from 'react-icons/fi';
-import { ROUTES } from '../../../../routes/routePaths';
+import { ROUTES } from '../../../../shared/navigation';
 import ReportStatusBadge from './ReportStatusBadge';
 
 const categorySymbols = {
