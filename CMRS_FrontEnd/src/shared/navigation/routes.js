@@ -13,22 +13,21 @@ export const ROUTES = {
   NOTIFICATIONS: '/notifications',
   PROFILE: '/profile',
 
-  ADMIN_PROFILE: '/admin/profile',
-
   ADMIN_DASHBOARD: '/admin',
   ADMIN_REVIEW_REPORTS: '/admin/reports/review',
   ADMIN_REPORT_DETAILS: '/admin/reports/review/:reportId',
+  ADMIN_COMPANIES: '/admin/companies',
   ADMIN_COMPANY_REQUESTS: '/admin/companies/requests',
+  ADMIN_ANALYTICS: '/admin/analytics',
+  ADMIN_SETTINGS: '/admin/settings',
+  ADMIN_PROFILE: '/admin/profile',
 
   COMPANY_DASHBOARD: '/company',
   COMPANY_REPORTS: '/company/reports',
-  COMPANY_NOTIFICATIONS: '/company/notifications',
-  COMPANY_PROFILE: '/company/profile',
-
-  ADMIN_ANALYTICS: '/admin/analytics',
-  ADMIN_SETTINGS: '/admin/settings',
   COMPANY_TEAMS: '/company/teams',
   COMPANY_ANALYTICS: '/company/analytics',
+  COMPANY_NOTIFICATIONS: '/company/notifications',
+  COMPANY_PROFILE: '/company/profile',
 
   UNAUTHORIZED: '/unauthorized',
   NOT_FOUND: '*',

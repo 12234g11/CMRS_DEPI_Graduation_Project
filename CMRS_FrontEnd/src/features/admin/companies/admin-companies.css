@@ -1,1 +1,1162 @@
 /* Admin company approval styles live here. */
+/* Admin companies styles */
+
+.admin-companies-page {
+  gap: 22px;
+}
+
+.admin-companies-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-add-company-btn {
+  min-height: 46px;
+  padding: 10px 18px;
+  border-radius: 14px;
+  background: var(--color-primary);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 950;
+  box-shadow: 0 10px 22px rgba(2, 95, 72, 0.18);
+  transition:
+    transform var(--transition-base),
+    background var(--transition-base),
+    box-shadow var(--transition-base);
+}
+
+.admin-add-company-btn:hover {
+  transform: translateY(-1px);
+  background: var(--color-primary-dark);
+  box-shadow: 0 14px 26px rgba(2, 95, 72, 0.22);
+}
+
+.admin-add-company-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Stats */
+
+.admin-companies-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-companies-stat-card {
+  min-height: 104px;
+  padding: 18px 20px;
+  border: 1.5px solid rgba(2, 95, 72, 0.08);
+  border-radius: 18px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 18px;
+}
+
+.admin-companies-stat-card__title {
+  min-width: 0;
+}
+
+.admin-companies-stat-card__title p {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.95rem;
+  font-weight: 950;
+  line-height: 1.4;
+}
+
+.admin-companies-stat-card__title small {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-subtitle);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.admin-companies-stat-card__value {
+  color: var(--color-primary);
+  font-size: 1.65rem;
+  font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.admin-companies-stat-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(2, 95, 72, 0.1);
+  color: var(--color-primary);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.admin-companies-stat-card__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Card and toolbar */
+
+.admin-companies-card {
+  padding: 18px;
+  border: 1.5px solid rgba(2, 95, 72, 0.08);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: 16px;
+}
+
+.admin-companies-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(145px, 180px) minmax(145px, 180px) minmax(145px, 170px);
+  gap: 10px;
+  align-items: start;
+  direction: rtl;
+}
+
+.admin-companies-search {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1.5px solid rgba(2, 95, 72, 0.22);
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition:
+    border-color var(--transition-base),
+    box-shadow var(--transition-base),
+    background var(--transition-base);
+}
+
+.admin-companies-search:focus-within {
+  border-color: rgba(2, 95, 72, 0.5);
+  box-shadow: 0 8px 22px rgba(2, 95, 72, 0.08);
+  background: #fff;
+}
+
+.admin-companies-search svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.admin-companies-search input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-weight: 850;
+}
+
+.admin-companies-search input::placeholder {
+  color: rgba(64, 73, 70, 0.6);
+}
+
+/* Table */
+
+.admin-companies-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(2, 95, 72, 0.08);
+  border-radius: 16px;
+}
+
+.admin-companies-table {
+  width: 100%;
+  min-width: 1100px;
+  border-collapse: collapse;
+}
+
+.admin-companies-table th,
+.admin-companies-table td {
+  padding: 13px 12px;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid rgba(2, 95, 72, 0.08);
+}
+
+.admin-companies-table th {
+  background: #f4f6f5;
+  color: #5a6460;
+  font-size: 0.82rem;
+  font-weight: 950;
+}
+
+.admin-companies-table td {
+  color: var(--color-text);
+  font-size: 0.88rem;
+  font-weight: 850;
+}
+
+.admin-companies-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-company-name-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-company-name-cell > span {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(52, 168, 83, 0.18);
+  color: #218540;
+  display: grid;
+  place-items: center;
+}
+
+.admin-company-name-cell strong,
+.admin-company-name-cell small {
+  display: block;
+}
+
+.admin-company-name-cell strong {
+  color: var(--color-text);
+  font-weight: 950;
+}
+
+.admin-company-name-cell small {
+  margin-top: 2px;
+  color: var(--color-subtitle);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.admin-company-service-pill {
+  min-height: 30px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: rgba(255, 193, 7, 0.16);
+  color: #b17800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.admin-company-number {
+  color: var(--color-primary);
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.admin-company-muted {
+  color: var(--color-subtitle);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.admin-company-status {
+  min-height: 30px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.admin-company-status--active {
+  background: rgba(52, 168, 83, 0.16);
+  color: #218540;
+}
+
+.admin-company-status--disabled {
+  background: rgba(239, 124, 124, 0.16);
+  color: #c24a4a;
+}
+
+.admin-company-performance {
+  min-width: 130px;
+  display: grid;
+  gap: 7px;
+}
+
+.admin-company-performance > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-company-performance strong {
+  color: var(--color-text);
+  font-size: 0.82rem;
+  font-weight: 950;
+}
+
+.admin-company-performance span {
+  color: var(--color-subtitle);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.admin-company-performance__bar {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(2, 95, 72, 0.1);
+  overflow: hidden;
+}
+
+.admin-company-performance__bar span {
+  height: 100%;
+  border-radius: inherit;
+  display: block;
+}
+
+.admin-company-performance--success .admin-company-performance__bar span {
+  background: var(--color-primary);
+}
+
+.admin-company-performance--warning .admin-company-performance__bar span {
+  background: #ff9f0a;
+}
+
+.admin-company-performance--danger .admin-company-performance__bar span {
+  background: #ff3b30;
+}
+
+/* Actions */
+
+.admin-company-actions {
+  min-width: 245px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+}
+
+.admin-company-action-btn {
+  min-height: 34px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  font-weight: 950;
+  transition:
+    transform var(--transition-base),
+    background var(--transition-base),
+    box-shadow var(--transition-base);
+}
+
+.admin-company-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(2, 95, 72, 0.1);
+}
+
+.admin-company-action-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.admin-company-action-btn--view {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.admin-company-action-btn--edit {
+  background: #ff9f0a;
+  color: #fff;
+}
+
+.admin-company-action-btn--disable {
+  background: rgba(239, 124, 124, 0.16);
+  color: #c24a4a;
+}
+
+.admin-company-action-btn--activate {
+  background: rgba(52, 168, 83, 0.16);
+  color: #218540;
+}
+
+.admin-companies-empty {
+  padding: 26px;
+  color: var(--color-subtitle);
+  text-align: center;
+  font-weight: 900;
+}
+
+/* Modals */
+
+.admin-company-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.42);
+  display: grid;
+  place-items: center;
+}
+
+.admin-company-modal,
+.admin-company-details-modal,
+.admin-company-status-modal {
+  position: relative;
+  width: min(920px, 100%);
+  max-height: calc(100vh - 40px);
+  padding: 24px;
+  border-radius: 24px;
+  background: #fff;
+  overflow: auto;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.2);
+}
+
+.admin-company-status-modal {
+  width: min(520px, 100%);
+}
+
+.admin-company-modal__close {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(2, 95, 72, 0.08);
+  color: var(--color-primary);
+  display: grid;
+  place-items: center;
+}
+
+.admin-company-modal__header {
+  padding-inline-end: 42px;
+  margin-bottom: 20px;
+}
+
+.admin-company-modal__header h2,
+.admin-company-details-header h2,
+.admin-company-status-modal h2 {
+  color: var(--color-text);
+  font-size: 1.25rem;
+  font-weight: 950;
+}
+
+.admin-company-modal__header p,
+.admin-company-details-header p,
+.admin-company-status-modal p {
+  margin-top: 5px;
+  color: var(--color-subtitle);
+  font-size: 0.9rem;
+  font-weight: 850;
+}
+
+.admin-company-form {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-company-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-company-form label,
+.admin-company-form__textarea,
+.admin-company-status-modal label {
+  color: var(--color-text);
+  display: grid;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.admin-company-form input,
+.admin-company-form select,
+.admin-company-form textarea,
+.admin-company-status-modal textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1.5px solid rgba(2, 95, 72, 0.16);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--color-text);
+  font-weight: 850;
+  outline: 0;
+}
+
+.admin-company-form textarea,
+.admin-company-status-modal textarea {
+  resize: vertical;
+  min-height: 105px;
+}
+
+.admin-company-form__full,
+.admin-company-form__textarea {
+  grid-column: 1 / -1;
+}
+
+.admin-company-form-section {
+  padding: 14px;
+  border-radius: 16px;
+  background: #fafafa;
+  display: grid;
+  gap: 12px;
+}
+
+.admin-company-form-section h3 {
+  color: var(--color-text);
+  font-size: 0.96rem;
+  font-weight: 950;
+}
+
+.admin-company-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-company-checks label {
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid rgba(2, 95, 72, 0.12);
+  border-radius: 999px;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-text-soft);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.admin-company-checks input {
+  width: auto;
+  min-height: auto;
+}
+
+.admin-company-form__actions,
+.admin-company-details-actions,
+.admin-company-status-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.admin-company-form__actions button,
+.admin-company-details-actions button,
+.admin-company-status-modal__actions button {
+  min-height: 44px;
+  padding: 9px 18px;
+  border-radius: 14px;
+  font-weight: 950;
+}
+
+.admin-company-form__actions button:first-child,
+.admin-company-details-actions button:first-child,
+.admin-company-status-modal__actions button:first-child {
+  background: #f2f2f2;
+  color: var(--color-text);
+}
+
+.admin-company-form__actions button:last-child,
+.admin-company-details-actions button:last-child,
+.admin-company-status-modal__actions button:last-child {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* Details modal */
+
+.admin-company-details-header {
+  padding-inline-end: 42px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-company-details-metrics {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-company-details-metrics article {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(2, 95, 72, 0.06);
+  display: grid;
+  gap: 7px;
+}
+
+.admin-company-details-metrics svg {
+  color: var(--color-primary);
+  width: 20px;
+  height: 20px;
+}
+
+.admin-company-details-metrics span {
+  color: var(--color-subtitle);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.admin-company-details-metrics strong {
+  color: var(--color-text);
+  font-size: 1.05rem;
+  font-weight: 950;
+}
+
+.admin-company-details-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-company-details-grid section,
+.admin-company-details-section {
+  padding: 16px;
+  border-radius: 16px;
+  background: #fafafa;
+}
+
+.admin-company-details-grid h3,
+.admin-company-details-section h3 {
+  color: var(--color-text);
+  font-size: 0.96rem;
+  font-weight: 950;
+  margin-bottom: 12px;
+}
+
+.admin-company-details-grid p,
+.admin-company-details-section p {
+  color: var(--color-text-soft);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 850;
+  line-height: 1.8;
+}
+
+.admin-company-details-grid p + p {
+  margin-top: 8px;
+}
+
+.admin-company-details-grid svg {
+  color: var(--color-primary);
+}
+
+.admin-company-details-section {
+  margin-top: 14px;
+}
+
+.admin-company-details-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-company-details-tags span {
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(2, 95, 72, 0.1);
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.admin-company-details-warning {
+  background: rgba(255, 193, 7, 0.12);
+}
+
+.admin-company-status-modal__icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: rgba(255, 193, 7, 0.16);
+  color: #b17800;
+  display: grid;
+  place-items: center;
+}
+
+.admin-company-status-modal__icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.admin-company-status-modal h2,
+.admin-company-status-modal > p {
+  text-align: center;
+}
+
+.admin-company-status-modal label {
+  margin-top: 18px;
+}
+
+/* Responsive */
+
+@media (max-width: 1200px) {
+  .admin-companies-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-companies-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-companies-search {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-companies-page__header {
+    display: grid;
+  }
+
+  .admin-add-company-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .admin-companies-stats-grid,
+  .admin-companies-toolbar,
+  .admin-company-form__grid,
+  .admin-company-details-metrics,
+  .admin-company-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-companies-card {
+    padding: 14px;
+  }
+
+  .admin-company-modal,
+  .admin-company-details-modal,
+  .admin-company-status-modal {
+    padding: 22px 16px;
+    border-radius: 20px;
+  }
+
+  .admin-company-form__actions,
+  .admin-company-details-actions,
+  .admin-company-status-modal__actions {
+    display: grid;
+  }
+}
+/* Updated companies header */
+
+.admin-companies-hero {
+  width: 100%;
+  padding: 24px 28px;
+  border: 1.5px solid rgba(2, 95, 72, 0.1);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(135deg, rgba(232, 255, 232, 0.85), rgba(255, 255, 255, 0.96));
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-companies-hero h1 {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: 1.65rem;
+  font-weight: 950;
+}
+
+.admin-companies-hero p {
+  margin: 8px 0 0;
+  color: var(--color-subtitle);
+  font-size: 0.95rem;
+  font-weight: 850;
+}
+
+.admin-add-company-btn {
+  min-height: 48px;
+  padding: 10px 20px;
+  border-radius: 14px;
+  background: var(--color-primary);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  font-weight: 950;
+  box-shadow: 0 10px 22px rgba(2, 95, 72, 0.18);
+  transition:
+    transform var(--transition-base),
+    background var(--transition-base),
+    box-shadow var(--transition-base);
+}
+
+.admin-add-company-btn:hover {
+  transform: translateY(-1px);
+  background: var(--color-primary-dark);
+  box-shadow: 0 14px 26px rgba(2, 95, 72, 0.22);
+}
+
+.admin-add-company-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Form dropdown alignment */
+
+.admin-company-form .admin-report-filter-select {
+  z-index: 20;
+}
+
+.admin-company-form .admin-report-filter-select__button {
+  min-height: 44px;
+  border-radius: 14px;
+  font-size: 0.88rem;
+}
+
+.admin-company-form .admin-report-filter-select--inline .admin-report-filter-select__menu {
+  margin-top: 8px;
+}
+
+/* Updated form sections */
+
+.admin-company-form-section p {
+  margin: -4px 0 0;
+  color: var(--color-subtitle);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.7;
+}
+
+.admin-company-checks--large {
+  gap: 10px;
+}
+
+.admin-company-checks--large label {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1.5px solid rgba(2, 95, 72, 0.12);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--color-text-soft);
+  cursor: pointer;
+  transition:
+    background var(--transition-base),
+    color var(--transition-base),
+    border-color var(--transition-base),
+    box-shadow var(--transition-base);
+}
+
+.admin-company-checks--large label.is-checked {
+  background: rgba(2, 95, 72, 0.1);
+  color: var(--color-primary);
+  border-color: rgba(2, 95, 72, 0.35);
+  box-shadow: 0 8px 18px rgba(2, 95, 72, 0.08);
+}
+
+.admin-company-checks--large input {
+  accent-color: var(--color-primary);
+}
+
+.admin-company-form-error {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(239, 124, 124, 0.13);
+  color: #c24a4a;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+/* No-data state inside table */
+
+.admin-company-no-data {
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(146, 146, 146, 0.12);
+  color: var(--color-subtitle);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+/* Responsive header */
+
+@media (max-width: 768px) {
+  .admin-companies-hero {
+    padding: 20px 16px;
+    display: grid;
+    text-align: right;
+  }
+
+  .admin-companies-hero h1 {
+    font-size: 1.4rem;
+  }
+
+  .admin-add-company-btn {
+    width: 100%;
+  }
+}
+/* Fix company form dropdown layout */
+
+.admin-company-form__grid {
+  align-items: start;
+}
+
+.admin-company-form__grid > label {
+  align-self: start;
+  align-content: start;
+}
+
+.admin-company-form input {
+  height: 44px;
+}
+
+.admin-company-form .admin-report-filter-select {
+  z-index: 80;
+}
+
+.admin-company-form .admin-report-filter-select.is-open {
+  z-index: 200;
+}
+
+.admin-company-form .admin-report-filter-select--overlay .admin-report-filter-select__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  z-index: 220;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* Field helper text */
+
+.admin-company-field-hint {
+  display: block;
+  margin-top: -2px;
+  color: var(--color-subtitle);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+/* Make modal content handle overlay dropdown better */
+
+.admin-company-modal {
+  overflow: auto;
+}
+
+.admin-company-form {
+  overflow: visible;
+}
+
+.admin-company-form__grid,
+.admin-company-form__grid > label {
+  overflow: visible;
+}
+
+@media (max-width: 768px) {
+  .admin-company-form .admin-report-filter-select--overlay .admin-report-filter-select__menu {
+    max-height: 260px;
+  }
+}
+/* Account status */
+
+.admin-company-account-status {
+  min-height: 30px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.76rem;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.admin-company-account-status--active {
+  background: rgba(52, 168, 83, 0.16);
+  color: #218540;
+}
+
+.admin-company-account-status--invited {
+  background: rgba(255, 193, 7, 0.18);
+  color: #b17800;
+}
+
+.admin-company-account-status--expired {
+  background: rgba(239, 124, 124, 0.16);
+  color: #c24a4a;
+}
+
+.admin-company-action-btn--invite {
+  background: rgba(90, 107, 255, 0.12);
+  color: #4352db;
+}
+
+.admin-company-details-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Invite note inside form */
+
+.admin-company-invite-note {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(2, 95, 72, 0.08);
+  color: var(--color-primary);
+  font-size: 0.84rem;
+  font-weight: 900;
+  line-height: 1.7;
+}
+
+/* Invite modal */
+
+.admin-company-invite-modal {
+  position: relative;
+  width: min(620px, 100%);
+  padding: 26px;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.admin-company-invite-modal__icon {
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: rgba(2, 95, 72, 0.1);
+  color: var(--color-primary);
+  display: grid;
+  place-items: center;
+}
+
+.admin-company-invite-modal__icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.admin-company-invite-modal h2 {
+  color: var(--color-text);
+  font-size: 1.2rem;
+  font-weight: 950;
+}
+
+.admin-company-invite-modal > p {
+  margin-top: 8px;
+  color: var(--color-subtitle);
+  font-size: 0.92rem;
+  font-weight: 850;
+  line-height: 1.8;
+}
+
+.admin-company-invite-info {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #fafafa;
+  display: grid;
+  gap: 4px;
+  text-align: right;
+}
+
+.admin-company-invite-info span {
+  color: var(--color-subtitle);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.admin-company-invite-info strong {
+  color: var(--color-text);
+  font-size: 0.92rem;
+  font-weight: 950;
+}
+
+.admin-company-invite-link-box {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1.5px solid rgba(2, 95, 72, 0.14);
+  border-radius: 16px;
+  background: rgba(232, 255, 232, 0.45);
+  display: grid;
+  gap: 10px;
+}
+
+.admin-company-invite-link-box span {
+  direction: ltr;
+  color: var(--color-text);
+  font-size: 0.82rem;
+  font-weight: 850;
+  word-break: break-all;
+  text-align: left;
+}
+
+.admin-company-invite-link-box button,
+.admin-company-invite-close-btn {
+  min-height: 42px;
+  padding: 8px 16px;
+  border-radius: 14px;
+  background: var(--color-primary);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 950;
+}
+
+.admin-company-invite-warning {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 193, 7, 0.14);
+  color: #9b7100;
+  font-size: 0.84rem;
+  font-weight: 900;
+  line-height: 1.7;
+  text-align: right;
+}
+
+.admin-company-invite-close-btn {
+  width: 100%;
+  margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .admin-company-invite-modal {
+    padding: 22px 16px;
+  }
+
+  .admin-company-actions {
+    min-width: 310px;
+  }
+}

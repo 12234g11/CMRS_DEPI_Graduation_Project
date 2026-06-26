@@ -16,15 +16,18 @@ const ROLE_ALLOWED_ROUTES = {
     ROUTES.NOTIFICATIONS,
     ROUTES.PROFILE,
   ],
+
   [ROLES.ADMIN]: [
     ROUTES.ADMIN_DASHBOARD,
     ROUTES.ADMIN_REVIEW_REPORTS,
     ROUTES.ADMIN_REPORT_DETAILS,
+    ROUTES.ADMIN_COMPANIES,
     ROUTES.ADMIN_COMPANY_REQUESTS,
     ROUTES.ADMIN_ANALYTICS,
     ROUTES.ADMIN_SETTINGS,
     ROUTES.ADMIN_PROFILE,
   ],
+
   [ROLES.COMPANY]: [
     ROUTES.COMPANY_DASHBOARD,
     ROUTES.COMPANY_REPORTS,
@@ -59,14 +62,22 @@ export function getDefaultRouteByRole(role) {
 export function canRoleAccessPath(role, path) {
   const normalizedPath = normalizePath(path);
 
-  if (!normalizedPath || normalizedPath === ROUTES.HOME || AUTH_ROUTES.includes(normalizedPath)) {
+  if (
+    !normalizedPath ||
+    normalizedPath === ROUTES.HOME ||
+    AUTH_ROUTES.includes(normalizedPath)
+  ) {
     return false;
   }
 
   return (ROLE_ALLOWED_ROUTES[role] || []).some((route) => {
     if (route.includes('/:')) {
       const baseRoute = route.split('/:')[0];
-      return normalizedPath === baseRoute || normalizedPath.startsWith(`${baseRoute}/`);
+
+      return (
+        normalizedPath === baseRoute ||
+        normalizedPath.startsWith(`${baseRoute}/`)
+      );
     }
 
     return normalizedPath === route;

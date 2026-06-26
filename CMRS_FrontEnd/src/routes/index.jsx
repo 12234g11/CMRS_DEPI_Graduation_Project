@@ -12,21 +12,25 @@ import LoginPage from '../features/auth/pages/LoginPage';
 import SignupPage from '../features/auth/pages/SignupPage';
 import CompanyLoginPage from '../features/auth/pages/CompanyLoginPage';
 import ForgotPasswordPage from '../features/auth/pages/ForgotPasswordPage';
+
 import AddReportPage from '../features/user/add-report/pages/AddReportPage';
 import MyReportsPage from '../features/user/reports/pages/MyReportsPage';
 import NearbyIssuesPage from '../features/user/nearby-issues/pages/NearbyIssuesPage';
 import UserNotificationsPage from '../features/user/notifications/pages/UserNotificationsPage';
-import CompanyNotificationsPage from '../features/company/notifications/pages/CompanyNotificationsPage';
 import UserProfilePage from '../features/user/profile/pages/UserProfilePage';
-import AdminProfilePage from '../features/admin/profile/pages/AdminProfilePage';
-import CompanyProfilePage from '../features/company/profile/pages/CompanyProfilePage';
 import UserDashboardPage from '../features/user/dashboard/pages/UserDashboardPage';
+
 import AdminDashboardPage from '../features/admin/dashboard/pages/AdminDashboardPage';
 import ReviewReportsPage from '../features/admin/reports/pages/ReviewReportsPage';
 import AdminReportDetailsPage from '../features/admin/reports/pages/AdminReportDetailsPage';
-import CompanyApprovalPage from '../features/admin/companies/pages/CompanyApprovalPage';
+import AdminCompaniesPage from '../features/admin/companies/pages/AdminCompaniesPage';
+import AdminProfilePage from '../features/admin/profile/pages/AdminProfilePage';
+
 import CompanyDashboardPage from '../features/company/dashboard/pages/CompanyDashboardPage';
 import CompanyReportsPage from '../features/company/reports/pages/CompanyReportsPage';
+import CompanyNotificationsPage from '../features/company/notifications/pages/CompanyNotificationsPage';
+import CompanyProfilePage from '../features/company/profile/pages/CompanyProfilePage';
+
 import NotFoundPage from '../features/common/pages/NotFoundPage';
 import UnauthorizedPage from '../features/common/pages/UnauthorizedPage';
 
@@ -65,7 +69,7 @@ function AppRouter() {
             <Route path={ROUTES.ADMIN_DASHBOARD} element={<AdminDashboardPage />} />
             <Route path={ROUTES.ADMIN_REVIEW_REPORTS} element={<ReviewReportsPage />} />
             <Route path={ROUTES.ADMIN_REPORT_DETAILS} element={<AdminReportDetailsPage />} />
-            <Route path={ROUTES.ADMIN_COMPANY_REQUESTS} element={<CompanyApprovalPage />} />
+            <Route path={ROUTES.ADMIN_COMPANIES} element={<AdminCompaniesPage />} />
             <Route path={ROUTES.ADMIN_PROFILE} element={<AdminProfilePage />} />
           </Route>
         </Route>

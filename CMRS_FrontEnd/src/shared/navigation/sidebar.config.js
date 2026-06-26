@@ -62,7 +62,7 @@ export const DASHBOARD_LAYOUT_CONFIG = {
       {
         key: 'companies',
         label: 'الشركات',
-        path: ROUTES.ADMIN_COMPANY_REQUESTS,
+        path: ROUTES.ADMIN_COMPANIES,
         icon: 'users',
       },
       {
