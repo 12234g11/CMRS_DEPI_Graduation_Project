@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 68 68" width="68" height="68">
+  <rect x="2" y="2" width="64" height="64" rx="10" fill="#FDE68A" stroke="#D97706" stroke-width="2"/>
+  <text x="34" y="30" text-anchor="middle" font-size="11" font-weight="600" font-family="sans-serif" fill="#78350F">TRUST</text>
+  <text x="34" y="50" text-anchor="middle" font-size="18" font-weight="700" font-family="sans-serif" fill="#78350F">95%</text>
+</svg>
