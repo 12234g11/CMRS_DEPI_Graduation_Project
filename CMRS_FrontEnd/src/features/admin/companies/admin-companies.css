@@ -1160,3 +1160,141 @@
     min-width: 310px;
   }
 }
+/* Fix toolbar dropdown on mobile */
+
+.admin-companies-card {
+  overflow: visible;
+  position: relative;
+}
+
+.admin-companies-toolbar {
+  position: relative;
+  z-index: 80;
+  overflow: visible;
+}
+
+.admin-companies-toolbar .admin-report-filter-select {
+  position: relative;
+  z-index: 90;
+}
+
+.admin-companies-toolbar .admin-report-filter-select.is-open {
+  z-index: 500;
+}
+
+.admin-companies-toolbar .admin-report-filter-select--overlay .admin-report-filter-select__menu {
+  z-index: 520;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.admin-companies-table-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .admin-companies-card {
+    overflow: visible;
+  }
+
+  .admin-companies-toolbar {
+    z-index: 300;
+    overflow: visible;
+  }
+
+  .admin-companies-toolbar .admin-report-filter-select {
+    width: 100%;
+  }
+
+  .admin-companies-toolbar .admin-report-filter-select.is-open {
+    z-index: 800;
+  }
+
+  .admin-companies-toolbar .admin-report-filter-select--overlay .admin-report-filter-select__menu {
+    z-index: 850;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+
+  .admin-companies-table-wrap {
+    z-index: 1;
+  }
+}
+/* Fix add company modal position and actions on mobile */
+
+.admin-company-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  padding: 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-company-modal {
+  position: relative;
+  width: min(820px, 100%);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  margin: auto;
+}
+
+/* Keep close button always visible */
+.admin-company-modal__close {
+  z-index: 5;
+}
+
+/* Center action buttons */
+.admin-company-form__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  text-align: center;
+}
+
+.admin-company-form__actions button {
+  min-width: 220px;
+}
+
+/* Mobile modal fix */
+@media (max-width: 768px) {
+  .admin-company-modal-backdrop {
+    align-items: flex-start;
+    justify-content: center;
+    padding: 92px 14px 24px;
+  }
+
+  .admin-company-modal {
+    width: 100%;
+    max-height: calc(100dvh - 116px);
+    margin: 0 auto;
+    border-radius: 24px;
+  }
+
+  .admin-company-modal__header {
+    padding-inline: 8px;
+  }
+
+  .admin-company-modal__close {
+    top: 14px;
+    left: 14px;
+  }
+
+  .admin-company-form__actions {
+    display: grid;
+    justify-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .admin-company-form__actions button {
+    width: min(240px, 100%);
+    min-width: 0;
+  }
+}

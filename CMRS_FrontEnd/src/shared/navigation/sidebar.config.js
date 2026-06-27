@@ -72,12 +72,6 @@ export const DASHBOARD_LAYOUT_CONFIG = {
         icon: 'bar-chart',
       },
       {
-        key: 'settings',
-        label: 'الإعدادات',
-        path: ROUTES.ADMIN_SETTINGS,
-        icon: 'settings',
-      },
-      {
         key: 'profile',
         label: 'الملف الشخصي',
         path: ROUTES.ADMIN_PROFILE,

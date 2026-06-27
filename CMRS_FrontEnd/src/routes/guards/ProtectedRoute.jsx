@@ -3,11 +3,19 @@ import { ROUTES } from '../../shared/navigation';
 import { useAuth } from '../../features/auth/hooks/useAuth';
 
 function ProtectedRoute() {
-  const { isAuthenticated } = useAuth();
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
-    return <Navigate to={ROUTES.LOGIN} replace state={{ from: location }} />;
+    return (
+      <Navigate
+        to={ROUTES.LOGIN}
+        replace
+        state={{
+          from: location.pathname,
+        }}
+      />
+    );
   }
 
   return <Outlet />;

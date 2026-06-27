@@ -1,11 +1,20 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaMapMarkerAlt } from 'react-icons/fa';
+import {
+  FiChevronDown,
+  FiCheck,
+  FiHome,
+} from 'react-icons/fi';
 import { ROUTES } from '../../../shared/navigation';
 import { useAuth } from '../hooks/useAuth';
 import { registerUser } from '../api/authApi';
-import { authMockCities } from '../mocks/authMockData';
+
+const GOVERNORATE_OPTIONS = [
+  { value: 'القاهرة', label: 'القاهرة' },
+  { value: 'الجيزة', label: 'الجيزة' },
+  { value: 'القليوبية', label: 'القليوبية' },
+];
 
 const initialValues = {
   fullName: '',
@@ -44,9 +53,12 @@ function SignupForm() {
 
   const [formData, setFormData] = useState(initialValues);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLocating, setIsLocating] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [locationText, setLocationText] = useState('استخدم موقعي الحالي');
+  const [isCityMenuOpen, setIsCityMenuOpen] = useState(false);
+
+  const selectedCity = GOVERNORATE_OPTIONS.find(
+    (city) => city.value === formData.city,
+  );
 
   function handleChange(event) {
     const { name, value, type, checked } = event.target;
@@ -61,38 +73,17 @@ function SignupForm() {
     }
   }
 
-  function handleUseCurrentLocation() {
-    if (!navigator.geolocation) {
-      setErrorMessage('المتصفح الحالي لا يدعم تحديد الموقع.');
-      return;
+  function handleCitySelect(city) {
+    setFormData((prev) => ({
+      ...prev,
+      city: city.value,
+    }));
+
+    setIsCityMenuOpen(false);
+
+    if (errorMessage) {
+      setErrorMessage('');
     }
-
-    setIsLocating(true);
-    setErrorMessage('');
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-
-        console.log('Location success:', latitude, longitude);
-
-        setLocationText('تم تحديد موقعك بنجاح');
-        setFormData((prev) => ({
-          ...prev,
-          location: {
-            lat: latitude,
-            lng: longitude,
-          },
-        }));
-        setIsLocating(false);
-      },
-      (error) => {
-        console.log('Location error:', error);
-        setErrorMessage('تعذر الوصول إلى موقعك الحالي.');
-        setIsLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
   }
 
   function validateForm() {
@@ -167,6 +158,13 @@ function SignupForm() {
         </p>
       </motion.header>
 
+      <motion.div variants={itemVariants}>
+        <Link to={ROUTES.HOME} className="auth-back-home-btn">
+          <FiHome />
+          الرجوع للصفحة الرئيسية
+        </Link>
+      </motion.div>
+
       <motion.form
         className="signup-form__body"
         onSubmit={handleSubmit}
@@ -214,20 +212,44 @@ function SignupForm() {
           </motion.div>
 
           <motion.div className="signup-form__field" variants={itemVariants}>
-            <label htmlFor="city">المدينة</label>
-            <select
-              id="city"
-              name="city"
-              value={formData.city}
-              onChange={handleChange}
-            >
-              <option value="">اختر المدينة</option>
-              {authMockCities.map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
+            <label>المحافظة</label>
+
+            <div className={`signup-city-dropdown ${isCityMenuOpen ? 'is-open' : ''}`}>
+              <button
+                type="button"
+                className={`signup-city-dropdown__button ${
+                  selectedCity ? 'is-selected' : ''
+                }`}
+                onClick={() => setIsCityMenuOpen((current) => !current)}
+                aria-expanded={isCityMenuOpen}
+                aria-label="اختيار المحافظة"
+              >
+                <span>{selectedCity?.label || 'اختر المحافظة'}</span>
+                <FiChevronDown />
+              </button>
+
+              {isCityMenuOpen ? (
+                <div className="signup-city-dropdown__menu">
+                  {GOVERNORATE_OPTIONS.map((city) => {
+                    const isActive = formData.city === city.value;
+
+                    return (
+                      <button
+                        key={city.value}
+                        type="button"
+                        className={`signup-city-dropdown__item ${
+                          isActive ? 'is-active' : ''
+                        }`}
+                        onClick={() => handleCitySelect(city)}
+                      >
+                        <span>{city.label}</span>
+                        {isActive ? <FiCheck /> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
           </motion.div>
 
           <motion.div className="signup-form__field" variants={itemVariants}>
@@ -256,19 +278,6 @@ function SignupForm() {
             />
           </motion.div>
         </motion.div>
-
-        <motion.button
-          type="button"
-          className="signup-form__location-btn"
-          onClick={handleUseCurrentLocation}
-          disabled={isLocating}
-          variants={itemVariants}
-          whileHover={{ y: -2, scale: 1.01 }}
-          whileTap={{ scale: 0.985 }}
-        >
-          <FaMapMarkerAlt />
-          <span>{isLocating ? 'جاري تحديد الموقع...' : locationText}</span>
-        </motion.button>
 
         <motion.label className="signup-form__checkbox" variants={itemVariants}>
           <input

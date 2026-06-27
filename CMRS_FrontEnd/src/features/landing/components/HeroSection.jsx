@@ -1,6 +1,10 @@
 import { motion } from 'motion/react';
-import { Link } from 'react-router-dom';
-import { ROUTES } from '../../../shared/navigation';
+import { useNavigate } from 'react-router-dom';
+import {
+  getDefaultRouteByRole,
+  ROUTES,
+} from '../../../shared/navigation';
+import { useAuth } from '../../auth/hooks/useAuth';
 
 const heroContainer = {
   hidden: {},
@@ -84,6 +88,22 @@ const actionsVariants = {
 };
 
 function HeroSection() {
+  const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
+
+  function handleStartReportClick() {
+    if (isAuthenticated && user?.role) {
+      navigate(getDefaultRouteByRole(user.role));
+      return;
+    }
+
+    navigate(ROUTES.LOGIN, {
+      state: {
+        from: ROUTES.ADD_REPORT,
+      },
+    });
+  }
+
   return (
     <section id="hero" className="hero-section">
       <motion.div
@@ -101,7 +121,11 @@ function HeroSection() {
           animate="visible"
         >
           <motion.h1 className="hero-section__title" variants={titleVariants}>
-            بلّغ عن <motion.span variants={highlightVariants}>مشاكل مدينتك</motion.span> في ثواني
+            بلّغ عن{' '}
+            <motion.span variants={highlightVariants}>
+              مشاكل مدينتك
+            </motion.span>{' '}
+            في ثواني
           </motion.h1>
 
           <motion.p className="hero-section__subtitle">
@@ -126,9 +150,13 @@ function HeroSection() {
               whileTap={{ scale: 0.98 }}
               transition={{ duration: 0.25 }}
             >
-              <Link to={ROUTES.ADD_REPORT} className="landing-btn landing-btn--hero">
+              <button
+                type="button"
+                className="landing-btn landing-btn--hero"
+                onClick={handleStartReportClick}
+              >
                 ابدأ الإبلاغ الآن
-              </Link>
+              </button>
             </motion.div>
           </motion.div>
         </motion.div>

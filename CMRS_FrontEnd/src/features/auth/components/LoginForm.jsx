@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { FiHome } from 'react-icons/fi';
 import { ROUTES, getPostLoginRedirectPath } from '../../../shared/navigation';
 import { useAuth } from '../hooks/useAuth';
 import { loginUser } from '../api/authApi';
@@ -31,6 +32,16 @@ const itemVariants = {
   },
 };
 
+function getRequestedPath(locationState) {
+  if (!locationState?.from) return undefined;
+
+  if (typeof locationState.from === 'string') {
+    return locationState.from;
+  }
+
+  return locationState.from.pathname;
+}
+
 function LoginForm() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -40,7 +51,7 @@ function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const from = location.state?.from?.pathname;
+  const from = getRequestedPath(location.state);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -101,6 +112,13 @@ function LoginForm() {
           مرحباً بك، قم بتسجيل الدخول للوصول إلى حسابك
         </p>
       </motion.header>
+
+      <motion.div variants={itemVariants}>
+        <Link to={ROUTES.HOME} className="auth-back-home-btn">
+          <FiHome />
+          الرجوع للصفحة الرئيسية
+        </Link>
+      </motion.div>
 
       <motion.form
         className="login-form__body"

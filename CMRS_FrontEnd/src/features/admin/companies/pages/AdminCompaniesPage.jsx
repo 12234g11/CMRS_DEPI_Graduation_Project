@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FiPlus } from 'react-icons/fi';
+import { useAuth } from '../../../auth/hooks/useAuth';
 import {
   changeAdminCompanyStatus,
   createAdminCompany,
@@ -17,11 +18,39 @@ import AdminCompanyStatusModal from '../components/AdminCompanyStatusModal';
 import { adminCompanies } from '../mocks/adminCompaniesMockData';
 import '../admin-companies.css';
 
+const DEFAULT_ADMIN_GOVERNORATE = 'القاهرة';
+
+const GOVERNORATE_VALUE_TO_LABEL = {
+  cairo: 'القاهرة',
+  giza: 'الجيزة',
+  qalyubia: 'القليوبية',
+  القاهره: 'القاهرة',
+  القاهرة: 'القاهرة',
+  الجيزة: 'الجيزة',
+  الجيزه: 'الجيزة',
+  القليوبية: 'القليوبية',
+  القليوبيه: 'القليوبية',
+};
+
+function getAdminGovernorate(user) {
+  const rawGovernorate =
+    user?.governorateLabel ||
+    user?.governorate ||
+    user?.assignedGovernorate ||
+    user?.city ||
+    DEFAULT_ADMIN_GOVERNORATE;
+
+  return GOVERNORATE_VALUE_TO_LABEL[rawGovernorate] || rawGovernorate;
+}
+
 function AdminCompaniesPage() {
+  const { user } = useAuth();
+
+  const adminGovernorate = getAdminGovernorate(user);
+
   const [companies, setCompanies] = useState(adminCompanies);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [governorateFilter, setGovernorateFilter] = useState('all');
   const [specializationFilter, setSpecializationFilter] = useState('all');
 
   const [formMode, setFormMode] = useState(null);
@@ -44,10 +73,20 @@ function AdminCompaniesPage() {
     };
   }, []);
 
+  const adminGovernorateCompanies = useMemo(() => {
+    return companies.filter((company) => {
+      const governorates = company.governorates?.length
+        ? company.governorates
+        : [company.governorate].filter(Boolean);
+
+      return governorates.includes(adminGovernorate);
+    });
+  }, [adminGovernorate, companies]);
+
   const filteredCompanies = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
-    return companies.filter((company) => {
+    return adminGovernorateCompanies.filter((company) => {
       const governorates = company.governorates?.length
         ? company.governorates
         : [company.governorate].filter(Boolean);
@@ -71,21 +110,18 @@ function AdminCompaniesPage() {
       const matchesStatus =
         statusFilter === 'all' || company.status === statusFilter;
 
-      const matchesGovernorate =
-        governorateFilter === 'all' || governorates.includes(governorateFilter);
-
       const matchesSpecialization =
         specializationFilter === 'all' ||
         company.specialization === specializationFilter;
 
-      return (
-        matchesSearch &&
-        matchesStatus &&
-        matchesGovernorate &&
-        matchesSpecialization
-      );
+      return matchesSearch && matchesStatus && matchesSpecialization;
     });
-  }, [companies, governorateFilter, searchTerm, specializationFilter, statusFilter]);
+  }, [
+    adminGovernorateCompanies,
+    searchTerm,
+    specializationFilter,
+    statusFilter,
+  ]);
 
   function handleOpenAddModal() {
     setSelectedCompany(null);
@@ -99,8 +135,19 @@ function AdminCompaniesPage() {
   }
 
   async function handleSubmitCompany(payload) {
+    const payloadWithAdminGovernorate = {
+      ...payload,
+      governorates: payload.governorates?.length
+        ? payload.governorates
+        : [adminGovernorate],
+      governorate: payload.governorate || adminGovernorate,
+      coverageAreas: payload.coverageAreas?.length
+        ? payload.coverageAreas
+        : [adminGovernorate],
+    };
+
     if (formMode === 'add') {
-      const result = await createAdminCompany(payload);
+      const result = await createAdminCompany(payloadWithAdminGovernorate);
 
       setCompanies((currentCompanies) => [
         result.company,
@@ -113,7 +160,7 @@ function AdminCompaniesPage() {
     if (formMode === 'edit' && selectedCompany) {
       const updatedCompany = await updateAdminCompany(selectedCompany.id, {
         ...selectedCompany,
-        ...payload,
+        ...payloadWithAdminGovernorate,
       });
 
       setCompanies((currentCompanies) =>
@@ -194,7 +241,9 @@ function AdminCompaniesPage() {
       <section className="admin-companies-hero">
         <div>
           <h1>الشركات</h1>
-          <p>Maintenance Companies - إدارة شركات الصيانة ومتابعة أدائها</p>
+          <p>
+            Maintenance Companies - إدارة شركات الصيانة داخل محافظة {adminGovernorate}
+          </p>
         </div>
 
         <button
@@ -207,7 +256,7 @@ function AdminCompaniesPage() {
         </button>
       </section>
 
-      <AdminCompaniesStatsCards companies={companies} />
+      <AdminCompaniesStatsCards companies={adminGovernorateCompanies} />
 
       <section className="admin-companies-card">
         <AdminCompaniesToolbar
@@ -215,8 +264,6 @@ function AdminCompaniesPage() {
           onSearchChange={setSearchTerm}
           statusFilter={statusFilter}
           onStatusChange={setStatusFilter}
-          governorateFilter={governorateFilter}
-          onGovernorateChange={setGovernorateFilter}
           specializationFilter={specializationFilter}
           onSpecializationChange={setSpecializationFilter}
         />

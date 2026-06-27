@@ -19,7 +19,6 @@ export const ROUTES = {
   ADMIN_COMPANIES: '/admin/companies',
   ADMIN_COMPANY_REQUESTS: '/admin/companies/requests',
   ADMIN_ANALYTICS: '/admin/analytics',
-  ADMIN_SETTINGS: '/admin/settings',
   ADMIN_PROFILE: '/admin/profile',
 
   COMPANY_DASHBOARD: '/company',

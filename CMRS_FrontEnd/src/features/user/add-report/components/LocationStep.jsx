@@ -21,7 +21,7 @@ const DEFAULT_LOCATION = {
 
 function LocationStep({
   formData = {},
-  setFormData = () => { },
+  setFormData = () => {},
   onNext,
   onBack,
 }) {
@@ -70,7 +70,7 @@ function LocationStep({
   };
 
   const selectedGovernorate = GOVERNORATE_OPTIONS.find(
-    (option) => option.value === location.governorate
+    (option) => option.value === location.governorate,
   );
 
   const handleGovernorateSelect = (option) => {
@@ -85,11 +85,11 @@ function LocationStep({
   };
 
   const handleFieldChange = (event) => {
-    if (isLocationConfirmed) {
+    const { name, value } = event.target;
+
+    if (isLocationConfirmed && name !== 'addressDetails') {
       return;
     }
-
-    const { name, value } = event.target;
 
     setFormData((previous = {}) => {
       const currentLocation = previous.location ?? DEFAULT_LOCATION;
@@ -161,8 +161,9 @@ function LocationStep({
             <div className="dropdown governorate-bs-dropdown">
               <button
                 type="button"
-                className={`btn dropdown-toggle governorate-bs-dropdown__toggle ${selectedGovernorate ? 'is-selected' : ''
-                  }`}
+                className={`btn dropdown-toggle governorate-bs-dropdown__toggle ${
+                  selectedGovernorate ? 'is-selected' : ''
+                }`}
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
                 disabled={isLocationConfirmed}
@@ -183,8 +184,9 @@ function LocationStep({
                     <li key={option.value}>
                       <button
                         type="button"
-                        className={`dropdown-item governorate-bs-dropdown__item ${isActive ? 'active' : ''
-                          }`}
+                        className={`dropdown-item governorate-bs-dropdown__item ${
+                          isActive ? 'active' : ''
+                        }`}
                         onClick={() => handleGovernorateSelect(option)}
                         disabled={isLocationConfirmed}
                       >
@@ -226,18 +228,12 @@ function LocationStep({
               placeholder="مثال: أمام الصيدلية - بجوار الكوبري - الدور الأرضي"
               value={location.addressDetails}
               onChange={handleFieldChange}
-              disabled={isLocationConfirmed}
-              title={
-                isLocationConfirmed
-                  ? 'لتغيير تفاصيل العنوان اضغط إلغاء تحديد المشكلة أولًا'
-                  : undefined
-              }
             />
           </div>
 
           <div className="add-report-location-form-card__notice">
             {isLocationConfirmed
-              ? 'تم تثبيت موقع المشكلة والعنوان. لتغيير الموقع أو العنوان اضغط إلغاء تحديد المشكلة أولًا.'
+              ? 'تم تثبيت موقع المشكلة والعنوان الأساسي. يمكنك إضافة أو تعديل التفاصيل الإضافية، ولتغيير الموقع أو العنوان الأساسي اضغط إلغاء تحديد المشكلة أولًا.'
               : 'حرّك الخريطة حتى يصل المؤشر إلى المكان المطلوب، ثم اضغط زر تأكيد الموقع لحفظه.'}
           </div>
 
@@ -245,7 +241,12 @@ function LocationStep({
             type="button"
             className="add-report-btn add-report-btn--ghost add-report-btn--clear-location"
             onClick={handleClearLocation}
-            disabled={!location.isConfirmed && !location.addressLine && !location.addressDetails && !location.governorate}
+            disabled={
+              !location.isConfirmed &&
+              !location.addressLine &&
+              !location.addressDetails &&
+              !location.governorate
+            }
           >
             <FiRefreshCcw />
             <span>إلغاء تحديد المشكلة</span>
@@ -268,6 +269,7 @@ function LocationStep({
         >
           السابق
         </button>
+
         <button
           type="button"
           className="add-report-btn add-report-btn--primary"

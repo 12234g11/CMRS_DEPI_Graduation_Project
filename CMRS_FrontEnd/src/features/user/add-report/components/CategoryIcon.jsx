@@ -5,10 +5,16 @@ import {
   FiMap,
   FiShield,
   FiSun,
+  FiTool,
   FiTrash2,
+  FiWifi,
   FiZap,
 } from 'react-icons/fi';
-import { FaTree } from 'react-icons/fa';
+import {
+  FaFire,
+  FaTrafficLight,
+  FaTree,
+} from 'react-icons/fa';
 
 const ICONS = {
   trash: FiTrash2,
@@ -19,10 +25,15 @@ const ICONS = {
   map: FiMap,
   tree: FaTree,
   help: FiHelpCircle,
+  traffic: FaTrafficLight,
+  fire: FaFire,
+  wifi: FiWifi,
+  tool: FiTool,
 };
 
 function CategoryIcon({ iconKey }) {
   const Icon = ICONS[iconKey] || FiAlertCircle;
+
   return <Icon />;
 }
 

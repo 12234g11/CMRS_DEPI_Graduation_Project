@@ -2,7 +2,6 @@ import { FiSearch } from 'react-icons/fi';
 import AdminReportFilterSelect from '../../reports/components/AdminReportFilterSelect';
 import {
   adminCompanySpecializationOptions,
-  companyGovernorateOptions,
   companyStatusOptions,
 } from '../mocks/adminCompaniesMockData';
 
@@ -11,8 +10,6 @@ function AdminCompaniesToolbar({
   onSearchChange,
   statusFilter,
   onStatusChange,
-  governorateFilter,
-  onGovernorateChange,
   specializationFilter,
   onSpecializationChange,
 }) {
@@ -24,7 +21,7 @@ function AdminCompaniesToolbar({
           type="search"
           value={searchTerm}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="ابحث باسم الشركة أو الخدمة أو المنطقة..."
+          placeholder="ابحث باسم الشركة أو الخدمة..."
           aria-label="البحث في الشركات"
         />
       </div>
@@ -34,14 +31,6 @@ function AdminCompaniesToolbar({
         options={adminCompanySpecializationOptions}
         onChange={onSpecializationChange}
         ariaLabel="فلترة حسب الخدمة"
-        variant="overlay"
-      />
-
-      <AdminReportFilterSelect
-        value={governorateFilter}
-        options={companyGovernorateOptions}
-        onChange={onGovernorateChange}
-        ariaLabel="فلترة حسب المحافظة"
         variant="overlay"
       />
 
