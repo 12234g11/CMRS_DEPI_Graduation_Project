@@ -5,14 +5,20 @@ import PageHeader from '../../../../shared/components/ui/PageHeader';
 import { ROUTES } from '../../../../shared/navigation';
 import ReportsMap from '../../../map/components/ReportsMap';
 import {
+  acceptCompanyCannotFix,
+  acceptCompanyFix,
   getAdminReportById,
+  prepareReportReassignment,
+  requestCompanyCompletion,
   updateAdminReport,
 } from '../api/adminReportsApi';
 import AdminCompanyAssignmentPanel from '../components/AdminCompanyAssignmentPanel';
+import AdminCompanyResponseReviewCard from '../components/AdminCompanyResponseReviewCard';
 import AdminReportImagesCard from '../components/AdminReportImagesCard';
 import AdminReporterCard from '../components/AdminReporterCard';
 import AdminReportStatusForm from '../components/AdminReportStatusForm';
 import AdminReportSummaryCard from '../components/AdminReportSummaryCard';
+import AdminReportTimelineCard from '../components/AdminReportTimelineCard';
 import { adminReports } from '../mocks/adminReportsMockData';
 import '../admin-reports.css';
 
@@ -40,12 +46,12 @@ function AdminReportDetailsPage() {
   }, [reportId]);
 
   useEffect(() => {
-    if (!report || location.hash !== '#company-assignment') return;
+    if (!report || !location.hash) return;
 
     const scrollTimer = window.setTimeout(() => {
-      const assignmentSection = document.getElementById('company-assignment');
+      const targetSection = document.querySelector(location.hash);
 
-      assignmentSection?.scrollIntoView({
+      targetSection?.scrollIntoView({
         behavior: 'smooth',
         block: 'start',
       });
@@ -76,18 +82,8 @@ function AdminReportDetailsPage() {
   }, [report]);
 
   async function handleStatusSave(payload) {
-    await updateAdminReport(report.id, payload);
-
-    setReport((currentReport) => ({
-      ...currentReport,
-      ...payload,
-      statusTone:
-        payload.status === 'تم الحل'
-          ? 'success'
-          : payload.status === 'جاري الحل'
-            ? 'info'
-            : 'warning',
-    }));
+    const updatedReport = await updateAdminReport(report.id, payload);
+    setReport(updatedReport);
   }
 
   function handleCompanyAssigned(result) {
@@ -99,9 +95,54 @@ function AdminReportDetailsPage() {
       status: result.status,
       statusTone: result.statusTone,
       assignment: result.assignment,
+      companyResponse: null,
+      timeline: [
+        ...(currentReport.timeline || []),
+        {
+          id: `${currentReport.id}-local-assignment-${Date.now()}`,
+          actorType: 'admin',
+          actor: 'الأدمن',
+          title: 'تم تعيين شركة',
+          description: `تم تعيين البلاغ إلى ${result.assignedCompany}.`,
+          date: new Date().toLocaleString('ar-EG'),
+        },
+      ],
     }));
   }
 
+  async function handleAcceptFix(adminNote) {
+    const updatedReport = await acceptCompanyFix(report.id, { adminNote });
+    setReport(updatedReport);
+  }
+
+  async function handleRequestCompletion(adminNote) {
+    const updatedReport = await requestCompanyCompletion(report.id, { adminNote });
+    setReport(updatedReport);
+  }
+
+  async function handleAcceptCannotFix(adminNote) {
+    const updatedReport = await acceptCompanyCannotFix(report.id, { adminNote });
+    setReport(updatedReport);
+  }
+
+async function handleReassign(adminNote) {
+  const updatedReport = await prepareReportReassignment(report.id, { adminNote });
+
+  setReport(updatedReport);
+
+  navigate(`${ROUTES.ADMIN_REVIEW_REPORTS}/${report.id}#company-assignment`, {
+    replace: true,
+  });
+
+  window.setTimeout(() => {
+    const assignmentSection = document.getElementById('company-assignment');
+
+    assignmentSection?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }, 350);
+}
   if (!report) {
     return (
       <div className="dashboard-page admin-report-details-page">
@@ -153,6 +194,8 @@ function AdminReportDetailsPage() {
           </section>
 
           <AdminReportSummaryCard report={report} />
+
+          <AdminReportTimelineCard timeline={report.timeline || []} />
         </div>
 
         <div className="admin-report-details-right">
@@ -174,6 +217,14 @@ function AdminReportDetailsPage() {
           </section>
 
           <AdminReporterCard reporter={report.reporter} />
+
+          <AdminCompanyResponseReviewCard
+            report={report}
+            onAcceptFix={handleAcceptFix}
+            onRequestCompletion={handleRequestCompletion}
+            onAcceptCannotFix={handleAcceptCannotFix}
+            onReassign={handleReassign}
+          />
 
           <AdminReportStatusForm report={report} onSave={handleStatusSave} />
 

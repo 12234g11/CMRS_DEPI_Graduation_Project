@@ -27,12 +27,28 @@ function ReviewReportsPage() {
     };
   }, []);
 
+  const pendingCompanyReviewCount = useMemo(() => {
+    return reports.filter(
+      (report) => report.companyResponse?.reviewStatus === 'pending',
+    ).length;
+  }, [reports]);
+
   const filteredReports = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
     return reports.filter((report) => {
       const matchesSearch = normalizedSearch
-        ? [report.type, report.title, report.location, report.status, report.priority, report.assignedCompany]
+        ? [
+            report.type,
+            report.title,
+            report.location,
+            report.status,
+            report.priority,
+            report.assignedCompany,
+            report.companyResponse?.companyName,
+            report.companyResponse?.statusLabel,
+            report.companyResponse?.note,
+          ]
             .join(' ')
             .toLowerCase()
             .includes(normalizedSearch)
@@ -51,6 +67,22 @@ function ReviewReportsPage() {
         title="إدارة البلاغات"
         subtitle="Manage Reports - إدارة البلاغات وتعيين فرق الصيانة"
       />
+
+      <section className="admin-company-review-inbox-summary">
+        <div>
+          <h2>ردود الشركات بانتظار المراجعة</h2>
+          <p>
+            يوجد {pendingCompanyReviewCount} بلاغ يحتاج قرار الأدمن بعد رد الشركة.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setStatusFilter('بانتظار مراجعة الأدمن')}
+        >
+          عرض البلاغات المنتظرة
+        </button>
+      </section>
 
       <DashboardSectionCard
         title="البلاغات"

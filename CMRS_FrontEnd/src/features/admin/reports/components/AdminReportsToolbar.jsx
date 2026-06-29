@@ -4,7 +4,14 @@ import AdminReportFilterSelect from './AdminReportFilterSelect';
 const statusOptions = [
   { value: 'all', label: 'كل الحالات' },
   { value: 'قيد المراجعة', label: 'قيد المراجعة' },
+  { value: 'مقبول', label: 'مقبول' },
+  { value: 'تم التعيين', label: 'تم التعيين' },
   { value: 'جاري الحل', label: 'جاري الحل' },
+  { value: 'بانتظار مراجعة الأدمن', label: 'بانتظار مراجعة الأدمن' },
+  { value: 'مطلوب استكمال', label: 'مطلوب استكمال' },
+  { value: 'بانتظار إعادة التعيين', label: 'بانتظار إعادة التعيين' },
+  { value: 'متعذر التنفيذ', label: 'متعذر التنفيذ' },
+  { value: 'مرفوض', label: 'مرفوض' },
   { value: 'تم الحل', label: 'تم الحل' },
 ];
 
@@ -31,7 +38,7 @@ function AdminReportsToolbar({
           type="search"
           value={searchTerm}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="ابحث عن شارع أو منطقة..."
+          placeholder="ابحث عن بلاغ أو شركة أو منطقة..."
           aria-label="البحث في البلاغات"
         />
       </div>

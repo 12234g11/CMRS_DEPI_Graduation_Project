@@ -1,17 +1,19 @@
 import {
-  adminDashboardCompanies,
-  adminDashboardMapMarkers,
+  adminDashboardPriorityOptions,
+  adminDashboardProblemTypeOptions,
   adminDashboardReports,
-  adminDashboardReportsMapLegend,
   adminDashboardStats,
+  adminDashboardStatusOptions,
 } from '../mocks/adminDashboardMockData';
 
 export async function getAdminDashboardData() {
   return Promise.resolve({
     stats: adminDashboardStats,
-    mapMarkers: adminDashboardMapMarkers,
-    mapLegend: adminDashboardReportsMapLegend,
-    companies: adminDashboardCompanies,
     reports: adminDashboardReports,
+    filters: {
+      problemTypes: adminDashboardProblemTypeOptions,
+      statuses: adminDashboardStatusOptions,
+      priorities: adminDashboardPriorityOptions,
+    },
   });
 }

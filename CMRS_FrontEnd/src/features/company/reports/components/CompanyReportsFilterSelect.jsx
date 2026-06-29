@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { FiCheck, FiChevronDown } from 'react-icons/fi';
 
-function AdminFilterSelect({
+function CompanyReportsFilterSelect({
   value,
   options = [],
   onChange,
@@ -43,12 +43,14 @@ function AdminFilterSelect({
 
   return (
     <div
-      className={`admin-filter-select ${isOpen ? 'is-open' : ''}`}
+      className={`company-reports-filter-select ${isOpen ? 'is-open' : ''}`}
       ref={selectRef}
     >
       <button
         type="button"
-        className={`admin-filter-select__button ${isOpen ? 'is-open' : ''}`}
+        className={`company-reports-filter-select__button ${
+          isOpen ? 'is-open' : ''
+        }`}
         onClick={() => setIsOpen((current) => !current)}
         aria-label={ariaLabel}
         aria-expanded={isOpen}
@@ -58,7 +60,7 @@ function AdminFilterSelect({
       </button>
 
       {isOpen ? (
-        <ul className="admin-filter-select__menu" role="listbox">
+        <ul className="company-reports-filter-select__menu" role="listbox">
           {options.map((option) => {
             const isActive = option.value === value;
 
@@ -66,7 +68,7 @@ function AdminFilterSelect({
               <li key={option.value}>
                 <button
                   type="button"
-                  className={`admin-filter-select__option ${
+                  className={`company-reports-filter-select__option ${
                     isActive ? 'is-active' : ''
                   }`}
                   onClick={() => handleSelect(option.value)}
@@ -85,4 +87,4 @@ function AdminFilterSelect({
   );
 }
 
-export default AdminFilterSelect;
+export default CompanyReportsFilterSelect;

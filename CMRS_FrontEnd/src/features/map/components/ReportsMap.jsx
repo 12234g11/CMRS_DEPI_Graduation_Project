@@ -21,7 +21,8 @@ const CURRENT_LOCATION_ZOOM = 17;
 const LIGHT_TILE = {
   key: 'light',
   url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  attribution:
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 };
 
 function buildMarkerIcon(tone = 'info', isActive = false) {
@@ -91,16 +92,21 @@ function dedupeMarkers(markers = [], activeMarkerId = null) {
 
   return Array.from(grouped.values());
 }
+
 function FlyToView({ view }) {
   const map = useMap();
 
   useEffect(() => {
     if (!view?.center?.length) return;
 
-    map.flyTo(view.center, typeof view.zoom === 'number' ? view.zoom : map.getZoom(), {
-      animate: true,
-      duration: 1.2,
-    });
+    map.flyTo(
+      view.center,
+      typeof view.zoom === 'number' ? view.zoom : map.getZoom(),
+      {
+        animate: true,
+        duration: 1.2,
+      },
+    );
   }, [map, view]);
 
   return null;
@@ -140,24 +146,31 @@ function FitRouteBounds({ routeCoordinates = [] }) {
   return null;
 }
 
-function ReportsMapControls({ onLocateMe, isLocating }) {
+function ReportsMapControls({
+  onLocateMe,
+  isLocating,
+  showCurrentLocationControl = true,
+}) {
   const map = useMap();
 
-  const handleZoomIn = (event) => {
+  function handleZoomIn(event) {
     event.preventDefault();
     event.stopPropagation();
     map.zoomIn();
-  };
+  }
 
-  const handleZoomOut = (event) => {
+  function handleZoomOut(event) {
     event.preventDefault();
     event.stopPropagation();
     map.zoomOut();
-  };
+  }
 
   return (
     <div className="reports-map__controls">
-      <div className="reports-map__zoom-group" aria-label="عناصر التحكم في تكبير الخريطة">
+      <div
+        className="reports-map__zoom-group"
+        aria-label="عناصر التحكم في تكبير الخريطة"
+      >
         <button
           type="button"
           className="reports-map__zoom-btn"
@@ -179,9 +192,11 @@ function ReportsMapControls({ onLocateMe, isLocating }) {
         </button>
       </div>
 
-      <div className="reports-map__utility-group">
-        <CurrentLocationButton onClick={onLocateMe} isLoading={isLocating} />
-      </div>
+      {showCurrentLocationControl ? (
+        <div className="reports-map__utility-group">
+          <CurrentLocationButton onClick={onLocateMe} isLoading={isLocating} />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -194,9 +209,13 @@ function ReportsMap({
   onMarkerSelect,
   onCurrentLocationChange,
   routeDestination = null,
+  showCurrentLocationControl = true,
 }) {
   const markerRefs = useRef({});
-  const dedupedMarkers = useMemo(() => dedupeMarkers(markers), [markers]);
+  const dedupedMarkers = useMemo(
+    () => dedupeMarkers(markers, activeMarkerId),
+    [markers, activeMarkerId],
+  );
 
   const initialCenter = useMemo(() => {
     if (userLocation?.lat && userLocation?.lng) {
@@ -204,6 +223,7 @@ function ReportsMap({
     }
 
     const firstMarker = dedupedMarkers[0]?.position;
+
     if (firstMarker?.lat && firstMarker?.lng) {
       return [firstMarker.lat, firstMarker.lng];
     }
@@ -215,11 +235,13 @@ function ReportsMap({
     center: initialCenter,
     zoom: DEFAULT_ZOOM,
   });
+
   const [showCurrentLocationMarker, setShowCurrentLocationMarker] = useState(false);
   const [routePath, setRoutePath] = useState(null);
   const [routeError, setRouteError] = useState('');
 
-const { location, isLoading, error, requestLocation } = useCurrentLocation();
+  const { location, isLoading, error, requestLocation } = useCurrentLocation();
+
   useEffect(() => {
     if (showCurrentLocationMarker || activeMarkerId || routeDestination) {
       return;
@@ -251,6 +273,7 @@ const { location, isLoading, error, requestLocation } = useCurrentLocation();
 
     const timeoutId = window.setTimeout(() => {
       const markerInstance = markerRefs.current[activeMarkerId];
+
       if (markerInstance?.openPopup) {
         markerInstance.openPopup();
       }
@@ -268,7 +291,12 @@ const { location, isLoading, error, requestLocation } = useCurrentLocation();
   useEffect(() => {
     let isCancelled = false;
 
-    if (!showCurrentLocationMarker || !location?.lat || !location?.lng || !routeDestination?.position) {
+    if (
+      !showCurrentLocationMarker ||
+      !location?.lat ||
+      !location?.lng ||
+      !routeDestination?.position
+    ) {
       setRoutePath(null);
       setRouteError('');
       return undefined;
@@ -294,10 +322,10 @@ const { location, isLoading, error, requestLocation } = useCurrentLocation();
     };
   }, [location, routeDestination, showCurrentLocationMarker]);
 
-  const handleLocateMe = () => {
+  function handleLocateMe() {
     setShowCurrentLocationMarker(true);
     requestLocation();
-  };
+  }
 
   return (
     <div className="reports-map">
@@ -305,7 +333,7 @@ const { location, isLoading, error, requestLocation } = useCurrentLocation();
         center={mapView.center}
         zoom={mapView.zoom}
         zoomControl={false}
-        scrollWheelZoom={true}
+        scrollWheelZoom
         className="reports-map__canvas"
         style={{ height: `${height}px` }}
       >
@@ -316,12 +344,20 @@ const { location, isLoading, error, requestLocation } = useCurrentLocation();
         />
 
         <FlyToView view={mapView} />
-        <FocusOnMarker markers={dedupedMarkers} activeMarkerId={activeMarkerId} />
-        {routePath?.coordinates?.length ? <FitRouteBounds routeCoordinates={routePath.coordinates} /> : null}
+
+        <FocusOnMarker
+          markers={dedupedMarkers}
+          activeMarkerId={activeMarkerId}
+        />
+
+        {routePath?.coordinates?.length ? (
+          <FitRouteBounds routeCoordinates={routePath.coordinates} />
+        ) : null}
 
         <ReportsMapControls
           onLocateMe={handleLocateMe}
           isLocating={isLoading}
+          showCurrentLocationControl={showCurrentLocationControl}
         />
 
         {dedupedMarkers.map((marker) => {
@@ -348,9 +384,13 @@ const { location, isLoading, error, requestLocation } = useCurrentLocation();
                   <strong>{marker.title}</strong>
                   <span>{marker.area || marker.subtitle}</span>
                   <small>{marker.statusLabel}</small>
+
                   {marker.distanceLabel || marker.distance ? (
-                    <small>يبعد عنك: {marker.distanceLabel || marker.distance}</small>
+                    <small>
+                      يبعد عنك: {marker.distanceLabel || marker.distance}
+                    </small>
                   ) : null}
+
                   {marker.address ? <small>{marker.address}</small> : null}
                 </div>
               </Popup>
@@ -359,7 +399,10 @@ const { location, isLoading, error, requestLocation } = useCurrentLocation();
         })}
 
         {showCurrentLocationMarker && location?.lat && location?.lng ? (
-          <Marker position={[location.lat, location.lng]} icon={buildCurrentLocationIcon()}>
+          <Marker
+            position={[location.lat, location.lng]}
+            icon={buildCurrentLocationIcon()}
+          >
             <Popup>
               <div className="reports-map__popup">
                 <strong>موقعك الحالي</strong>
@@ -388,10 +431,12 @@ const { location, isLoading, error, requestLocation } = useCurrentLocation();
       {routePath?.coordinates?.length ? (
         <div className="reports-map__route-summary">
           <strong>أقصر طريق جاهز</strong>
+
           <div className="reports-map__route-summary-row">
             <span>المسافة</span>
             <b>{routePath.distanceLabel || '—'}</b>
           </div>
+
           <div className="reports-map__route-summary-row">
             <span>الوقت التقريبي</span>
             <b>{routePath.durationLabel || '—'}</b>

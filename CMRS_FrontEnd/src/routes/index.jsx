@@ -29,6 +29,7 @@ import AdminProfilePage from '../features/admin/profile/pages/AdminProfilePage';
 
 import CompanyDashboardPage from '../features/company/dashboard/pages/CompanyDashboardPage';
 import CompanyReportsPage from '../features/company/reports/pages/CompanyReportsPage';
+import CompanyReportDetailsPage from '../features/company/reports/pages/CompanyReportDetailsPage';
 import CompanyNotificationsPage from '../features/company/notifications/pages/CompanyNotificationsPage';
 import CompanyProfilePage from '../features/company/profile/pages/CompanyProfilePage';
 
@@ -82,6 +83,10 @@ function AppRouter() {
           <Route element={<DashboardLayout />}>
             <Route path={ROUTES.COMPANY_DASHBOARD} element={<CompanyDashboardPage />} />
             <Route path={ROUTES.COMPANY_REPORTS} element={<CompanyReportsPage />} />
+            <Route
+              path={`${ROUTES.COMPANY_REPORTS}/:reportId`}
+              element={<CompanyReportDetailsPage />}
+            />
             <Route path={ROUTES.COMPANY_NOTIFICATIONS} element={<CompanyNotificationsPage />} />
             <Route path={ROUTES.COMPANY_PROFILE} element={<CompanyProfilePage />} />
           </Route>
