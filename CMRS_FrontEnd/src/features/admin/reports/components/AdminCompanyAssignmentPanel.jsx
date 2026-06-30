@@ -137,7 +137,15 @@ function AdminCompanyAssignmentPanel({ report, onAssigned }) {
     }
   }
 
-  async function handleConfirmAssign() {
+  function handleCloseConfirmModal() {
+    if (isAssigning) return;
+
+    setIsConfirmOpen(false);
+  }
+
+  async function handleConfirmAssign(event) {
+    event.preventDefault();
+
     if (!selectedCompany) return;
 
     setIsAssigning(true);
@@ -150,6 +158,7 @@ function AdminCompanyAssignmentPanel({ report, onAssigned }) {
     });
 
     onAssigned?.(result);
+
     setIsConfirmOpen(false);
     setIsAssigning(false);
   }
@@ -184,7 +193,9 @@ function AdminCompanyAssignmentPanel({ report, onAssigned }) {
       <div className="admin-company-assignment-tabs">
         <button
           type="button"
-          className={activeView === ASSIGNMENT_VIEWS.RECOMMENDED ? 'is-active' : ''}
+          className={
+            activeView === ASSIGNMENT_VIEWS.RECOMMENDED ? 'is-active' : ''
+          }
           onClick={() => handleViewChange(ASSIGNMENT_VIEWS.RECOMMENDED)}
         >
           الشركات المقترحة
@@ -286,7 +297,8 @@ function AdminCompanyAssignmentPanel({ report, onAssigned }) {
             <strong>{selectedCompany.name}</strong>
 
             <p>
-              {selectedCompany.specialization} - مطابقة {selectedCompany.matchScore}%
+              {selectedCompany.specialization} - مطابقة{' '}
+              {selectedCompany.matchScore}%
             </p>
           </div>
 
@@ -302,96 +314,108 @@ function AdminCompanyAssignmentPanel({ report, onAssigned }) {
 
       {isConfirmOpen ? (
         <div className="admin-assignment-modal-backdrop" role="presentation">
-          <div className="admin-assignment-modal" role="dialog" aria-modal="true">
+          <form
+            className="admin-assignment-modal"
+            role="dialog"
+            aria-modal="true"
+            onSubmit={handleConfirmAssign}
+          >
             <button
               type="button"
               className="admin-assignment-modal__close"
-              onClick={() => setIsConfirmOpen(false)}
+              onClick={handleCloseConfirmModal}
               aria-label="إغلاق"
             >
               <FiX />
             </button>
 
-            <div className="admin-assignment-modal__icon">
-              <FiCheckCircle />
-            </div>
-
-            <h3>تأكيد تعيين الشركة</h3>
-
-            <div className="admin-assignment-confirm-info">
-              <p>
-                <span>البلاغ</span>
-                <strong>
-                  #{report.id} - {report.type}
-                </strong>
-              </p>
-
-              <p>
-                <span>الشركة</span>
-                <strong>{selectedCompany.name}</strong>
-              </p>
-
-              <p>
-                <span>طريقة الاختيار</span>
-                <strong>
-                  {activeView === ASSIGNMENT_VIEWS.RECOMMENDED
-                    ? 'اختيار من الشركات المقترحة'
-                    : 'اختيار يدوي من كل الشركات'}
-                </strong>
-              </p>
-
-              <p>
-                <span>نسبة المطابقة</span>
-                <strong>{selectedCompany.matchScore}%</strong>
-              </p>
-
-              <p>
-                <span>سبب الترشيح / الملاحظة</span>
-                <strong>{selectedCompany.matchReasons?.[0]}</strong>
-              </p>
-            </div>
-
-            {activeView === ASSIGNMENT_VIEWS.ALL &&
-            selectedCompany.matchScore < 70 ? (
-              <div className="admin-assignment-warning">
-                <FiAlertCircle />
-                <span>
-                  الشركة المختارة ليست من أعلى الشركات مطابقة لهذا البلاغ. يفضل
-                  إضافة سبب واضح في الملاحظات.
-                </span>
+            <header className="admin-assignment-modal__header">
+              <div className="admin-assignment-modal__icon">
+                <FiCheckCircle />
               </div>
-            ) : null}
 
-            <label className="admin-assignment-note">
-              ملاحظات للأدمن / تعليمات للشركة
+              <h3>تأكيد تعيين الشركة</h3>
+            </header>
 
-              <textarea
-                value={adminNote}
-                onChange={(event) => setAdminNote(event.target.value)}
-                placeholder="مثال: تم اختيار هذه الشركة يدويًا لأنها متاحة حاليًا أو بناءً على توجيه الإدارة..."
-                rows={4}
-              />
-            </label>
+            <div className="admin-assignment-modal__body">
+              <div className="admin-assignment-confirm-info">
+                <p>
+                  <span>البلاغ</span>
+                  <strong>
+                    #{report.id} - {report.type}
+                  </strong>
+                </p>
 
-            <div className="admin-assignment-modal__actions">
+                <p>
+                  <span>الشركة</span>
+                  <strong>{selectedCompany.name}</strong>
+                </p>
+
+                <p>
+                  <span>طريقة الاختيار</span>
+                  <strong>
+                    {activeView === ASSIGNMENT_VIEWS.RECOMMENDED
+                      ? 'اختيار من الشركات المقترحة'
+                      : 'اختيار يدوي من كل الشركات'}
+                  </strong>
+                </p>
+
+                <p>
+                  <span>نسبة المطابقة</span>
+                  <strong>{selectedCompany.matchScore}%</strong>
+                </p>
+
+                <p>
+                  <span>سبب الترشيح / الملاحظة</span>
+                  <strong>
+                    {selectedCompany.matchReasons?.[0] ||
+                      'الشركة مناسبة لهذا البلاغ'}
+                  </strong>
+                </p>
+              </div>
+
+              {activeView === ASSIGNMENT_VIEWS.ALL &&
+              selectedCompany.matchScore < 70 ? (
+                <div className="admin-assignment-warning">
+                  <FiAlertCircle />
+                  <span>
+                    الشركة المختارة ليست من أعلى الشركات مطابقة لهذا البلاغ. يفضل
+                    إضافة سبب واضح في الملاحظات.
+                  </span>
+                </div>
+              ) : null}
+
+              <label className="admin-assignment-note">
+                <span>ملاحظات للأدمن / تعليمات للشركة</span>
+
+                <textarea
+                  value={adminNote}
+                  onChange={(event) => setAdminNote(event.target.value)}
+                  placeholder="مثال: تم اختيار هذه الشركة يدويًا لأنها متاحة حاليًا أو بناءً على توجيه الإدارة..."
+                  rows={4}
+                />
+              </label>
+            </div>
+
+            <footer className="admin-assignment-modal__actions">
               <button
                 type="button"
                 className="admin-assignment-cancel-btn"
-                onClick={() => setIsConfirmOpen(false)}
+                onClick={handleCloseConfirmModal}
+                disabled={isAssigning}
               >
                 إلغاء
               </button>
 
               <button
-                type="button"
+                type="submit"
                 className="admin-assignment-submit-btn"
-                onClick={handleConfirmAssign}
                 disabled={isAssigning}
               >
                 {isAssigning ? 'جاري التعيين...' : 'تأكيد التعيين'}
               </button>
-            </div>
-          </div>
+            </footer>
+          </form>
         </div>
       ) : null}
     </section>

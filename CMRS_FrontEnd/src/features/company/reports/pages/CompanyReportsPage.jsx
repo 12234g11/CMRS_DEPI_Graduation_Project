@@ -208,28 +208,7 @@ function CompanyReportsPage() {
       >
         <FiFilter />
       </button>
-
-      <button
-        type="button"
-        className="company-reports-reset-btn"
-        onClick={handleResetFilters}
-      >
-        <FiX />
-        مسح
-      </button>
     </div>
-  );
-
-  const mobileFiltersButton = (
-    <button
-      type="button"
-      className="company-reports-open-filters-btn"
-      onClick={() => setIsFiltersOpen(true)}
-    >
-      <FiSliders />
-      الفلاتر
-      {activeFiltersCount ? <span>{activeFiltersCount}</span> : null}
-    </button>
   );
 
   return (
@@ -281,16 +260,56 @@ function CompanyReportsPage() {
         </section>
       ) : null}
 
+      <section className="company-reports-filter-card">
+        <div className="company-reports-filter-card__header">
+          <div>
+            <h2>فلترة البلاغات المسندة</h2>
+            <p>
+              يتم عرض {filteredReports.length} بلاغ من إجمالي {reports.length}{' '}
+              بلاغ مسند للشركة.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="company-reports-filter-card__reset-btn"
+            onClick={handleResetFilters}
+          >
+            <FiX />
+            مسح الفلاتر
+          </button>
+        </div>
+
+        <div className="company-reports-filter-card__body">
+          {desktopFilters}
+
+          <div className="company-reports-filter-card__mobile-actions">
+            <button
+              type="button"
+              className="company-reports-open-filters-btn"
+              onClick={() => setIsFiltersOpen(true)}
+            >
+              <FiSliders />
+              الفلاتر
+              {activeFiltersCount ? <span>{activeFiltersCount}</span> : null}
+            </button>
+
+            <button
+              type="button"
+              className="company-reports-filter-card__reset-btn"
+              onClick={handleResetFilters}
+            >
+              <FiX />
+              مسح الفلاتر
+            </button>
+          </div>
+        </div>
+      </section>
+
       <DashboardSectionCard
         title="البلاغات المسندة"
         subtitle="Assigned Reports"
         className="company-reports-card"
-        action={
-          <>
-            {desktopFilters}
-            {mobileFiltersButton}
-          </>
-        }
       >
         <div className="company-reports-flow-note">
           <FiAlertCircle />
@@ -327,8 +346,6 @@ function CompanyReportsPage() {
               </button>
 
               <div>
-        
-
                 <h2>فلترة البلاغات</h2>
 
                 <p>

@@ -32,6 +32,8 @@ import CompanyReportsPage from '../features/company/reports/pages/CompanyReports
 import CompanyReportDetailsPage from '../features/company/reports/pages/CompanyReportDetailsPage';
 import CompanyNotificationsPage from '../features/company/notifications/pages/CompanyNotificationsPage';
 import CompanyProfilePage from '../features/company/profile/pages/CompanyProfilePage';
+import CompanyTeamsPage from '../features/company/teams/pages/CompanyTeamsPage';
+import CompanyAnalyticsPage from '../features/company/analytics/pages/CompanyAnalyticsPage';
 
 import NotFoundPage from '../features/common/pages/NotFoundPage';
 import UnauthorizedPage from '../features/common/pages/UnauthorizedPage';
@@ -87,8 +89,10 @@ function AppRouter() {
               path={`${ROUTES.COMPANY_REPORTS}/:reportId`}
               element={<CompanyReportDetailsPage />}
             />
+            <Route path={ROUTES.COMPANY_TEAMS} element={<CompanyTeamsPage />} />
             <Route path={ROUTES.COMPANY_NOTIFICATIONS} element={<CompanyNotificationsPage />} />
-            <Route path={ROUTES.COMPANY_PROFILE} element={<CompanyProfilePage />} />
+            <Route path={ROUTES.COMPANY_PROFILE} element={<CompanyProfilePage />} />\
+            <Route path={ROUTES.COMPANY_ANALYTICS} element={<CompanyAnalyticsPage />} />
           </Route>
         </Route>
       </Route>

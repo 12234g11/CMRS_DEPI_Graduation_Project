@@ -2862,3 +2862,153 @@
     width: min(100%, 260px);
   }
 }
+/* Reports filter card like company teams/dashboard */
+
+.company-reports-filter-card {
+  position: relative;
+  z-index: 80;
+  padding: 18px;
+  border: 1px solid rgba(2, 95, 72, 0.08);
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: 16px;
+  overflow: visible;
+}
+
+.company-reports-filter-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.company-reports-filter-card__header h2 {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: 1.15rem;
+  font-weight: 950;
+}
+
+.company-reports-filter-card__header p {
+  margin: 5px 0 0;
+  color: var(--color-subtitle);
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
+.company-reports-filter-card__reset-btn {
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: rgba(2, 95, 72, 0.08);
+  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 950;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.company-reports-filter-card__body {
+  position: relative;
+  z-index: 90;
+  overflow: visible;
+}
+
+.company-reports-filter-card__mobile-actions {
+  display: none;
+}
+
+/* Desktop toolbar inside filter card */
+
+.company-reports-filter-card .company-reports-toolbar--desktop {
+  display: grid;
+  grid-template-columns:
+    minmax(320px, 1.5fr)
+    minmax(170px, 0.8fr)
+    minmax(190px, 0.9fr)
+    48px;
+  gap: 10px;
+  align-items: center;
+}
+
+.company-reports-filter-card .company-reports-reset-btn {
+  display: none;
+}
+
+/* Keep table card below filter card */
+
+.company-reports-card {
+  position: relative;
+  z-index: 1;
+}
+
+/* Mobile filter card */
+
+@media (max-width: 768px) {
+  .company-reports-filter-card {
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .company-reports-filter-card__header {
+    display: grid;
+    justify-items: center;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .company-reports-filter-card__header h2 {
+    font-size: 1.05rem;
+  }
+
+  .company-reports-filter-card__header p {
+    font-size: 0.78rem;
+    line-height: 1.7;
+  }
+
+  .company-reports-filter-card__header > .company-reports-filter-card__reset-btn {
+    display: none;
+  }
+
+  .company-reports-filter-card .company-reports-toolbar--desktop {
+    display: none !important;
+  }
+
+  .company-reports-filter-card__mobile-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    justify-items: center;
+  }
+
+  .company-reports-open-filters-btn,
+  .company-reports-filter-card__mobile-actions .company-reports-filter-card__reset-btn {
+    width: min(100%, 260px);
+  }
+
+  .company-reports-open-filters-btn {
+    display: inline-flex;
+  }
+
+  .company-reports-card .dashboard-section-card__header {
+    display: grid !important;
+    justify-items: center !important;
+    text-align: center !important;
+    gap: 8px !important;
+    padding-inline: 16px !important;
+  }
+
+  .company-reports-card .dashboard-section-card__header > div {
+    text-align: center !important;
+  }
+
+  .company-reports-card .dashboard-section-card__header h2,
+  .company-reports-card .dashboard-section-card__header p {
+    text-align: center !important;
+  }
+}

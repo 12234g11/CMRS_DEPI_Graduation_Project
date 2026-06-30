@@ -2343,3 +2343,260 @@
     text-align: center;
   }
 }
+/* Fix original admin assignment confirmation modal */
+
+.admin-assignment-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.admin-assignment-modal {
+  width: min(620px, 100%);
+  max-height: calc(100dvh - 48px);
+  margin: auto;
+  border-radius: 28px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.admin-assignment-modal__close {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: rgba(2, 95, 72, 0.08);
+  color: var(--color-primary);
+  display: grid;
+  place-items: center;
+  z-index: 5;
+}
+
+.admin-assignment-modal__header {
+  padding: 26px 24px 14px;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.admin-assignment-modal__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 20px;
+  background: rgba(2, 95, 72, 0.09);
+  color: var(--color-primary);
+  display: grid;
+  place-items: center;
+}
+
+.admin-assignment-modal__icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.admin-assignment-modal__header h3 {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: 1.25rem;
+  font-weight: 950;
+}
+
+.admin-assignment-modal__body {
+  padding: 0 24px 18px;
+  display: grid;
+  gap: 12px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.admin-assignment-confirm-info {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-assignment-confirm-info p {
+  min-height: 72px;
+  margin: 0;
+  padding: 13px 15px;
+  border-radius: 16px;
+  background: rgba(2, 95, 72, 0.035);
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  text-align: right;
+}
+
+.admin-assignment-confirm-info p span {
+  color: var(--color-subtitle);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.admin-assignment-confirm-info p strong {
+  color: var(--color-text);
+  font-size: 0.95rem;
+  font-weight: 950;
+  line-height: 1.6;
+}
+
+.admin-assignment-warning {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 193, 7, 0.15);
+  color: #9b7100;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.admin-assignment-warning svg {
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.admin-assignment-warning span {
+  font-size: 0.82rem;
+  font-weight: 850;
+  line-height: 1.8;
+}
+
+.admin-assignment-note {
+  display: grid;
+  gap: 8px;
+  color: var(--color-primary);
+  font-size: 0.88rem;
+  font-weight: 950;
+}
+
+.admin-assignment-note > span {
+  color: var(--color-primary);
+  font-size: 0.88rem;
+  font-weight: 950;
+}
+
+.admin-assignment-note textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 14px 16px;
+  border: 1.5px solid rgba(2, 95, 72, 0.16);
+  border-radius: 16px;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 850;
+  line-height: 1.8;
+  resize: vertical;
+  outline: none;
+}
+
+.admin-assignment-note textarea:focus {
+  border-color: rgba(2, 95, 72, 0.48);
+  box-shadow: 0 10px 24px rgba(2, 95, 72, 0.08);
+}
+
+.admin-assignment-modal__actions {
+  padding: 14px 24px 22px;
+  border-top: 1px solid rgba(2, 95, 72, 0.08);
+  background: #fff;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.admin-assignment-cancel-btn,
+.admin-assignment-submit-btn {
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.admin-assignment-cancel-btn {
+  background: rgba(107, 114, 128, 0.1);
+  color: var(--color-subtitle);
+}
+
+.admin-assignment-submit-btn {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.admin-assignment-cancel-btn:disabled,
+.admin-assignment-submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Mobile */
+
+@media (max-width: 768px) {
+  .admin-assignment-modal-backdrop {
+    padding: 14px;
+    align-items: flex-start;
+  }
+
+  .admin-assignment-modal {
+    width: 100%;
+    max-height: calc(100dvh - 28px);
+    margin: 0 auto;
+    border-radius: 24px;
+  }
+
+  .admin-assignment-modal__header {
+    padding: 58px 16px 14px;
+  }
+
+  .admin-assignment-modal__body {
+    padding: 0 16px 16px;
+    gap: 10px;
+  }
+
+  .admin-assignment-confirm-info p {
+    min-height: auto;
+    padding: 12px 14px;
+    text-align: center;
+  }
+
+  .admin-assignment-warning {
+    text-align: center;
+    display: grid;
+    justify-items: center;
+  }
+
+  .admin-assignment-note {
+    text-align: center;
+  }
+
+  .admin-assignment-modal__actions {
+    padding: 12px 16px 18px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .admin-assignment-cancel-btn,
+  .admin-assignment-submit-btn {
+    width: 100%;
+  }
+}
