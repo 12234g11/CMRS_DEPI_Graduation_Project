@@ -134,7 +134,7 @@ function SignupForm() {
         userData: response.user,
       });
 
-      navigate(ROUTES.HOME, { replace: true });
+      navigate(ROUTES.DASHBOARD, { replace: true });
     } catch (error) {
       setErrorMessage(error?.message || 'حدث خطأ أثناء إنشاء الحساب.');
     } finally {
@@ -217,9 +217,8 @@ function SignupForm() {
             <div className={`signup-city-dropdown ${isCityMenuOpen ? 'is-open' : ''}`}>
               <button
                 type="button"
-                className={`signup-city-dropdown__button ${
-                  selectedCity ? 'is-selected' : ''
-                }`}
+                className={`signup-city-dropdown__button ${selectedCity ? 'is-selected' : ''
+                  }`}
                 onClick={() => setIsCityMenuOpen((current) => !current)}
                 aria-expanded={isCityMenuOpen}
                 aria-label="اختيار المحافظة"
@@ -237,9 +236,8 @@ function SignupForm() {
                       <button
                         key={city.value}
                         type="button"
-                        className={`signup-city-dropdown__item ${
-                          isActive ? 'is-active' : ''
-                        }`}
+                        className={`signup-city-dropdown__item ${isActive ? 'is-active' : ''
+                          }`}
                         onClick={() => handleCitySelect(city)}
                       >
                         <span>{city.label}</span>

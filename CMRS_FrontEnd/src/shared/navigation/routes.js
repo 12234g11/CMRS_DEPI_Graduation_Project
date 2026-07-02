@@ -2,8 +2,9 @@ export const ROUTES = {
   HOME: '/',
   LOGIN: '/login',
   SIGNUP: '/signup',
-  COMPANY_LOGIN: '/company-login',
+  COMPANY_SETUP_PASSWORD: '/company/setup-password',
   FORGOT_PASSWORD: '/forgot-password',
+  RESET_PASSWORD: '/reset-password',
 
   DASHBOARD: '/dashboard',
   ADD_REPORT: '/reports/new',

@@ -1,8 +1,8 @@
 import { motion } from 'motion/react';
-import CompanyLoginForm from '../components/CompanyLoginForm';
-import authImage from '../images/auth.webp'
+import CompanySetupPasswordForm from '../components/CompanySetupPasswordForm';
+import authImage from '../images/auth.webp';
 
-function CompanyLoginPage() {
+function CompanySetupPasswordPage() {
   return (
     <main className="auth-page auth-page--company">
       <div className="auth-page__content">
@@ -26,7 +26,7 @@ function CompanyLoginPage() {
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="auth-page__panel-inner auth-page__panel-inner--wide">
-            <CompanyLoginForm />
+            <CompanySetupPasswordForm />
           </div>
         </motion.section>
       </div>
@@ -34,4 +34,4 @@ function CompanyLoginPage() {
   );
 }
 
-export default CompanyLoginPage;
+export default CompanySetupPasswordPage;

@@ -175,3 +175,47 @@ export async function loginCompany(credentials) {
     user: sanitizeCompany(company),
   };
 }
+export async function acceptCompanyInvitation(payload) {
+  await wait(700);
+
+  if (!payload.token) {
+    throw new Error('رابط الدعوة غير صحيح أو منتهي الصلاحية.');
+  }
+
+  if (!payload.email || !payload.password || !payload.confirmPassword) {
+    throw new Error('من فضلك املأ جميع الحقول المطلوبة.');
+  }
+
+  if (payload.password !== payload.confirmPassword) {
+    throw new Error('كلمة المرور وتأكيد كلمة المرور غير متطابقين.');
+  }
+
+  return {
+    success: true,
+    message: 'تم تفعيل حساب الشركة بنجاح.',
+  };
+}
+export async function resetPassword(payload) {
+  await wait(700);
+
+  if (!payload.token) {
+    throw new Error('رابط إعادة تعيين كلمة المرور غير صحيح أو منتهي الصلاحية.');
+  }
+
+  if (!payload.password || !payload.confirmPassword) {
+    throw new Error('من فضلك املأ كلمة المرور وتأكيد كلمة المرور.');
+  }
+
+  if (payload.password.length < 8) {
+    throw new Error('كلمة المرور يجب ألا تقل عن 8 أحرف.');
+  }
+
+  if (payload.password !== payload.confirmPassword) {
+    throw new Error('كلمة المرور وتأكيد كلمة المرور غير متطابقين.');
+  }
+
+  return {
+    success: true,
+    message: 'تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.',
+  };
+}

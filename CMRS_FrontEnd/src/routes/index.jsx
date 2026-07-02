@@ -6,13 +6,13 @@ import GuestRoute from './guards/GuestRoute';
 import MainLayout from '../layouts/MainLayout/MainLayout';
 import AuthLayout from '../layouts/AuthLayout/AuthLayout';
 import DashboardLayout from '../layouts/DashboardLayout/DashboardLayout';
+import ResetPasswordPage from '../features/auth/pages/ResetPasswordPage';
 
 import LandingPage from '../features/landing/pages/LandingPage';
 import LoginPage from '../features/auth/pages/LoginPage';
 import SignupPage from '../features/auth/pages/SignupPage';
-import CompanyLoginPage from '../features/auth/pages/CompanyLoginPage';
 import ForgotPasswordPage from '../features/auth/pages/ForgotPasswordPage';
-
+import CompanySetupPasswordPage from '../features/auth/pages/CompanySetupPasswordPage';
 import AddReportPage from '../features/user/add-report/pages/AddReportPage';
 import MyReportsPage from '../features/user/reports/pages/MyReportsPage';
 import NearbyIssuesPage from '../features/user/nearby-issues/pages/NearbyIssuesPage';
@@ -49,8 +49,12 @@ function AppRouter() {
         <Route element={<AuthLayout />}>
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
           <Route path={ROUTES.SIGNUP} element={<SignupPage />} />
-          <Route path={ROUTES.COMPANY_LOGIN} element={<CompanyLoginPage />} />
+          <Route
+            path={ROUTES.COMPANY_SETUP_PASSWORD}
+            element={<CompanySetupPasswordPage />}
+          />
           <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
+          <Route path={ROUTES.RESET_PASSWORD} element={<ResetPasswordPage />} />
         </Route>
       </Route>
 
@@ -91,7 +95,7 @@ function AppRouter() {
             />
             <Route path={ROUTES.COMPANY_TEAMS} element={<CompanyTeamsPage />} />
             <Route path={ROUTES.COMPANY_NOTIFICATIONS} element={<CompanyNotificationsPage />} />
-            <Route path={ROUTES.COMPANY_PROFILE} element={<CompanyProfilePage />} />\
+            <Route path={ROUTES.COMPANY_PROFILE} element={<CompanyProfilePage />} />
             <Route path={ROUTES.COMPANY_ANALYTICS} element={<CompanyAnalyticsPage />} />
           </Route>
         </Route>
