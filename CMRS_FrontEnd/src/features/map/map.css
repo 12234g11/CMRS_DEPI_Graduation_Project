@@ -441,3 +441,6 @@
     max-width: none;
   }
 }
+.reports-map__marker--danger {
+  background: #ef4444;
+}

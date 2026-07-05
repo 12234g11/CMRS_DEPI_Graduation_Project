@@ -9,15 +9,16 @@ function ProfileInfoCard({
   values,
   isEditing = false,
   onChange,
+  errors = {},
 }) {
-  const handleChange = (event) => {
+  function handleChange(event) {
     const { name, value } = event.target;
 
     onChange?.({
       ...values,
       [name]: value,
     });
-  };
+  }
 
   return (
     <section className="user-profile-card user-profile-info-card">
@@ -39,10 +40,17 @@ function ProfileInfoCard({
             <input
               type="text"
               name="fullName"
-              value={values.fullName}
+              value={values.fullName || ''}
               onChange={handleChange}
               placeholder="اكتب الاسم الكامل"
+              className={errors.fullName ? 'is-invalid' : ''}
             />
+
+            {errors.fullName ? (
+              <small className="user-profile-form__error">
+                {errors.fullName}
+              </small>
+            ) : null}
           </label>
 
           <label>
@@ -50,10 +58,17 @@ function ProfileInfoCard({
             <input
               type="email"
               name="email"
-              value={values.email}
+              value={values.email || ''}
               onChange={handleChange}
               placeholder="example@email.com"
+              className={errors.email ? 'is-invalid' : ''}
             />
+
+            {errors.email ? (
+              <small className="user-profile-form__error">
+                {errors.email}
+              </small>
+            ) : null}
           </label>
 
           <label>
@@ -61,10 +76,17 @@ function ProfileInfoCard({
             <input
               type="text"
               name="phone"
-              value={values.phone}
+              value={values.phone || ''}
               onChange={handleChange}
               placeholder="رقم الهاتف"
+              className={errors.phone ? 'is-invalid' : ''}
             />
+
+            {errors.phone ? (
+              <small className="user-profile-form__error">
+                {errors.phone}
+              </small>
+            ) : null}
           </label>
 
           <label>
@@ -72,21 +94,17 @@ function ProfileInfoCard({
             <input
               type="text"
               name="city"
-              value={values.city}
+              value={values.city || ''}
               onChange={handleChange}
               placeholder="المدينة"
+              className={errors.city ? 'is-invalid' : ''}
             />
-          </label>
 
-          <label className="user-profile-form__full">
-            <span>نبذة قصيرة</span>
-            <textarea
-              name="bio"
-              value={values.bio}
-              onChange={handleChange}
-              placeholder="اكتب نبذة قصيرة عن نشاطك داخل النظام"
-              rows={4}
-            />
+            {errors.city ? (
+              <small className="user-profile-form__error">
+                {errors.city}
+              </small>
+            ) : null}
           </label>
         </div>
       ) : (
@@ -95,7 +113,7 @@ function ProfileInfoCard({
             <FiUser />
             <div>
               <span>الاسم الكامل</span>
-              <strong>{values.fullName}</strong>
+              <strong>{values.fullName || '—'}</strong>
             </div>
           </article>
 
@@ -103,7 +121,7 @@ function ProfileInfoCard({
             <FiMail />
             <div>
               <span>البريد الإلكتروني</span>
-              <strong>{values.email}</strong>
+              <strong>{values.email || '—'}</strong>
             </div>
           </article>
 
@@ -111,7 +129,7 @@ function ProfileInfoCard({
             <FiPhone />
             <div>
               <span>رقم الهاتف</span>
-              <strong>{values.phone}</strong>
+              <strong>{values.phone || '—'}</strong>
             </div>
           </article>
 
@@ -119,14 +137,7 @@ function ProfileInfoCard({
             <FiMapPin />
             <div>
               <span>المدينة</span>
-              <strong>{values.city}</strong>
-            </div>
-          </article>
-
-          <article className="user-profile-info-list__bio">
-            <div>
-              <span>نبذة عن المستخدم</span>
-              <p>{values.bio}</p>
+              <strong>{values.city || '—'}</strong>
             </div>
           </article>
         </div>

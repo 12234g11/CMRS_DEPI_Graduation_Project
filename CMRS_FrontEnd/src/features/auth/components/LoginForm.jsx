@@ -42,14 +42,33 @@ function getRequestedPath(locationState) {
   return locationState.from.pathname;
 }
 
+function getLoginPayload(response) {
+  if (response?.data?.token && response?.data?.user) {
+    return response.data;
+  }
+
+  if (response?.data?.data?.token && response?.data?.data?.user) {
+    return response.data.data;
+  }
+
+  return null;
+}
+
 function LoginForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
 
-  const [formData, setFormData] = useState(initialValues);
+  const [formData, setFormData] = useState(() => ({
+    ...initialValues,
+    email: location.state?.email || '',
+  }));
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState(
+    location.state?.message || ''
+  );
 
   const from = getRequestedPath(location.state);
 
@@ -64,6 +83,10 @@ function LoginForm() {
     if (errorMessage) {
       setErrorMessage('');
     }
+
+    if (successMessage) {
+      setSuccessMessage('');
+    }
   }
 
   async function handleSubmit(event) {
@@ -77,16 +100,33 @@ function LoginForm() {
     try {
       setIsSubmitting(true);
       setErrorMessage('');
+      setSuccessMessage('');
 
       const response = await loginUser(formData);
+      const loginPayload = getLoginPayload(response);
+
+      if (!loginPayload?.token || !loginPayload?.user) {
+        throw new Error('استجابة تسجيل الدخول غير صحيحة من الخادم.');
+      }
+
+      const { token, user } = loginPayload;
+
+      const role = String(user.role || '').trim().toLowerCase();
+
+      if (!role) {
+        throw new Error('لم يتم تحديد صلاحية المستخدم من الخادم.');
+      }
 
       login({
-        token: response.token,
-        userData: response.user,
+        token,
+        userData: {
+          ...user,
+          role,
+        },
       });
 
       const redirectPath = getPostLoginRedirectPath({
-        role: response.user.role,
+        role,
         requestedPath: from,
       });
 
@@ -166,6 +206,17 @@ function LoginForm() {
             animate={{ opacity: 1, y: 0 }}
           >
             {errorMessage}
+          </motion.p>
+        ) : null}
+
+        {successMessage ? (
+          <motion.p
+            className="login-form__success"
+            role="status"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            {successMessage}
           </motion.p>
         ) : null}
 

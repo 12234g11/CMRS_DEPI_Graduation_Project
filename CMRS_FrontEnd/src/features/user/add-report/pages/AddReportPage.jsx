@@ -1,17 +1,20 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import { useAuth } from '../../../auth/hooks/useAuth';
 import { ROUTES } from '../../../../shared/navigation';
 import {
-  ADD_REPORT_CATEGORIES,
   ADD_REPORT_STEPS,
   REPORT_DETAILS_LIMITS,
-} from '../mocks/addReportMockData';
+} from '../constants/addReportConfig';
+
 import CategorySelectionStep from '../components/CategorySelectionStep';
 import DetailsStep from '../components/DetailsStep';
 import LocationStep from '../components/LocationStep';
 import ReportWizardHeader from '../components/ReportWizardHeader';
 import ReviewStep from '../components/ReviewStep';
+import DuplicateReportModal from '../components/DuplicateReportModal';
 import useAddReport from '../hooks/useAddReport';
 
 const DEFAULT_LOCATION = {
@@ -40,22 +43,46 @@ function createInitialFormState() {
   };
 }
 
+function getReportId(report) {
+  return report?.reportId || report?.id || report?.ReportId || report?.Id || '';
+}
+
 function AddReportPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const previewUrlsRef = useRef([]);
+
   const [currentStep, setCurrentStep] = useState(1);
   const [uploadMessage, setUploadMessage] = useState('');
   const [formValues, setFormValues] = useState(createInitialFormState);
-  const { submitReport, isSubmitting, error: submitError } = useAddReport();
 
-  const selectedCategory = useMemo(
-    () => ADD_REPORT_CATEGORIES.find((item) => item.id === formValues.categoryId) || null,
-    [formValues.categoryId]
-  );
+  const [duplicateReport, setDuplicateReport] = useState(null);
+  const [lastSubmissionPayload, setLastSubmissionPayload] = useState(null);
+
+  const {
+    categories,
+    isLoadingCategories,
+    categoriesError,
+    submitReport,
+    confirmDuplicate,
+    isSubmitting,
+    submitError,
+  } = useAddReport();
+
+  const safeCategories = Array.isArray(categories) ? categories : [];
+
+  const selectedCategory = useMemo(() => {
+    return (
+      safeCategories.find(
+        (category) =>
+          String(category.categoryId) === String(formValues.categoryId)
+      ) || null
+    );
+  }, [safeCategories, formValues.categoryId]);
 
   const locationLabel = useMemo(() => {
     const location = formValues.location || {};
+
     const parts = [
       location.governorateLabel || location.previewGovernorate || '',
       location.addressLine || '',
@@ -66,7 +93,9 @@ function AddReportPage() {
   }, [formValues.location]);
 
   useEffect(() => {
-    previewUrlsRef.current = formValues.imagePreviews.map((preview) => preview.url);
+    previewUrlsRef.current = formValues.imagePreviews.map(
+      (preview) => preview.url
+    );
   }, [formValues.imagePreviews]);
 
   useEffect(() => {
@@ -76,70 +105,98 @@ function AddReportPage() {
     };
   }, []);
 
-  const handleCategoryChange = (categoryId) => {
+  function resetFormAfterSuccess() {
+    previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    previewUrlsRef.current = [];
+
+    setFormValues(createInitialFormState());
+    setCurrentStep(1);
+    setUploadMessage('');
+    setDuplicateReport(null);
+    setLastSubmissionPayload(null);
+  }
+
+  function navigateToMyReports(createdReport, successMessage) {
+    navigate(ROUTES.MY_REPORTS, {
+      state: {
+        createdReportId: getReportId(createdReport),
+        successMessage:
+          successMessage ||
+          createdReport?.message ||
+          'تم إرسال البلاغ بنجاح ويمكنك متابعة حالته من صفحة بلاغاتي.',
+      },
+    });
+  }
+
+  function buildSubmissionPayload() {
+    return {
+      user,
+      category: selectedCategory,
+      values: {
+        ...formValues,
+        position:
+          formValues.location?.confirmedCoordinates ||
+          formValues.location?.coordinates ||
+          formValues.position,
+        locationText: locationLabel,
+      },
+    };
+  }
+
+  function handleCategoryChange(categoryId) {
     setFormValues((currentValues) => ({
       ...currentValues,
-      categoryId,
+      categoryId: String(categoryId),
     }));
-  };
+  }
 
-  const handleTitleChange = (title) => {
+  function handleTitleChange(title) {
     setFormValues((currentValues) => ({
       ...currentValues,
       title,
     }));
-  };
+  }
 
-  const handleDescriptionChange = (description) => {
+  function handleDescriptionChange(description) {
     setFormValues((currentValues) => ({
       ...currentValues,
       description,
     }));
-  };
+  }
 
-  const handleSeverityChange = (severity) => {
+  function handleSeverityChange(severity) {
     setFormValues((currentValues) => ({
       ...currentValues,
       severity,
     }));
-  };
+  }
+  function handleAddImages(nextFiles) {
+    const remainingSlots =
+      REPORT_DETAILS_LIMITS.maxImages - formValues.images.length;
 
-  const handleAddImages = (nextFiles) => {
-    const remainingSlots = REPORT_DETAILS_LIMITS.maxImages - formValues.images.length;
-    const validTypeFiles = nextFiles.filter((file) => file.type.startsWith('image/'));
-    const allowedSizeBytes = REPORT_DETAILS_LIMITS.maxImageSizeMb * 1024 * 1024;
-    const validSizeFiles = validTypeFiles.filter((file) => file.size <= allowedSizeBytes);
-    const acceptedFiles = validSizeFiles.slice(0, remainingSlots);
+    const allowedSizeBytes =
+      REPORT_DETAILS_LIMITS.maxImageSizeMb * 1024 * 1024;
 
-    const rejectedByTypeCount = nextFiles.length - validTypeFiles.length;
-    const rejectedBySizeCount = validTypeFiles.length - validSizeFiles.length;
-    const rejectedByLimitCount = validSizeFiles.length - acceptedFiles.length;
+    const validFiles = nextFiles
+      .filter((file) => file.type === 'image/webp')
+      .filter((file) => file.size <= allowedSizeBytes)
+      .slice(0, remainingSlots);
 
-    if (rejectedByTypeCount || rejectedBySizeCount || rejectedByLimitCount) {
-      const messages = [];
+    const rejectedCount = nextFiles.length - validFiles.length;
 
-      if (rejectedByTypeCount) {
-        messages.push('تم تجاهل الملفات غير الصورية.');
-      }
-
-      if (rejectedBySizeCount) {
-        messages.push(`بعض الصور تجاوزت ${REPORT_DETAILS_LIMITS.maxImageSizeMb}MB.`);
-      }
-
-      if (rejectedByLimitCount) {
-        messages.push(`يمكنك رفع ${REPORT_DETAILS_LIMITS.maxImages} صور كحد أقصى.`);
-      }
-
-      setUploadMessage(messages.join(' '));
+    if (rejectedCount) {
+      setUploadMessage(
+        `تم تجاهل ${rejectedCount} صورة. الصور يجب أن تكون WEBP ولا تتجاوز ${REPORT_DETAILS_LIMITS.maxImageSizeMb}MB.`
+      );
     } else {
       setUploadMessage('');
     }
 
-    if (!acceptedFiles.length) {
+    if (!validFiles.length) {
       return;
     }
 
-    const nextPreviews = acceptedFiles.map((file, index) => ({
+    const nextPreviews = validFiles.map((file, index) => ({
       id: `${file.name}-${Date.now()}-${index}`,
       name: file.name,
       url: URL.createObjectURL(file),
@@ -147,12 +204,12 @@ function AddReportPage() {
 
     setFormValues((currentValues) => ({
       ...currentValues,
-      images: [...currentValues.images, ...acceptedFiles],
+      images: [...currentValues.images, ...validFiles],
       imagePreviews: [...currentValues.imagePreviews, ...nextPreviews],
     }));
-  };
+  }
 
-  const handleRemoveImage = (previewId) => {
+  function handleRemoveImage(previewId) {
     setFormValues((currentValues) => {
       const previewIndex = currentValues.imagePreviews.findIndex(
         (preview) => preview.id === previewId
@@ -163,63 +220,99 @@ function AddReportPage() {
       }
 
       const removedPreview = currentValues.imagePreviews[previewIndex];
+
       if (removedPreview?.url) {
         URL.revokeObjectURL(removedPreview.url);
       }
 
       return {
         ...currentValues,
-        images: currentValues.images.filter((_, index) => index !== previewIndex),
-        imagePreviews: currentValues.imagePreviews.filter((preview) => preview.id !== previewId),
+        images: currentValues.images.filter(
+          (_, index) => index !== previewIndex
+        ),
+        imagePreviews: currentValues.imagePreviews.filter(
+          (preview) => preview.id !== previewId
+        ),
       };
     });
-  };
+  }
 
-  const handleSubmit = async () => {
-    const createdReport = await submitReport({
-      user,
-      values: {
-        ...formValues,
-        position:
-          formValues.location?.confirmedCoordinates ||
-          formValues.location?.coordinates ||
-          formValues.position,
-        locationText: locationLabel,
-      },
+  async function handleSubmit() {
+    const submissionPayload = buildSubmissionPayload();
+
+    setLastSubmissionPayload(submissionPayload);
+
+    const result = await submitReport(submissionPayload, {
+      ignoreDuplicateCheck: false,
     });
 
-    if (!createdReport) {
+    if (!result) return;
+
+    if (result.type === 'duplicate') {
+      setDuplicateReport(result.duplicateReport);
       return;
     }
 
-    previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
-    previewUrlsRef.current = [];
-    setFormValues(createInitialFormState());
-    setCurrentStep(1);
-    setUploadMessage('');
+    if (result.type === 'created') {
+      resetFormAfterSuccess();
+      navigateToMyReports(result.report);
+    }
+  }
 
-    navigate(ROUTES.MY_REPORTS, {
-      state: {
-        createdReportId: createdReport.id,
-        successMessage: 'تم إرسال البلاغ بنجاح ويمكنك متابعة حالته من صفحة بلاغاتي.',
-      },
+  async function handleConfirmDuplicate() {
+    if (!duplicateReport?.id) return;
+
+    const result = await confirmDuplicate(duplicateReport.id);
+
+    if (!result) return;
+
+    resetFormAfterSuccess();
+
+    navigateToMyReports(
+      { reportId: duplicateReport.id },
+      result.message ||
+      'تم تأكيد المشكلة بنجاح ويمكنك متابعة حالته من صفحة بلاغاتي.'
+    );
+  }
+
+  async function handleCreateAnyway() {
+    const submissionPayload = lastSubmissionPayload || buildSubmissionPayload();
+
+    const result = await submitReport(submissionPayload, {
+      ignoreDuplicateCheck: true,
     });
-  };
+
+    if (!result) return;
+
+    if (result.type === 'created') {
+      resetFormAfterSuccess();
+
+      navigateToMyReports(
+        result.report,
+        result.report?.message || 'تم إرسال البلاغ كبلاغ جديد بنجاح.'
+      );
+
+      return;
+    }
+
+    if (result.type === 'duplicate') {
+      setDuplicateReport(result.duplicateReport);
+    }
+  }
 
   return (
     <div className="dashboard-page add-report-page">
-      <ReportWizardHeader
-        steps={ADD_REPORT_STEPS}
-        currentStep={currentStep}
-      />
+      <ReportWizardHeader steps={ADD_REPORT_STEPS} currentStep={currentStep} />
 
       <div className="add-report-shell">
         {currentStep === 1 ? (
           <CategorySelectionStep
-            categories={ADD_REPORT_CATEGORIES}
+            categories={safeCategories}
             selectedCategoryId={formValues.categoryId}
             onSelect={handleCategoryChange}
             onNext={() => setCurrentStep(2)}
+            isLoading={isLoadingCategories}
+            errorMessage={categoriesError}
           />
         ) : null}
 
@@ -259,6 +352,23 @@ function AddReportPage() {
           />
         ) : null}
       </div>
+
+      {duplicateReport
+        ? createPortal(
+          <DuplicateReportModal
+            duplicateReport={duplicateReport}
+            isSubmitting={isSubmitting}
+            onConfirmDuplicate={handleConfirmDuplicate}
+            onCreateAnyway={handleCreateAnyway}
+            onClose={() => {
+              if (!isSubmitting) {
+                setDuplicateReport(null);
+              }
+            }}
+          />,
+          document.body
+        )
+        : null}
     </div>
   );
 }

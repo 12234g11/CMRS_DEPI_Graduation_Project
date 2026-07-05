@@ -10,7 +10,7 @@ import {
 } from 'react-icons/fi';
 
 function getInitials(name = '') {
-  const words = name.trim().split(/\s+/).filter(Boolean);
+  const words = String(name).trim().split(/\s+/).filter(Boolean);
 
   if (!words.length) return '؟';
 
@@ -23,7 +23,7 @@ function getInitials(name = '') {
 function formatJoinDate(value) {
   const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
+  if (!value || Number.isNaN(date.getTime())) {
     return 'تاريخ غير محدد';
   }
 
@@ -46,7 +46,7 @@ function ProfileHeader({
       <div className="user-profile-header__top">
         <div className="user-profile-header__title">
           <h1>الملف الشخصي</h1>
-          <p>Profile — إدارة بياناتك ودرجة موثوقيتك داخل النظام</p>
+          <p>إدارة بيانات حسابك داخل النظام</p>
         </div>
 
         <div className="user-profile-header__actions">
@@ -94,7 +94,7 @@ function ProfileHeader({
           </div>
 
           <div>
-            <h2>{profile?.fullName}</h2>
+            <h2>{profile?.fullName || 'مستخدم'}</h2>
 
             <div className="user-profile-header__status">
               <span className="user-profile-header__status-dot" />
@@ -106,17 +106,17 @@ function ProfileHeader({
         <div className="user-profile-header__meta">
           <span>
             <FiMail />
-            {profile?.email}
+            {profile?.email || 'لا يوجد بريد إلكتروني'}
           </span>
 
           <span>
             <FiPhone />
-            {profile?.phone}
+            {profile?.phone || 'لا يوجد رقم هاتف'}
           </span>
 
           <span>
             <FiMapPin />
-            {profile?.city}
+            {profile?.city || 'مدينة غير محددة'}
           </span>
 
           <span>
@@ -126,7 +126,7 @@ function ProfileHeader({
 
           <span>
             <FiShield />
-            درجة الثقة {profile?.trustScore}%
+            درجة الثقة {profile?.trustScore ?? 0}%
           </span>
         </div>
       </div>

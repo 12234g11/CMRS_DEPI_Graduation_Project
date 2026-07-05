@@ -1,13 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  FiChevronDown,
-  FiCheck,
-  FiHome,
-} from 'react-icons/fi';
+import { FiChevronDown, FiCheck, FiHome } from 'react-icons/fi';
 import { ROUTES } from '../../../shared/navigation';
-import { useAuth } from '../hooks/useAuth';
 import { registerUser } from '../api/authApi';
 
 const GOVERNORATE_OPTIONS = [
@@ -23,7 +18,7 @@ const initialValues = {
   city: '',
   password: '',
   confirmPassword: '',
-  acceptTerms: false,
+  termsAccepted: false,
 };
 
 const containerVariants = {
@@ -49,7 +44,6 @@ const itemVariants = {
 
 function SignupForm() {
   const navigate = useNavigate();
-  const { login } = useAuth();
 
   const [formData, setFormData] = useState(initialValues);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,7 +51,7 @@ function SignupForm() {
   const [isCityMenuOpen, setIsCityMenuOpen] = useState(false);
 
   const selectedCity = GOVERNORATE_OPTIONS.find(
-    (city) => city.value === formData.city,
+    (city) => city.value === formData.city
   );
 
   function handleChange(event) {
@@ -106,7 +100,7 @@ function SignupForm() {
       return 'كلمتا المرور غير متطابقتين.';
     }
 
-    if (!formData.acceptTerms) {
+    if (!formData.termsAccepted) {
       return 'يجب الموافقة على الشروط والأحكام أولاً.';
     }
 
@@ -129,12 +123,19 @@ function SignupForm() {
 
       const response = await registerUser(formData);
 
-      login({
-        token: response.token,
-        userData: response.user,
-      });
+      if (response?.success === false) {
+        throw new Error(response.message || 'حدث خطأ أثناء إنشاء الحساب.');
+      }
 
-      navigate(ROUTES.DASHBOARD, { replace: true });
+      navigate(ROUTES.LOGIN, {
+        replace: true,
+        state: {
+          email: formData.email,
+          message:
+            response?.message ||
+            'تم إنشاء الحساب بنجاح. يمكنك الآن تسجيل الدخول.',
+        },
+      });
     } catch (error) {
       setErrorMessage(error?.message || 'حدث خطأ أثناء إنشاء الحساب.');
     } finally {
@@ -214,11 +215,16 @@ function SignupForm() {
           <motion.div className="signup-form__field" variants={itemVariants}>
             <label>المحافظة</label>
 
-            <div className={`signup-city-dropdown ${isCityMenuOpen ? 'is-open' : ''}`}>
+            <div
+              className={`signup-city-dropdown ${
+                isCityMenuOpen ? 'is-open' : ''
+              }`}
+            >
               <button
                 type="button"
-                className={`signup-city-dropdown__button ${selectedCity ? 'is-selected' : ''
-                  }`}
+                className={`signup-city-dropdown__button ${
+                  selectedCity ? 'is-selected' : ''
+                }`}
                 onClick={() => setIsCityMenuOpen((current) => !current)}
                 aria-expanded={isCityMenuOpen}
                 aria-label="اختيار المحافظة"
@@ -236,8 +242,9 @@ function SignupForm() {
                       <button
                         key={city.value}
                         type="button"
-                        className={`signup-city-dropdown__item ${isActive ? 'is-active' : ''
-                          }`}
+                        className={`signup-city-dropdown__item ${
+                          isActive ? 'is-active' : ''
+                        }`}
                         onClick={() => handleCitySelect(city)}
                       >
                         <span>{city.label}</span>
@@ -280,8 +287,8 @@ function SignupForm() {
         <motion.label className="signup-form__checkbox" variants={itemVariants}>
           <input
             type="checkbox"
-            name="acceptTerms"
-            checked={formData.acceptTerms}
+            name="termsAccepted"
+            checked={formData.termsAccepted}
             onChange={handleChange}
           />
           <span>أوافق على الشروط والأحكام</span>

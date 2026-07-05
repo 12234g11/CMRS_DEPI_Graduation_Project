@@ -1,4 +1,5 @@
-import { FiMapPin, FiRefreshCcw } from 'react-icons/fi';
+import { useMemo, useState } from 'react';
+import { FiAlertCircle, FiMapPin, FiRefreshCcw } from 'react-icons/fi';
 import ReportLocationPicker from './ReportLocationPicker';
 
 const GOVERNORATE_OPTIONS = [
@@ -6,6 +7,10 @@ const GOVERNORATE_OPTIONS = [
   { value: 'giza', label: 'الجيزة' },
   { value: 'qalyubia', label: 'القليوبية' },
 ];
+
+const ALLOWED_GOVERNORATE_LABELS = GOVERNORATE_OPTIONS.map(
+  (option) => option.label
+);
 
 const DEFAULT_LOCATION = {
   coordinates: { lat: 30.04442, lng: 31.235712 },
@@ -19,12 +24,82 @@ const DEFAULT_LOCATION = {
   previewGovernorate: '',
 };
 
+function normalizeArabicText(value = '') {
+  return String(value)
+    .trim()
+    .replace(/[إأآا]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/\s+/g, ' ');
+}
+
+function findGovernorateOptionByValueOrLabel(value = '', label = '') {
+  const normalizedValue = String(value || '').trim().toLowerCase();
+  const normalizedLabel = normalizeArabicText(label);
+
+  return GOVERNORATE_OPTIONS.find((option) => {
+    return (
+      option.value === normalizedValue ||
+      normalizeArabicText(option.label) === normalizedLabel
+    );
+  });
+}
+
+function getGovernorateDisplayName(location = {}) {
+  return (
+    location.governorateLabel ||
+    location.previewGovernorate ||
+    location.governorate ||
+    ''
+  );
+}
+
+function isGovernorateAllowed(location = {}) {
+  const matchedOption = findGovernorateOptionByValueOrLabel(
+    location.governorate,
+    getGovernorateDisplayName(location)
+  );
+
+  return Boolean(matchedOption);
+}
+
+function getLocationValidationErrors(location = {}) {
+  const errors = {};
+
+  const hasConfirmedCoordinates = Boolean(
+    location?.confirmedCoordinates?.lat && location?.confirmedCoordinates?.lng
+  );
+
+  const governorateDisplayName = getGovernorateDisplayName(location);
+
+  if (!hasConfirmedCoordinates) {
+    errors.coordinates = 'برجاء تحديد موقع المشكلة وتثبيته على الخريطة.';
+  }
+
+  if (!governorateDisplayName) {
+    errors.governorate = 'برجاء اختيار المحافظة.';
+  } else if (!isGovernorateAllowed(location)) {
+    errors.governorate = `نطاق الخدمة الحالي داخل ${ALLOWED_GOVERNORATE_LABELS.join(
+      ' و '
+    )} فقط. برجاء اختيار موقع داخل هذه المحافظات.`;
+  }
+
+  if (!String(location.addressLine || '').trim()) {
+    errors.addressLine = 'برجاء كتابة العنوان الأساسي للمشكلة.';
+  } else if (String(location.addressLine || '').trim().length < 8) {
+    errors.addressLine = 'العنوان الأساسي قصير جدًا. برجاء كتابة عنوان أوضح.';
+  }
+
+  return errors;
+}
+
 function LocationStep({
   formData = {},
-  setFormData = () => {},
+  setFormData = () => { },
   onNext,
   onBack,
 }) {
+  const [touchedFields, setTouchedFields] = useState({});
+
   const location = {
     ...DEFAULT_LOCATION,
     ...(formData?.location ?? {}),
@@ -37,21 +112,67 @@ function LocationStep({
 
   const isLocationConfirmed = Boolean(location.isConfirmed);
 
-  const handleLocationChange = (partialLocation) => {
+  const selectedGovernorate = GOVERNORATE_OPTIONS.find(
+    (option) => option.value === location.governorate
+  );
+
+  const validationErrors = useMemo(
+    () => getLocationValidationErrors(location),
+    [location]
+  );
+
+  const canProceed = Object.keys(validationErrors).length === 0;
+
+  function shouldShowError(fieldName) {
+    return Boolean(touchedFields[fieldName] && validationErrors[fieldName]);
+  }
+
+  function markFieldAsTouched(fieldName) {
+    setTouchedFields((current) => ({
+      ...current,
+      [fieldName]: true,
+    }));
+  }
+
+  function handleLocationChange(partialLocation) {
     setFormData((previous = {}) => {
+      const currentLocation = previous.location ?? DEFAULT_LOCATION;
+
+      const incomingGovernorateLabel =
+        partialLocation?.governorateLabel ||
+        partialLocation?.previewGovernorate ||
+        currentLocation.governorateLabel ||
+        currentLocation.previewGovernorate ||
+        '';
+
+      const matchedGovernorate = findGovernorateOptionByValueOrLabel(
+        partialLocation?.governorate || currentLocation.governorate,
+        incomingGovernorateLabel
+      );
+
       const nextLocation = {
         ...DEFAULT_LOCATION,
-        ...(previous.location ?? {}),
+        ...currentLocation,
         ...partialLocation,
+
         coordinates: {
           ...DEFAULT_LOCATION.coordinates,
-          ...(previous.location?.coordinates ?? {}),
+          ...(currentLocation.coordinates ?? {}),
           ...(partialLocation?.coordinates ?? {}),
         },
+
         confirmedCoordinates:
           partialLocation?.confirmedCoordinates ??
-          previous.location?.confirmedCoordinates ??
+          currentLocation.confirmedCoordinates ??
           null,
+
+        governorate: matchedGovernorate
+          ? matchedGovernorate.value
+          : partialLocation?.governorate ?? currentLocation.governorate ?? '',
+
+        governorateLabel: matchedGovernorate
+          ? matchedGovernorate.label
+          : incomingGovernorateLabel,
       };
 
       return {
@@ -67,24 +188,31 @@ function LocationStep({
           .join(' - '),
       };
     });
-  };
 
-  const selectedGovernorate = GOVERNORATE_OPTIONS.find(
-    (option) => option.value === location.governorate,
-  );
+    if (partialLocation?.confirmedCoordinates || partialLocation?.isConfirmed) {
+      setTouchedFields((current) => ({
+        ...current,
+        coordinates: true,
+        governorate: true,
+      }));
+    }
+  }
 
-  const handleGovernorateSelect = (option) => {
+  function handleGovernorateSelect(option) {
     if (isLocationConfirmed) {
       return;
     }
 
+    markFieldAsTouched('governorate');
+
     handleLocationChange({
       governorate: option.value,
       governorateLabel: option.label,
+      previewGovernorate: option.label,
     });
-  };
+  }
 
-  const handleFieldChange = (event) => {
+  function handleFieldChange(event) {
     const { name, value } = event.target;
 
     if (isLocationConfirmed && name !== 'addressDetails') {
@@ -98,10 +226,13 @@ function LocationStep({
         ...DEFAULT_LOCATION,
         ...currentLocation,
         [name]: value,
+
         governorateLabel:
           name === 'governorate'
-            ? GOVERNORATE_OPTIONS.find((option) => option.value === value)?.label || ''
+            ? GOVERNORATE_OPTIONS.find((option) => option.value === value)
+              ?.label || ''
             : currentLocation.governorateLabel,
+
         coordinates: {
           ...DEFAULT_LOCATION.coordinates,
           ...(currentLocation.coordinates ?? {}),
@@ -120,25 +251,44 @@ function LocationStep({
           .join(' - '),
       };
     });
-  };
+  }
 
-  const handleClearLocation = () => {
+  function handleFieldBlur(event) {
+    markFieldAsTouched(event.target.name);
+  }
+
+  function handleClearLocation() {
     setFormData((previous = {}) => ({
       ...previous,
       location: {
         ...DEFAULT_LOCATION,
-        coordinates: previous.location?.coordinates || DEFAULT_LOCATION.coordinates,
+        coordinates:
+          previous.location?.coordinates || DEFAULT_LOCATION.coordinates,
       },
       position: null,
       locationText: '',
     }));
-  };
 
-  const canProceed =
-    Boolean(location?.confirmedCoordinates?.lat) &&
-    Boolean(location?.confirmedCoordinates?.lng) &&
-    Boolean(location.governorate) &&
-    Boolean(location.addressLine.trim());
+    setTouchedFields({});
+  }
+
+  function handleNextClick() {
+    setTouchedFields({
+      coordinates: true,
+      governorate: true,
+      addressLine: true,
+    });
+
+    if (!canProceed) {
+      return;
+    }
+
+    onNext();
+  }
+
+  const governorateDisplayName = getGovernorateDisplayName(location);
+  const isOutsideAllowedGovernorates =
+    Boolean(governorateDisplayName) && !isGovernorateAllowed(location);
 
   return (
     <section className="add-report-step">
@@ -155,18 +305,32 @@ function LocationStep({
 
       <div className="add-report-step__grid add-report-step__grid--location">
         <div className="add-report-location-form-card">
+          {shouldShowError('coordinates') ? (
+            <div className="add-report-location-error">
+              <FiAlertCircle />
+              <span>{validationErrors.coordinates}</span>
+            </div>
+          ) : null}
+
+          {isOutsideAllowedGovernorates || shouldShowError('governorate') ? (
+            <div className="add-report-location-error">
+              <FiAlertCircle />
+              <span>{validationErrors.governorate}</span>
+            </div>
+          ) : null}
+
           <div className="form-field form-field--governorate">
             <label>المحافظة</label>
 
             <div className="dropdown governorate-bs-dropdown">
               <button
                 type="button"
-                className={`btn dropdown-toggle governorate-bs-dropdown__toggle ${
-                  selectedGovernorate ? 'is-selected' : ''
-                }`}
+                className={`btn dropdown-toggle governorate-bs-dropdown__toggle ${selectedGovernorate ? 'is-selected' : ''
+                  } ${shouldShowError('governorate') ? 'is-invalid' : ''}`}
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
                 disabled={isLocationConfirmed}
+                onBlur={() => markFieldAsTouched('governorate')}
                 title={
                   isLocationConfirmed
                     ? 'لتغيير المحافظة اضغط إلغاء تحديد المشكلة أولًا'
@@ -184,9 +348,8 @@ function LocationStep({
                     <li key={option.value}>
                       <button
                         type="button"
-                        className={`dropdown-item governorate-bs-dropdown__item ${
-                          isActive ? 'active' : ''
-                        }`}
+                        className={`dropdown-item governorate-bs-dropdown__item ${isActive ? 'active' : ''
+                          }`}
                         onClick={() => handleGovernorateSelect(option)}
                         disabled={isLocationConfirmed}
                       >
@@ -200,15 +363,20 @@ function LocationStep({
           </div>
 
           <div className="form-field">
-            <label htmlFor="addressLine">العنوان بالتفصيل</label>
+            <label htmlFor="addressLine">
+              العنوان بالتفصيل <span className="form-field__required">*</span>
+            </label>
+
             <input
               id="addressLine"
               name="addressLine"
               type="text"
-              className="input"
+              className={`input ${shouldShowError('addressLine') ? 'is-invalid' : ''
+                }`}
               placeholder="مثال: شارع التحرير - الدقي - بجوار محطة مترو الدقي"
               value={location.addressLine}
               onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
               disabled={isLocationConfirmed}
               title={
                 isLocationConfirmed
@@ -216,10 +384,23 @@ function LocationStep({
                   : undefined
               }
             />
+
+            {shouldShowError('addressLine') ? (
+              <p className="add-report-form__message add-report-form__message--error">
+                {validationErrors.addressLine}
+              </p>
+            ) : null}
           </div>
 
           <div className="form-field">
-            <label htmlFor="addressDetails">تفاصيل إضافية للعنوان</label>
+            <label htmlFor="addressDetails" className="form-field__label">
+              <span className="form-field__label-text">
+                تفاصيل إضافية للعنوان
+              </span>
+
+              <span className="form-field__optional">اختياري</span>
+            </label>
+
             <input
               id="addressDetails"
               name="addressDetails"
@@ -231,10 +412,17 @@ function LocationStep({
             />
           </div>
 
-          <div className="add-report-location-form-card__notice">
-            {isLocationConfirmed
-              ? 'تم تثبيت موقع المشكلة والعنوان الأساسي. يمكنك إضافة أو تعديل التفاصيل الإضافية، ولتغيير الموقع أو العنوان الأساسي اضغط إلغاء تحديد المشكلة أولًا.'
-              : 'حرّك الخريطة حتى يصل المؤشر إلى المكان المطلوب، ثم اضغط زر تأكيد الموقع لحفظه.'}
+          <div
+            className={`add-report-location-form-card__notice ${isOutsideAllowedGovernorates ? 'is-error' : ''
+              }`}
+          >
+            {isOutsideAllowedGovernorates
+              ? `عذرًا، لا يمكن إرسال بلاغ خارج نطاق ${ALLOWED_GOVERNORATE_LABELS.join(
+                ' و '
+              )}. برجاء اختيار موقع داخل المحافظات المدعومة.`
+              : isLocationConfirmed
+                ? 'تم تثبيت موقع المشكلة والعنوان الأساسي. يمكنك إضافة أو تعديل التفاصيل الإضافية، ولتغيير الموقع أو العنوان الأساسي اضغط إلغاء تحديد المشكلة أولًا.'
+                : 'حرّك الخريطة حتى يصل المؤشر إلى المكان المطلوب، ثم اضغط زر تأكيد الموقع لحفظه.'}
           </div>
 
           <button
@@ -252,13 +440,14 @@ function LocationStep({
             <span>إلغاء تحديد المشكلة</span>
           </button>
         </div>
-
-        <ReportLocationPicker
-          value={location}
-          onChange={handleLocationChange}
-          height={500}
-          isActive
-        />
+        <div className="add-report-location-map-card">
+          <ReportLocationPicker
+            value={location}
+            onChange={handleLocationChange}
+            height={500}
+            isActive
+          />
+        </div>
       </div>
 
       <div className="add-report-step__actions add-report-step__actions--location">
@@ -273,7 +462,7 @@ function LocationStep({
         <button
           type="button"
           className="add-report-btn add-report-btn--primary"
-          onClick={onNext}
+          onClick={handleNextClick}
           disabled={!canProceed}
         >
           التالي

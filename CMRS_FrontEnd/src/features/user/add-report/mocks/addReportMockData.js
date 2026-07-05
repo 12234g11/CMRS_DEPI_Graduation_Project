@@ -5,79 +5,6 @@ export const ADD_REPORT_STEPS = [
   { id: 4, key: 'review', label: 'إرسال' },
 ];
 
-export const ADD_REPORT_CATEGORIES = [
-  {
-    id: 'roads-pavements',
-    label: 'الطرق والرصف',
-    subtitle: 'Roads & Pavements',
-    iconKey: 'map',
-    tone: 'orange',
-  },
-  {
-    id: 'lighting-electricity',
-    label: 'الإنارة والكهرباء',
-    subtitle: 'Lighting & Electricity',
-    iconKey: 'zap',
-    tone: 'amber',
-  },
-  {
-    id: 'cleaning-waste',
-    label: 'النظافة والمخلفات',
-    subtitle: 'Cleaning & Waste',
-    iconKey: 'trash',
-    tone: 'mint',
-  },
-  {
-    id: 'water-drainage',
-    label: 'المياه والصرف',
-    subtitle: 'Water & Drainage',
-    iconKey: 'droplet',
-    tone: 'sky',
-  },
-  {
-    id: 'traffic-signals',
-    label: 'الإشارات والمرور',
-    subtitle: 'Traffic & Signals',
-    iconKey: 'traffic',
-    tone: 'rose',
-  },
-  {
-    id: 'trees-gardens',
-    label: 'الأشجار والحدائق',
-    subtitle: 'Trees & Gardens',
-    iconKey: 'tree',
-    tone: 'emerald',
-  },
-  {
-    id: 'public-safety',
-    label: 'السلامة العامة',
-    subtitle: 'Public Safety',
-    iconKey: 'shield',
-    tone: 'violet',
-  },
-  {
-    id: 'gas',
-    label: 'الغاز',
-    subtitle: 'Gas',
-    iconKey: 'fire',
-    tone: 'rose',
-  },
-  {
-    id: 'networks',
-    label: 'الشبكات',
-    subtitle: 'Networks',
-    iconKey: 'wifi',
-    tone: 'sky',
-  },
-  {
-    id: 'general-maintenance',
-    label: 'صيانة عامة',
-    subtitle: 'General Maintenance',
-    iconKey: 'tool',
-    tone: 'slate',
-  },
-];
-
 export const REPORT_SEVERITY_OPTIONS = [
   { id: 'low', label: 'منخفضة', subtitle: 'Low', tone: 'success' },
   { id: 'medium', label: 'متوسطة', subtitle: 'Medium', tone: 'warning' },
@@ -85,9 +12,9 @@ export const REPORT_SEVERITY_OPTIONS = [
 ];
 
 export const REPORT_DETAILS_LIMITS = {
-  maxImages: 4,
+  maxImages: 5,
   maxDescriptionLength: 500,
-  maxImageSizeMb: 10,
+  maxImageSizeMb: 5,
 };
 
 export const LOCATION_PREVIEW_MARKERS = [

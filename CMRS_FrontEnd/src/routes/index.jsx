@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Navigate, Routes, Route } from 'react-router-dom';
 import { ROUTES, ROLES } from '../shared/navigation';
 import ProtectedRoute from './guards/ProtectedRoute';
 import RoleRoute from './guards/RoleRoute';
@@ -18,7 +18,6 @@ import MyReportsPage from '../features/user/reports/pages/MyReportsPage';
 import NearbyIssuesPage from '../features/user/nearby-issues/pages/NearbyIssuesPage';
 import UserNotificationsPage from '../features/user/notifications/pages/UserNotificationsPage';
 import UserProfilePage from '../features/user/profile/pages/UserProfilePage';
-import UserDashboardPage from '../features/user/dashboard/pages/UserDashboardPage';
 
 import AdminDashboardPage from '../features/admin/dashboard/pages/AdminDashboardPage';
 import ReviewReportsPage from '../features/admin/reports/pages/ReviewReportsPage';
@@ -61,7 +60,10 @@ function AppRouter() {
       <Route element={<ProtectedRoute />}>
         <Route element={<RoleRoute allowedRoles={[ROLES.USER]} />}>
           <Route element={<DashboardLayout />}>
-            <Route path={ROUTES.DASHBOARD} element={<UserDashboardPage />} />
+            <Route
+              path={ROUTES.DASHBOARD}
+              element={<Navigate to={ROUTES.MY_REPORTS} replace />}
+            />
             <Route path={ROUTES.ADD_REPORT} element={<AddReportPage />} />
             <Route path={ROUTES.MY_REPORTS} element={<MyReportsPage />} />
             <Route path={ROUTES.NEARBY_ISSUES} element={<NearbyIssuesPage />} />

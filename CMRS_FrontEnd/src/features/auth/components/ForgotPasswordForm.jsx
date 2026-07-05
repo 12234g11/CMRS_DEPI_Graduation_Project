@@ -43,20 +43,25 @@ function ForgotPasswordForm() {
       [name]: value,
     }));
 
-    if (errorMessage) {
-      setErrorMessage('');
+    if (errorMessage) setErrorMessage('');
+    if (successMessage) setSuccessMessage('');
+  }
+
+  function validateForm() {
+    if (!formData.email.trim()) {
+      return 'من فضلك اكتب البريد الإلكتروني.';
     }
 
-    if (successMessage) {
-      setSuccessMessage('');
-    }
+    return '';
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!formData.email.trim()) {
-      setErrorMessage('من فضلك أدخل البريد الإلكتروني.');
+    const validationError = validateForm();
+
+    if (validationError) {
+      setErrorMessage(validationError);
       return;
     }
 
@@ -67,11 +72,13 @@ function ForgotPasswordForm() {
 
       const response = await requestPasswordReset(formData.email);
 
-      setSuccessMessage(response.message);
-      setFormData(initialValues);
+      setSuccessMessage(
+        response?.message ||
+          'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.'
+      );
     } catch (error) {
       setErrorMessage(
-        error?.message || 'حدث خطأ أثناء محاولة إرسال رابط إعادة التعيين.'
+        error?.message || 'حدث خطأ أثناء إرسال رابط إعادة تعيين كلمة المرور.'
       );
     } finally {
       setIsSubmitting(false);
@@ -89,7 +96,7 @@ function ForgotPasswordForm() {
       <motion.header className="forgot-form__header" variants={itemVariants}>
         <h1 className="forgot-form__title">نسيت كلمة المرور؟</h1>
         <p className="forgot-form__subtitle">
-          أدخل بريدك الإلكتروني وسنرسل لك رابطًا لإعادة تعيين كلمة المرور
+          أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين كلمة المرور
         </p>
       </motion.header>
 
@@ -105,7 +112,7 @@ function ForgotPasswordForm() {
             id="email"
             name="email"
             type="email"
-            placeholder="مثال: example@mail.com"
+            placeholder="example@mail.com"
             value={formData.email}
             onChange={handleChange}
             autoComplete="email"
@@ -116,7 +123,6 @@ function ForgotPasswordForm() {
           <motion.p
             className="forgot-form__error"
             role="alert"
-            variants={itemVariants}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
           >
@@ -128,7 +134,6 @@ function ForgotPasswordForm() {
           <motion.p
             className="forgot-form__success"
             role="status"
-            variants={itemVariants}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
           >
@@ -150,12 +155,6 @@ function ForgotPasswordForm() {
         <motion.div className="forgot-form__links" variants={itemVariants}>
           <Link to={ROUTES.LOGIN} className="forgot-form__link">
             العودة لتسجيل الدخول
-          </Link>
-
-          <span className="forgot-form__divider">|</span>
-
-          <Link to={ROUTES.SIGNUP} className="forgot-form__link">
-            إنشاء حساب جديد
           </Link>
         </motion.div>
       </motion.form>

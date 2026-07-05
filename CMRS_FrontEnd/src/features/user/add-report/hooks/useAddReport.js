@@ -1,30 +1,79 @@
-import { useCallback, useState } from 'react';
-import { createAddReportSubmission } from '../api/addReportApi';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  confirmDuplicateReport,
+  createAddReportSubmission,
+  getIssueCategories,
+} from '../api/addReportApi';
 
-export function useAddReport() {
+function useAddReport() {
+  const [categories, setCategories] = useState([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [categoriesError, setCategoriesError] = useState('');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [submitError, setSubmitError] = useState('');
 
-  const submitReport = useCallback(async (payload) => {
+  const loadCategories = useCallback(async () => {
+    try {
+      setIsLoadingCategories(true);
+      setCategoriesError('');
+
+      const nextCategories = await getIssueCategories();
+
+      setCategories(Array.isArray(nextCategories) ? nextCategories : []);
+    } catch (error) {
+      setCategories([]);
+      setCategoriesError(
+        error?.message || 'تعذر تحميل أنواع البلاغات حاليًا.'
+      );
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  }, []);
+
+  const submitReport = useCallback(async (payload, options) => {
     try {
       setIsSubmitting(true);
-      setError('');
+      setSubmitError('');
 
-      const createdReport = await createAddReportSubmission(payload);
-      return createdReport;
-    } catch (submissionError) {
-      console.error(submissionError);
-      setError('تعذر إرسال البلاغ الآن. حاول مرة أخرى بعد قليل.');
-      return null;
+      return await createAddReportSubmission(payload, options);
+    } catch (error) {
+      setSubmitError(error?.message || 'تعذر إرسال البلاغ حاليًا.');
+      throw error;
     } finally {
       setIsSubmitting(false);
     }
   }, []);
 
+  const confirmDuplicate = useCallback(async (reportId) => {
+    try {
+      setIsSubmitting(true);
+      setSubmitError('');
+
+      return await confirmDuplicateReport(reportId);
+    } catch (error) {
+      setSubmitError(error?.message || 'تعذر تأكيد البلاغ الحالي.');
+      throw error;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
   return {
-    submitReport,
+    categories,
+    isLoadingCategories,
+    categoriesError,
+
     isSubmitting,
-    error,
+    submitError,
+
+    loadCategories,
+    submitReport,
+    confirmDuplicate,
   };
 }
 

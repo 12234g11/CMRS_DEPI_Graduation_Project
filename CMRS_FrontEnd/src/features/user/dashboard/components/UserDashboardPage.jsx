@@ -1,31 +1,25 @@
-import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FiArrowLeft,
   FiEye,
   FiMapPin,
+  FiNavigation,
   FiPlus,
+  FiStar,
+  FiUserPlus,
 } from 'react-icons/fi';
-
 import { useAuth } from '../../../auth/hooks/useAuth';
 import PageHeader from '../../../../shared/components/ui/PageHeader';
 import { ROUTES } from '../../../../shared/navigation';
-
-import MapLegend from '../../../map/components/MapLegend';
 import ReportsMap from '../../../map/components/ReportsMap';
-import { reportMapLegend } from '../../../map/mocks/mapMockData';
-
 import useNearbyIssueDistances from '../../nearby-issues/hooks/useNearbyIssueDistances';
 import { nearbyIssues } from '../../nearby-issues/mocks/nearbyIssuesMockData';
-
 import useUserReports from '../../reports/hooks/useUserReports';
-
 import UserDashboardStats from '../components/UserDashboardStats';
 import UserDashboardFilters from '../components/UserDashboardFilters';
 import UserMapSelectedReportCard from '../components/UserMapSelectedReportCard';
 import UserDashboardReportDetailsModal from '../components/UserDashboardReportDetailsModal';
-
 import '../user-dashboard.css';
 
 const SOURCE_OPTIONS = [
@@ -45,55 +39,27 @@ function normalizeText(value) {
   return String(value || '').toLowerCase().trim();
 }
 
-function getReportPosition(report, userReportMarkers = []) {
-  if (report?.position?.lat && report?.position?.lng) {
-    return report.position;
-  }
-
-  const matchedMarker = userReportMarkers.find((marker) => {
-    return (
-      String(marker.id) === String(report.id) ||
-      String(marker.reportId) === String(report.id) ||
-      String(marker.originalId) === String(report.id) ||
-      String(marker.id) === `report-${report.id}` ||
-      String(marker.id) === `mine-${report.id}`
-    );
-  });
-
-  return matchedMarker?.position || null;
-}
-
-function toUserDashboardReport(report, userReportMarkers = []) {
-  const position = getReportPosition(report, userReportMarkers);
-
+function toUserDashboardReport(report) {
   return {
     id: `mine-${report.id}`,
     originalId: report.id,
     source: 'mine',
-
     reportNumber: report.reportNumber,
-    title: report.title || report.issue || report.categoryLabel || 'بلاغ المستخدم',
-    typeLabel: report.categoryLabel || report.issue || report.typeLabel || 'أخرى',
-
+    title: report.title || report.issue || 'بلاغ المستخدم',
+    typeLabel: report.categoryLabel || report.issue || 'أخرى',
     statusLabel: report.statusLabel || 'قيد المراجعة',
-    statusTone: report.statusTone || report.tone || 'warning',
-
-    priority: report.severityLabel || report.priority || 'متوسطة',
-    description: report.description || 'لا يوجد وصف متاح لهذا البلاغ.',
-
-    area: report.area || report.city || '',
-    address: report.locationText || report.address || report.area || report.city || '',
-
-    date: report.createdAt || report.date || report.reportedAt,
-
+    statusTone: report.statusTone || 'warning',
+    priority: report.severityLabel || 'متوسطة',
+    description: report.description || '',
+    area: report.area,
+    address: report.locationText || report.address || report.area,
+    date: report.createdAt || report.date,
     distance: '',
     distanceLabel: '',
-
     rating: report.rating || 0,
-    coverImage: report.coverImage || report.image || '',
-    images: report.images || [],
-
-    position,
+    coverImage: report.coverImage,
+    images: report.images,
+    position: report.position,
   };
 }
 
@@ -102,29 +68,21 @@ function toNearbyDashboardReport(issue) {
     id: `nearby-${issue.id}`,
     originalId: issue.id,
     source: 'nearby',
-
     reportNumber: issue.reportNumber,
-    title: issue.title || 'بلاغ قريب منك',
-    typeLabel: issue.category || issue.type || issue.subtitle || 'أخرى',
-
-    statusLabel: issue.statusLabel || 'قيد المراجعة',
-    statusTone: issue.tone || issue.statusTone || 'warning',
-
+    title: issue.title,
+    typeLabel: issue.category || issue.type || 'أخرى',
+    statusLabel: issue.statusLabel,
+    statusTone: issue.tone || 'warning',
     priority: issue.priority || 'متوسطة',
-    description: issue.description || 'لا يوجد وصف متاح لهذا البلاغ.',
-
-    area: issue.area || '',
-    address: issue.address || issue.area || '',
-
-    date: issue.reportedAt || issue.createdAt || issue.date,
-
+    description: issue.description,
+    area: issue.area,
+    address: issue.address || issue.area,
+    date: issue.reportedAt,
     distance: issue.distance,
     distanceLabel: issue.distanceLabel,
-
     rating: issue.rating || 0,
-    coverImage: issue.coverImage || issue.image || '',
-    images: issue.images || [],
-
+    coverImage: issue.coverImage,
+    images: issue.images,
     position: issue.position,
   };
 }
@@ -138,10 +96,10 @@ function buildMapMarker(report) {
     area: report.area,
     statusLabel: report.statusLabel,
     tone: report.statusTone,
-    distance: report.distance,
-    distanceLabel: report.distanceLabel,
     address: report.address,
     position: report.position,
+    distance: report.distance,
+    distanceLabel: report.distanceLabel,
   };
 }
 
@@ -149,25 +107,19 @@ function UserDashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-
   const mapSectionRef = useRef(null);
-  const selectedReportCardRef = useRef(null);
 
-  const {
-    recentReports = [],
-    dashboardStats = [],
-    mapMarkers: userReportMarkers = [],
-  } = useUserReports(user?.id);
+  const { reports, dashboardStats } = useUserReports(user?.id);
 
   const [currentLocation, setCurrentLocation] = useState(null);
-
-  const nearbyIssuesWithAccurateDistances = useNearbyIssueDistances(
+  const nearbyIssuesWithDistances = useNearbyIssueDistances(
     nearbyIssues,
     currentLocation
   );
 
   const [searchTerm, setSearchTerm] = useState('');
   const [sourceFilter, setSourceFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
   const [activeMarkerId, setActiveMarkerId] = useState(null);
@@ -181,61 +133,30 @@ function UserDashboardPage() {
   const focusMapReport = location.state?.focusMapReport || null;
 
   const dashboardReports = useMemo(() => {
-    const userReportsForMap = recentReports
-      .map((report) => toUserDashboardReport(report, userReportMarkers))
-      .filter((report) => report.position?.lat && report.position?.lng);
+    const userDashboardReports = reports
+      .filter((report) => report.position?.lat && report.position?.lng)
+      .map(toUserDashboardReport);
 
-    const nearbyReportsForMap = nearbyIssuesWithAccurateDistances
-      .map(toNearbyDashboardReport)
-      .filter((report) => report.position?.lat && report.position?.lng);
+    const nearbyDashboardReports = nearbyIssuesWithDistances
+      .filter((issue) => issue.position?.lat && issue.position?.lng)
+      .map(toNearbyDashboardReport);
 
-    const reports = [...userReportsForMap, ...nearbyReportsForMap];
+    return [...userDashboardReports, ...nearbyDashboardReports];
+  }, [nearbyIssuesWithDistances, reports]);
 
-    if (
-      focusMapReport?.markerId &&
-      focusMapReport?.position?.lat &&
-      focusMapReport?.position?.lng &&
-      !reports.some((report) => report.id === focusMapReport.markerId)
-    ) {
-      reports.unshift({
-        id: focusMapReport.markerId,
-        originalId: focusMapReport.originalId || focusMapReport.markerId,
-        source: focusMapReport.source || 'mine',
+  const typeOptions = useMemo(() => {
+    const uniqueTypes = Array.from(
+      new Set(dashboardReports.map((report) => report.typeLabel).filter(Boolean))
+    );
 
-        reportNumber: focusMapReport.reportNumber,
-        title: focusMapReport.title || 'بلاغ المستخدم',
-        typeLabel: focusMapReport.typeLabel || focusMapReport.subtitle || 'أخرى',
-
-        statusLabel: focusMapReport.statusLabel || 'قيد المراجعة',
-        statusTone: focusMapReport.tone || focusMapReport.statusTone || 'warning',
-
-        priority: focusMapReport.priority || 'متوسطة',
-        description:
-          focusMapReport.description || 'لا يوجد وصف متاح لهذا البلاغ.',
-
-        area: focusMapReport.area || '',
-        address: focusMapReport.address || focusMapReport.area || '',
-
-        date: focusMapReport.date || focusMapReport.createdAt,
-
-        distance: focusMapReport.distance,
-        distanceLabel: focusMapReport.distanceLabel,
-
-        rating: focusMapReport.rating || 0,
-        coverImage: focusMapReport.coverImage || '',
-        images: focusMapReport.images || [],
-
-        position: focusMapReport.position,
-      });
-    }
-
-    return reports;
-  }, [
-    focusMapReport,
-    nearbyIssuesWithAccurateDistances,
-    recentReports,
-    userReportMarkers,
-  ]);
+    return [
+      { value: 'all', label: 'كل الأنواع' },
+      ...uniqueTypes.map((type) => ({
+        value: type,
+        label: type,
+      })),
+    ];
+  }, [dashboardReports]);
 
   const filteredReports = useMemo(() => {
     const query = normalizeText(searchTerm);
@@ -243,6 +164,9 @@ function UserDashboardPage() {
     return dashboardReports.filter((report) => {
       const matchesSource =
         sourceFilter === 'all' || report.source === sourceFilter;
+
+      const matchesType =
+        typeFilter === 'all' || report.typeLabel === typeFilter;
 
       const matchesStatus =
         statusFilter === 'all' || report.statusTone === statusFilter;
@@ -263,32 +187,30 @@ function UserDashboardPage() {
 
       const matchesSearch = !query || searchableText.includes(query);
 
-      return matchesSource && matchesStatus && matchesSearch;
+      return matchesSource && matchesType && matchesStatus && matchesSearch;
     });
-  }, [dashboardReports, searchTerm, sourceFilter, statusFilter]);
+  }, [dashboardReports, searchTerm, sourceFilter, statusFilter, typeFilter]);
 
   const mapMarkers = useMemo(() => {
     return filteredReports.map(buildMapMarker);
   }, [filteredReports]);
 
   const routeDestination = useMemo(() => {
-    return (
-      dashboardReports.find((report) => report.id === routeReportId) || null
-    );
+    return dashboardReports.find((report) => report.id === routeReportId) || null;
   }, [dashboardReports, routeReportId]);
 
   useEffect(() => {
     if (!focusMapReport?.markerId) return;
 
+    setActiveMarkerId(focusMapReport.markerId);
+
     const report = dashboardReports.find(
       (item) => item.id === focusMapReport.markerId
     );
 
-    if (!report) return;
-
-    setRouteReportId(null);
-    setActiveMarkerId(report.id);
-    setSelectedReport(report);
+    if (report) {
+      setSelectedReport(report);
+    }
 
     const timer = window.setTimeout(() => {
       mapSectionRef.current?.scrollIntoView({
@@ -300,44 +222,23 @@ function UserDashboardPage() {
     return () => window.clearTimeout(timer);
   }, [dashboardReports, focusMapReport]);
 
-  useEffect(() => {
-    if (!selectedReport) return;
-
-    const isMobile = window.matchMedia('(max-width: 768px)').matches;
-
-    if (!isMobile) return;
-
-    const timer = window.setTimeout(() => {
-      selectedReportCardRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    }, 180);
-
-    return () => window.clearTimeout(timer);
-  }, [selectedReport]);
-
   function handleMarkerSelect(marker) {
-    if (!marker?.id) return;
-
     const report = filteredReports.find(
-      (item) =>
-        String(item.id) === String(marker.id) ||
-        String(item.id) === String(marker.reportId)
+      (item) => item.id === marker?.id || item.id === marker?.reportId
     );
 
     setRouteReportId(null);
-    setActiveMarkerId(marker.id);
+    setActiveMarkerId(marker?.id || null);
     setSelectedReport(report || null);
   }
 
   function handleResetFilters() {
     setSearchTerm('');
     setSourceFilter('all');
+    setTypeFilter('all');
     setStatusFilter('all');
     setActiveMarkerId(null);
     setSelectedReport(null);
-    setDetailsReport(null);
     setRouteReportId(null);
   }
 
@@ -404,9 +305,7 @@ function UserDashboardPage() {
   }
 
   function renderPopupContent(marker) {
-    const report = filteredReports.find(
-      (item) => String(item.id) === String(marker.id)
-    );
+    const report = filteredReports.find((item) => item.id === marker.id);
 
     if (!report) return null;
 
@@ -421,21 +320,19 @@ function UserDashboardPage() {
           {report.area || report.address}
         </small>
 
-        {report.distanceLabel ? <small>{report.distanceLabel}</small> : null}
-
         <div className="user-dashboard-map-popup__actions">
           <button
             type="button"
-            onClick={() => {
-              setSelectedReport(report);
-              setDetailsReport(report);
-            }}
+            onClick={() => setDetailsReport(report)}
           >
             <FiEye />
             عرض التفاصيل
           </button>
 
-          <button type="button" onClick={() => handleGoToReport(report)}>
+          <button
+            type="button"
+            onClick={() => handleGoToReport(report)}
+          >
             صفحة البلاغ
             <FiArrowLeft />
           </button>
@@ -444,22 +341,18 @@ function UserDashboardPage() {
     );
   }
 
-  const selectedReportRating = selectedReport
-    ? reportRatings[selectedReport.id] || selectedReport.rating || 0
-    : 0;
+  const selectedReportRating =
+    selectedReport ? reportRatings[selectedReport.id] || selectedReport.rating || 0 : 0;
 
-  const detailsReportRating = detailsReport
-    ? reportRatings[detailsReport.id] || detailsReport.rating || 0
-    : 0;
+  const detailsReportRating =
+    detailsReport ? reportRatings[detailsReport.id] || detailsReport.rating || 0 : 0;
 
   return (
     <div className="dashboard-page user-dashboard-page">
       <PageHeader
         title="الصفحة الرئيسية"
         subtitle={`Dashboard — نظام إدارة البلاغات${
-          user?.name || user?.userName
-            ? ` • أهلاً ${user.name || user.userName}`
-            : ''
+          user?.name || user?.userName ? ` • أهلاً ${user.name || user.userName}` : ''
         }`}
         action={
           <Link
@@ -481,9 +374,12 @@ function UserDashboardPage() {
         onSearchChange={setSearchTerm}
         sourceFilter={sourceFilter}
         onSourceFilterChange={setSourceFilter}
+        typeFilter={typeFilter}
+        onTypeFilterChange={setTypeFilter}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
         sourceOptions={SOURCE_OPTIONS}
+        typeOptions={typeOptions}
         statusOptions={STATUS_OPTIONS}
         onReset={handleResetFilters}
       />
@@ -497,15 +393,21 @@ function UserDashboardPage() {
             </p>
           </div>
 
-          <div className="user-dashboard-map-card__actions">
-            <MapLegend items={reportMapLegend} compact />
-          </div>
+          {selectedReport ? (
+            <span className={`user-dashboard-active-report is-${selectedReport.statusTone}`}>
+              البلاغ المحدد: {selectedReport.reportNumber || selectedReport.originalId} -{' '}
+              {selectedReport.typeLabel}
+            </span>
+          ) : (
+            <span className="user-dashboard-active-report">
+              لم يتم تحديد بلاغ
+            </span>
+          )}
         </header>
 
         <div className="user-dashboard-map-wrapper">
           <ReportsMap
             markers={mapMarkers}
-            userLocation={user?.location}
             activeMarkerId={activeMarkerId}
             onMarkerSelect={handleMarkerSelect}
             onCurrentLocationChange={setCurrentLocation}
@@ -514,46 +416,34 @@ function UserDashboardPage() {
             renderPopupContent={renderPopupContent}
           />
 
-          <div
-            ref={selectedReportCardRef}
-            className="user-dashboard-selected-report-card-slot"
-          >
-            <UserMapSelectedReportCard
-              report={selectedReport}
-              isFollowed={
-                selectedReport ? followedReports.has(selectedReport.id) : false
-              }
-              rating={selectedReportRating}
-              onClose={() => {
-                setSelectedReport(null);
-                setActiveMarkerId(null);
-                setRouteReportId(null);
-              }}
-              onOpenDetails={setDetailsReport}
-              onGoToReport={handleGoToReport}
-              onToggleFollow={handleToggleFollow}
-              onRate={handleRate}
-              onRequestDirections={handleRequestDirections}
-            />
-          </div>
+          <UserMapSelectedReportCard
+            report={selectedReport}
+            isFollowed={selectedReport ? followedReports.has(selectedReport.id) : false}
+            rating={selectedReportRating}
+            onClose={() => {
+              setSelectedReport(null);
+              setActiveMarkerId(null);
+              setRouteReportId(null);
+            }}
+            onOpenDetails={setDetailsReport}
+            onGoToReport={handleGoToReport}
+            onToggleFollow={handleToggleFollow}
+            onRate={handleRate}
+            onRequestDirections={handleRequestDirections}
+          />
         </div>
       </section>
 
-      {detailsReport
-        ? createPortal(
-            <UserDashboardReportDetailsModal
-              report={detailsReport}
-              isFollowed={followedReports.has(detailsReport.id)}
-              rating={detailsReportRating}
-              onClose={() => setDetailsReport(null)}
-              onGoToReport={handleGoToReport}
-              onToggleFollow={handleToggleFollow}
-              onRate={handleRate}
-              onRequestDirections={handleRequestDirections}
-            />,
-            document.body
-          )
-        : null}
+      <UserDashboardReportDetailsModal
+        report={detailsReport}
+        isFollowed={detailsReport ? followedReports.has(detailsReport.id) : false}
+        rating={detailsReportRating}
+        onClose={() => setDetailsReport(null)}
+        onGoToReport={handleGoToReport}
+        onToggleFollow={handleToggleFollow}
+        onRate={handleRate}
+        onRequestDirections={handleRequestDirections}
+      />
     </div>
   );
 }

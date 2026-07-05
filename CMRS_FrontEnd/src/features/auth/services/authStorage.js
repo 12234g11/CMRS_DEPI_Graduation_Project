@@ -1,9 +1,16 @@
 const ACCESS_TOKEN_KEY = 'access_token';
 const USER_KEY = 'current_user';
 
-export function setAuthData({ token, user }) {
-  localStorage.setItem(ACCESS_TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+export function setAuthData({ token, accessToken, user }) {
+  const resolvedToken = token || accessToken;
+
+  if (resolvedToken) {
+    localStorage.setItem(ACCESS_TOKEN_KEY, resolvedToken);
+  }
+
+  if (user) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
 }
 
 export function getAccessToken() {
@@ -11,8 +18,13 @@ export function getAccessToken() {
 }
 
 export function getStoredUser() {
-  const user = localStorage.getItem(USER_KEY);
-  return user ? JSON.parse(user) : null;
+  try {
+    const user = localStorage.getItem(USER_KEY);
+    return user ? JSON.parse(user) : null;
+  } catch {
+    clearAuthData();
+    return null;
+  }
 }
 
 export function clearAuthData() {

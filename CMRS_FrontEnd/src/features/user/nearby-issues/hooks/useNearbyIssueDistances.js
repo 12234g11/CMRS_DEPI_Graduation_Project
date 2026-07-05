@@ -17,7 +17,14 @@ function useNearbyIssueDistances(issues = [], currentLocation = null) {
     }
 
     const fallbackDistanceMap = issues.reduce((accumulator, issue) => {
-      const fallbackDistance = calculateCrowDistanceMeters(currentLocation, issue.position);
+      if (!issue?.position?.lat || !issue?.position?.lng) {
+        return accumulator;
+      }
+
+      const fallbackDistance = calculateCrowDistanceMeters(
+        currentLocation,
+        issue.position
+      );
 
       if (fallbackDistance) {
         accumulator[issue.id] = {
@@ -34,12 +41,16 @@ function useNearbyIssueDistances(issues = [], currentLocation = null) {
 
     getRouteMatrixFromCurrentLocation(currentLocation, issues)
       .then((nextDistanceMap) => {
-        if (!isCancelled && nextDistanceMap && Object.keys(nextDistanceMap).length) {
+        if (
+          !isCancelled &&
+          nextDistanceMap &&
+          Object.keys(nextDistanceMap).length
+        ) {
           setDistanceMap(nextDistanceMap);
         }
       })
       .catch(() => {
-        // Keep the fallback straight-line distance if route distance is unavailable.
+        // Keep fallback straight-line distance.
       });
 
     return () => {

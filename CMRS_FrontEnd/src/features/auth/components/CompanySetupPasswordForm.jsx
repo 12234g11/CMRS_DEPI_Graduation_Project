@@ -100,10 +100,19 @@ function CompanySetupPasswordForm() {
         confirmPassword: formData.confirmPassword,
       });
 
-      setSuccessMessage('تم تفعيل حساب الشركة بنجاح. يمكنك الآن تسجيل الدخول.');
+      const successText =
+        'تم تفعيل حساب الشركة بنجاح. يمكنك الآن تسجيل الدخول.';
+
+      setSuccessMessage(successText);
 
       window.setTimeout(() => {
-        navigate(ROUTES.LOGIN, { replace: true });
+        navigate(ROUTES.LOGIN, {
+          replace: true,
+          state: {
+            email: formData.email,
+            message: successText,
+          },
+        });
       }, 1200);
     } catch (error) {
       setErrorMessage(error?.message || 'حدث خطأ أثناء تفعيل حساب الشركة.');
@@ -124,7 +133,8 @@ function CompanySetupPasswordForm() {
         <h1 className="company-form__title">تفعيل حساب الشركة</h1>
         <p className="company-form__lead">تمت دعوتك للانضمام إلى منصة CMRS</p>
         <p className="company-form__subtitle">
-          أدخل البريد الإلكتروني الذي تم إرسال الدعوة عليه، ثم قم بتعيين كلمة المرور الخاصة بحساب الشركة.
+          أدخل البريد الإلكتروني الذي تم إرسال الدعوة عليه، ثم قم بتعيين كلمة
+          المرور الخاصة بحساب الشركة.
         </p>
       </motion.header>
 
@@ -191,7 +201,7 @@ function CompanySetupPasswordForm() {
 
         {successMessage ? (
           <motion.p
-            className="company-form__error"
+            className="company-form__success"
             role="status"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}

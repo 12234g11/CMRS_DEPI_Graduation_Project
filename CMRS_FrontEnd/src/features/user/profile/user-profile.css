@@ -767,3 +767,76 @@
     height: 112px;
   }
 }
+.user-profile-form input.is-invalid {
+  border-color: rgba(220, 38, 38, 0.55);
+  background: rgba(254, 242, 242, 0.55);
+}
+
+.user-profile-form__error {
+  margin-top: 6px;
+  color: #dc2626;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.user-profile-message.is-error {
+  background: rgba(254, 242, 242, 0.9);
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.18);
+}
+
+.user-profile-message.is-success {
+  background: rgba(52, 168, 83, 0.12);
+  color: #218540;
+  border-color: rgba(52, 168, 83, 0.18);
+}
+
+.user-profile-extra-stats-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.user-profile-extra-stats-grid article {
+  padding: 14px;
+  border: 1.5px solid rgba(2, 95, 72, 0.08);
+  border-radius: 16px;
+  background: #ffffff;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
+  box-shadow: 0 8px 22px rgba(2, 95, 72, 0.05);
+}
+
+.user-profile-extra-stats-grid article > svg {
+  width: 22px;
+  height: 22px;
+  color: var(--color-primary);
+}
+
+.user-profile-extra-stats-grid strong {
+  display: block;
+  color: var(--color-primary);
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.user-profile-extra-stats-grid span {
+  color: var(--color-subtitle);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+@media (max-width: 1200px) {
+  .user-profile-extra-stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .user-profile-extra-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,4 +1,4 @@
-import { ADD_REPORT_CATEGORIES, REPORT_SEVERITY_OPTIONS } from '../../add-report/mocks/addReportMockData';
+import {  REPORT_SEVERITY_OPTIONS } from '../../add-report/mocks/addReportMockData';
 import { buildReportPreviewImage } from './buildReportPreviewImage';
 import { buildReportLocationDetails, normalizeReportPosition } from './reportLocation';
 

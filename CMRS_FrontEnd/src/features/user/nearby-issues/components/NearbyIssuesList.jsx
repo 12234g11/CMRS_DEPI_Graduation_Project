@@ -8,16 +8,28 @@ function NearbyIssuesList({
   currentLocation = null,
   onRequestDirections,
   onClearSelection,
+  onToggleFollow,
+  onToggleVerify,
+  onToggleRating,
+  activeAction = '',
+  emptyMessage = 'لا توجد بلاغات قريبة لعرضها حاليًا.',
 }) {
+  if (!issues.length) {
+    return <p className="no-data-message">{emptyMessage}</p>;
+  }
+
   return (
     <div className="dashboard-side-list">
       {issues.map((issue) => {
-        const isActive = issue.id === activeIssueId;
+        const isActive = String(issue.id) === String(activeIssueId);
 
         return (
           <div
             key={issue.id}
-            className={`dashboard-side-list__entry ${isActive ? 'is-active' : ''}`}
+            data-nearby-issue-id={issue.id}
+            className={`dashboard-side-list__entry ${
+              isActive ? 'is-active' : ''
+            }`}
           >
             <button
               type="button"
@@ -25,14 +37,19 @@ function NearbyIssuesList({
               onClick={() => onSelectIssue?.(issue)}
             >
               <div className="dashboard-side-list__content">
-                <strong className="dashboard-side-list__title">{issue.title}</strong>
+                <strong className="dashboard-side-list__title">
+                  {issue.title}
+                </strong>
+
                 <span className="dashboard-side-list__meta">
-                  {issue.distanceLabel || issue.distance}
+                  {issue.distanceLabel || issue.distance || issue.area}
                 </span>
               </div>
 
               <span
-                className={`dashboard-mini-icon ${isActive ? 'is-expanded' : ''}`}
+                className={`dashboard-mini-icon ${
+                  isActive ? 'is-expanded' : ''
+                }`}
                 aria-hidden="true"
               >
                 <PiArrowCircleLeftBold size={38} />
@@ -45,6 +62,10 @@ function NearbyIssuesList({
                 currentLocation={currentLocation}
                 onRequestDirections={onRequestDirections}
                 onClearSelection={onClearSelection}
+                onToggleFollow={onToggleFollow}
+                onToggleVerify={onToggleVerify}
+                onToggleRating={onToggleRating}
+                activeAction={activeAction}
                 inline
               />
             ) : null}

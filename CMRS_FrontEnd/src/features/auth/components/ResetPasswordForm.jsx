@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom';
 import { ROUTES } from '../../../shared/navigation';
 import { resetPassword } from '../api/authApi';
-
-const initialValues = {
-  password: '',
-  confirmPassword: '',
-};
 
 const containerVariants = {
   hidden: {},
@@ -32,11 +32,19 @@ const itemVariants = {
 
 function ResetPasswordForm() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  const resetToken = searchParams.get('token');
+  const resetToken = searchParams.get('token') || '';
+  const emailFromUrl = searchParams.get('email') || '';
+  const emailFromState = location.state?.email || '';
 
-  const [formData, setFormData] = useState(initialValues);
+  const [formData, setFormData] = useState(() => ({
+    email: emailFromUrl || emailFromState || '',
+    newPassword: '',
+    confirmPassword: '',
+  }));
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -49,13 +57,8 @@ function ResetPasswordForm() {
       [name]: value,
     }));
 
-    if (errorMessage) {
-      setErrorMessage('');
-    }
-
-    if (successMessage) {
-      setSuccessMessage('');
-    }
+    if (errorMessage) setErrorMessage('');
+    if (successMessage) setSuccessMessage('');
   }
 
   function validateForm() {
@@ -63,15 +66,22 @@ function ResetPasswordForm() {
       return 'رابط إعادة تعيين كلمة المرور غير صحيح أو منتهي الصلاحية.';
     }
 
-    if (!formData.password.trim() || !formData.confirmPassword.trim()) {
-      return 'من فضلك املأ كلمة المرور وتأكيد كلمة المرور.';
+    if (
+      !formData.email.trim() ||
+      !formData.newPassword.trim() ||
+      !formData.confirmPassword.trim()
+    ) {
+      return 'من فضلك املأ البريد الإلكتروني وكلمة المرور وتأكيد كلمة المرور.';
     }
 
-    if (formData.password.length < 8) {
-      return 'كلمة المرور يجب ألا تقل عن 8 أحرف.';
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+
+    if (!passwordRegex.test(formData.newPassword)) {
+      return 'كلمة المرور يجب أن تحتوي على حرف كبير وحرف صغير ورقم ورمز خاص وألا تقل عن 8 أحرف.';
     }
 
-    if (formData.password !== formData.confirmPassword) {
+    if (formData.newPassword !== formData.confirmPassword) {
       return 'كلمة المرور وتأكيد كلمة المرور غير متطابقين.';
     }
 
@@ -94,21 +104,29 @@ function ResetPasswordForm() {
       setSuccessMessage('');
 
       const response = await resetPassword({
+        email: formData.email,
         token: resetToken,
-        password: formData.password,
+        newPassword: formData.newPassword,
         confirmPassword: formData.confirmPassword,
       });
 
-      setSuccessMessage(response.message || 'تم تغيير كلمة المرور بنجاح.');
-      setFormData(initialValues);
+      const successText =
+        response?.message ||
+        'تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.';
+
+      setSuccessMessage(successText);
 
       window.setTimeout(() => {
-        navigate(ROUTES.LOGIN, { replace: true });
+        navigate(ROUTES.LOGIN, {
+          replace: true,
+          state: {
+            email: formData.email,
+            message: successText,
+          },
+        });
       }, 1200);
     } catch (error) {
-      setErrorMessage(
-        error?.message || 'حدث خطأ أثناء تغيير كلمة المرور.'
-      );
+      setErrorMessage(error?.message || 'حدث خطأ أثناء تغيير كلمة المرور.');
     } finally {
       setIsSubmitting(false);
     }
@@ -125,7 +143,7 @@ function ResetPasswordForm() {
       <motion.header className="forgot-form__header" variants={itemVariants}>
         <h1 className="forgot-form__title">إعادة تعيين كلمة المرور</h1>
         <p className="forgot-form__subtitle">
-          أدخل كلمة المرور الجديدة ثم أكدها لإكمال عملية إعادة التعيين
+          أدخل بريدك الإلكتروني وكلمة المرور الجديدة لإكمال عملية إعادة التعيين
         </p>
       </motion.header>
 
@@ -136,13 +154,26 @@ function ResetPasswordForm() {
         variants={containerVariants}
       >
         <motion.div className="forgot-form__field" variants={itemVariants}>
-          <label htmlFor="password">كلمة المرور الجديدة</label>
+          <label htmlFor="email">البريد الإلكتروني</label>
           <input
-            id="password"
-            name="password"
+            id="email"
+            name="email"
+            type="email"
+            placeholder="example@mail.com"
+            value={formData.email}
+            onChange={handleChange}
+            autoComplete="email"
+          />
+        </motion.div>
+
+        <motion.div className="forgot-form__field" variants={itemVariants}>
+          <label htmlFor="newPassword">كلمة المرور الجديدة</label>
+          <input
+            id="newPassword"
+            name="newPassword"
             type="password"
             placeholder="••••••••"
-            value={formData.password}
+            value={formData.newPassword}
             onChange={handleChange}
             autoComplete="new-password"
           />
@@ -165,7 +196,6 @@ function ResetPasswordForm() {
           <motion.p
             className="forgot-form__error"
             role="alert"
-            variants={itemVariants}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
           >
@@ -177,7 +207,6 @@ function ResetPasswordForm() {
           <motion.p
             className="forgot-form__success"
             role="status"
-            variants={itemVariants}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
           >

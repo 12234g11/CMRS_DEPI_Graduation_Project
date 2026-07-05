@@ -201,6 +201,24 @@ function ReportsMapControls({
   );
 }
 
+function DefaultPopupContent({ marker }) {
+  return (
+    <div className="reports-map__popup">
+      <strong>{marker.title}</strong>
+      <span>{marker.area || marker.subtitle}</span>
+      <small>{marker.statusLabel}</small>
+
+      {marker.distanceLabel || marker.distance ? (
+        <small>
+          يبعد عنك: {marker.distanceLabel || marker.distance}
+        </small>
+      ) : null}
+
+      {marker.address ? <small>{marker.address}</small> : null}
+    </div>
+  );
+}
+
 function ReportsMap({
   markers = [],
   userLocation = null,
@@ -210,6 +228,7 @@ function ReportsMap({
   onCurrentLocationChange,
   routeDestination = null,
   showCurrentLocationControl = true,
+  renderPopupContent,
 }) {
   const markerRefs = useRef({});
   const dedupedMarkers = useMemo(
@@ -380,19 +399,9 @@ function ReportsMap({
               }}
             >
               <Popup>
-                <div className="reports-map__popup">
-                  <strong>{marker.title}</strong>
-                  <span>{marker.area || marker.subtitle}</span>
-                  <small>{marker.statusLabel}</small>
-
-                  {marker.distanceLabel || marker.distance ? (
-                    <small>
-                      يبعد عنك: {marker.distanceLabel || marker.distance}
-                    </small>
-                  ) : null}
-
-                  {marker.address ? <small>{marker.address}</small> : null}
-                </div>
+                {typeof renderPopupContent === 'function'
+                  ? renderPopupContent(marker) || <DefaultPopupContent marker={marker} />
+                  : <DefaultPopupContent marker={marker} />}
               </Popup>
             </Marker>
           );

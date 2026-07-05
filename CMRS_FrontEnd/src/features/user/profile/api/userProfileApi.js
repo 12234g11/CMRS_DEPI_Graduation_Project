@@ -1,122 +1,101 @@
-import {
-  userProfileAchievements,
-  userProfileFallback,
-  userProfileRecentActivity,
-} from '../mocks/userProfileMockData';
+import axiosClient from '../../../../shared/services/api/axiosClient';
 
-const STORAGE_KEY = 'cmrs:user-profile:v1';
-let memoryPayload = {};
+function getApiErrorMessage(error) {
+  const data = error?.response?.data;
 
-function canUseStorage() {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
-}
+  if (!data) {
+    return error?.message || 'حدث خطأ غير متوقع.';
+  }
 
-function wait(ms = 180) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+  if (typeof data === 'string') {
+    return data;
+  }
 
-function clone(value) {
-  return JSON.parse(JSON.stringify(value));
-}
+  if (data.message) {
+    return data.message;
+  }
 
-function readPayload() {
-  if (canUseStorage()) {
-    try {
-      const storedValue = window.localStorage.getItem(STORAGE_KEY);
+  if (data.Message) {
+    return data.Message;
+  }
 
-      if (storedValue) {
-        const parsedValue = JSON.parse(storedValue);
+  if (data.title) {
+    return data.title;
+  }
 
-        if (parsedValue && typeof parsedValue === 'object') {
-          memoryPayload = parsedValue;
-          return parsedValue;
+  if (data.Title) {
+    return data.Title;
+  }
+
+  const errors = data.errors || data.Errors;
+
+  if (errors && typeof errors === 'object') {
+    const messages = Object.entries(errors)
+      .filter(([key]) => String(key).toLowerCase() !== 'traceid')
+      .flatMap(([field, value]) => {
+        if (Array.isArray(value)) {
+          return value.map((message) => `${field}: ${message}`);
         }
-      }
-    } catch (error) {
-      console.error('Unable to read user profile.', error);
+
+        if (typeof value === 'string') {
+          return [`${field}: ${value}`];
+        }
+
+        return [];
+      });
+
+    if (messages.length) {
+      return messages.join(' ');
     }
   }
 
-  return memoryPayload;
+  return 'حدث خطأ أثناء تنفيذ الطلب.';
 }
 
-function writePayload(payload) {
-  memoryPayload = payload;
-
-  if (canUseStorage()) {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-    } catch (error) {
-      console.error('Unable to save user profile.', error);
-    }
-  }
+function getResponseData(response) {
+  return response?.data?.data || response?.data?.Data || null;
 }
 
-function resolveUserId(user) {
-  return String(user?.id || 'guest');
-}
+export async function getUserProfile() {
+  try {
+    const response = await axiosClient.get('/api/User/me');
+    const data = getResponseData(response);
 
-function buildProfileFromUser(user) {
-  return {
-    ...userProfileFallback,
-    id: resolveUserId(user),
-    fullName: user?.fullName || user?.name || userProfileFallback.fullName,
-    email: user?.email || userProfileFallback.email,
-    phone: user?.phone || userProfileFallback.phone,
-    city: user?.city || userProfileFallback.city,
-  };
-}
-
-function ensureUserProfile(user) {
-  const userId = resolveUserId(user);
-  const payload = readPayload();
-
-  if (!payload[userId]) {
-    const nextPayload = {
-      ...payload,
-      [userId]: buildProfileFromUser(user),
+    return {
+      profile: data?.profile || null,
+      achievements: Array.isArray(data?.achievements) ? data.achievements : [],
+      recentActivity: Array.isArray(data?.recentActivity)
+        ? data.recentActivity
+        : [],
+      message:
+        response?.data?.message ||
+        response?.data?.Message ||
+        'تم جلب بيانات الملف الشخصي بنجاح',
     };
-
-    writePayload(nextPayload);
-
-    return nextPayload[userId];
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error));
   }
-
-  return {
-    ...buildProfileFromUser(user),
-    ...payload[userId],
-    id: userId,
-  };
 }
 
-export async function getUserProfile(user) {
-  await wait();
+export async function updateUserProfile(payload) {
+  try {
+    const response = await axiosClient.put('/api/User/me', {
+      fullName: payload.fullName,
+      phone: payload.phone,
+      email: payload.email,
+      city: payload.city,
+    });
 
-  return {
-    profile: clone(ensureUserProfile(user)),
-    achievements: clone(userProfileAchievements),
-    recentActivity: clone(userProfileRecentActivity),
-  };
-}
+    const data = getResponseData(response);
 
-export async function updateUserProfile(user, updates) {
-  await wait(220);
-
-  const userId = resolveUserId(user);
-  const payload = readPayload();
-  const currentProfile = ensureUserProfile(user);
-
-  const nextProfile = {
-    ...currentProfile,
-    ...updates,
-    id: userId,
-    updatedAt: new Date().toISOString(),
-  };
-
-  writePayload({
-    ...payload,
-    [userId]: nextProfile,
-  });
-
-  return clone(nextProfile);
+    return {
+      profile: data?.profile || data || null,
+      message:
+        response?.data?.message ||
+        response?.data?.Message ||
+        'تم تحديث بيانات الملف الشخصي بنجاح',
+    };
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error));
+  }
 }

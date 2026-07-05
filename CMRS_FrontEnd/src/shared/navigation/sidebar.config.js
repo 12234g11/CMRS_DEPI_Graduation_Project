@@ -5,10 +5,10 @@ export const DASHBOARD_LAYOUT_CONFIG = {
   [ROLES.USER]: {
     navItems: [
       {
-        key: 'dashboard',
-        label: 'الصفحة الرئيسية',
-        path: ROUTES.DASHBOARD,
-        icon: 'home',
+        key: 'my-reports',
+        label: 'بلاغاتي',
+        path: ROUTES.MY_REPORTS,
+        icon: 'file-text',
         end: true,
       },
       {
@@ -22,12 +22,6 @@ export const DASHBOARD_LAYOUT_CONFIG = {
         label: 'مشاكل قريبة منك',
         path: ROUTES.NEARBY_ISSUES,
         icon: 'map-pin',
-      },
-      {
-        key: 'my-reports',
-        label: 'بلاغاتي',
-        path: ROUTES.MY_REPORTS,
-        icon: 'file-text',
       },
       {
         key: 'notifications',
