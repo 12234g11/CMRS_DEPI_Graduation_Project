@@ -1,29 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FiX } from 'react-icons/fi';
 import AdminReportFilterSelect from '../../reports/components/AdminReportFilterSelect';
-import {
-  adminCompanySpecializationOptions,
-  COMPANY_GOVERNORATES,
-} from '../mocks/adminCompaniesMockData';
 
-const emptyForm = {
-  name: '',
-  specialization: 'الطرق والرصف',
-  governorates: [COMPANY_GOVERNORATES.CAIRO],
-  maxCapacity: 10,
-  phone: '',
-  email: '',
-  managerName: '',
-  managerPhone: '',
-  address: '',
-  description: '',
-};
+const FALLBACK_SPECIALIZATIONS = [
+  { value: 'الطرق والرصف', label: 'الطرق والرصف' },
+  { value: 'الإنارة والكهرباء', label: 'الإنارة والكهرباء' },
+  { value: 'النظافة والمخلفات', label: 'النظافة والمخلفات' },
+  { value: 'المياه والصرف', label: 'المياه والصرف' },
+  { value: 'صيانة عامة', label: 'صيانة عامة' },
+];
 
-const specializationOptions = adminCompanySpecializationOptions.filter(
-  (option) => option.value !== 'all',
-);
+const FALLBACK_GOVERNORATES = [
+  { value: 'القاهرة', label: 'القاهرة' },
+  { value: 'الجيزة', label: 'الجيزة' },
+  { value: 'القليوبية', label: 'القليوبية' },
+];
 
-const governorateOptions = Object.values(COMPANY_GOVERNORATES);
+function createEmptyForm({ defaultGovernorate, firstSpecialization }) {
+  return {
+    name: '',
+    specialization: firstSpecialization || 'الطرق والرصف',
+    governorates: [defaultGovernorate || 'القاهرة'],
+    maxCapacity: 10,
+    phone: '',
+    email: '',
+    managerName: '',
+    managerPhone: '',
+    address: '',
+    description: '',
+  };
+}
 
 function toggleArrayValue(list, value) {
   return list.includes(value)
@@ -34,9 +40,31 @@ function toggleArrayValue(list, value) {
 function AdminCompanyFormModal({
   mode = 'add',
   company,
+  governorateOptions = FALLBACK_GOVERNORATES,
+  specializationOptions = FALLBACK_SPECIALIZATIONS,
+  defaultGovernorate = 'القاهرة',
   onClose,
   onSubmit,
 }) {
+  const cleanedSpecializationOptions = useMemo(
+    () => (specializationOptions.length ? specializationOptions : FALLBACK_SPECIALIZATIONS),
+    [specializationOptions],
+  );
+
+  const cleanedGovernorateOptions = useMemo(
+    () => (governorateOptions.length ? governorateOptions : FALLBACK_GOVERNORATES),
+    [governorateOptions],
+  );
+
+  const emptyForm = useMemo(
+    () =>
+      createEmptyForm({
+        defaultGovernorate,
+        firstSpecialization: cleanedSpecializationOptions[0]?.value,
+      }),
+    [cleanedSpecializationOptions, defaultGovernorate],
+  );
+
   const [formData, setFormData] = useState(emptyForm);
   const [formError, setFormError] = useState('');
 
@@ -57,7 +85,7 @@ function AdminCompanyFormModal({
     }
 
     setFormError('');
-  }, [company, isEditMode]);
+  }, [company, emptyForm, isEditMode]);
 
   function handleChange(field, value) {
     setFormData((current) => ({
@@ -124,7 +152,7 @@ function AdminCompanyFormModal({
           <p>
             {isEditMode
               ? 'تعديل بيانات شركة الصيانة ونطاق عملها.'
-              : 'سيتم إنشاء حساب دخول للشركة وإصدار رابط دعوة لتعيين كلمة المرور.'}
+              : 'سيتم إنشاء حساب دخول للشركة وإرسال دعوة التفعيل إلى البريد الإلكتروني.'}
           </p>
         </header>
 
@@ -144,7 +172,7 @@ function AdminCompanyFormModal({
               نوع الخدمة الرئيسي
               <AdminReportFilterSelect
                 value={formData.specialization}
-                options={specializationOptions}
+                options={cleanedSpecializationOptions}
                 onChange={(value) => handleChange('specialization', value)}
                 ariaLabel="اختيار نوع الخدمة الرئيسي"
                 placeholder="اختر نوع الخدمة..."
@@ -162,8 +190,7 @@ function AdminCompanyFormModal({
                 placeholder="مثال: 10"
               />
               <small className="admin-company-field-hint">
-                عدد البلاغات التي يمكن للشركة استقبالها في نفس الوقت.
-              </small>
+يتم استخدامه عند تعديل بيانات الشركة، أما عند إرسال دعوة جديدة فيتم الاعتماد على بيانات إنشاء الحساب الأساسية.              </small>
             </label>
 
             <label>
@@ -172,7 +199,6 @@ function AdminCompanyFormModal({
                 value={formData.managerName}
                 onChange={(event) => handleChange('managerName', event.target.value)}
                 placeholder="اسم المسؤول"
-                required
               />
             </label>
 
@@ -182,7 +208,6 @@ function AdminCompanyFormModal({
                 value={formData.managerPhone}
                 onChange={(event) => handleChange('managerPhone', event.target.value)}
                 placeholder="+20 100 000 0000"
-                required
               />
             </label>
 
@@ -216,7 +241,6 @@ function AdminCompanyFormModal({
                 value={formData.address}
                 onChange={(event) => handleChange('address', event.target.value)}
                 placeholder="العنوان التفصيلي"
-                required
               />
             </label>
           </div>
@@ -224,40 +248,39 @@ function AdminCompanyFormModal({
           <div className="admin-company-form-section">
             <h3>المحافظات التي تغطيها الشركة</h3>
             <p>
-              الشركة تعتبر مسؤولة عن جميع المناطق داخل المحافظة أو المحافظات المختارة.
+              تستخدم في تعديل بيانات الشركة، وتساعد الأدمن في تحديد نطاق العمل داخل النظام.
             </p>
 
             <div className="admin-company-checks admin-company-checks--large">
-              {governorateOptions.map((governorate) => (
+              {cleanedGovernorateOptions.map((governorate) => (
                 <label
-                  key={governorate}
-                  className={formData.governorates.includes(governorate) ? 'is-checked' : ''}
+                  key={governorate.value}
+                  className={formData.governorates.includes(governorate.value) ? 'is-checked' : ''}
                 >
                   <input
                     type="checkbox"
-                    checked={formData.governorates.includes(governorate)}
-                    onChange={() => handleGovernorateToggle(governorate)}
+                    checked={formData.governorates.includes(governorate.value)}
+                    onChange={() => handleGovernorateToggle(governorate.value)}
                   />
-                  {governorate}
+                  {governorate.label}
                 </label>
               ))}
             </div>
           </div>
 
           <label className="admin-company-form__textarea">
-            وصف الشركة
+            وصف الشركة / ملاحظات الدعوة
             <textarea
               value={formData.description}
               onChange={(event) => handleChange('description', event.target.value)}
-              placeholder="اكتب نبذة مختصرة عن الشركة وخبرتها..."
+              placeholder="اكتب نبذة مختصرة عن الشركة أو ملاحظات يتم إرسالها للباك..."
               rows={4}
             />
           </label>
 
           {!isEditMode ? (
             <div className="admin-company-invite-note">
-              بعد إضافة الشركة سيتم إنشاء رابط دعوة لتفعيل الحساب وتعيين كلمة المرور.
-            </div>
+بعد إضافة الشركة سيتم إنشاء الحساب وإرسال دعوة التفعيل مباشرة إلى البريد الإلكتروني الخاص بها.            </div>
           ) : null}
 
           {formError ? (
@@ -270,7 +293,7 @@ function AdminCompanyFormModal({
             </button>
 
             <button type="submit">
-              {isEditMode ? 'حفظ التعديلات' : 'إضافة الشركة وإنشاء الدعوة'}
+              {isEditMode ? 'حفظ التعديلات' : 'إضافة الشركة وإرسال الدعوة'}
             </button>
           </div>
         </form>

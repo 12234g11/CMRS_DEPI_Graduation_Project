@@ -16,7 +16,6 @@ import { ROUTES } from '../../../../shared/navigation';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import MapLegend from '../../../map/components/MapLegend';
 import ReportsMap from '../../../map/components/ReportsMap';
-import { reportMapLegend } from '../../../map/mocks/mapMockData';
 import UserDashboardStats from '../../dashboard/components/UserDashboardStats';
 import UserDashboardReportDetailsModal from '../../dashboard/components/UserDashboardReportDetailsModal';
 import UserMapSelectedReportCard from '../../dashboard/components/UserMapSelectedReportCard';
@@ -24,12 +23,21 @@ import RecentReportsTable from '../components/RecentReportsTable';
 import UserReportsFilters from '../components/UserReportsFilters';
 import useUserReports from '../hooks/useUserReports';
 import {
+  getReportById,
   getReportsByStatus,
   REPORT_STATUS_API_VALUES,
   REPORT_STATUS_FILTER_OPTIONS,
   searchReports,
 } from '../api/userReportsApi';
 import '../user-reports.css';
+
+const reportMapLegend = [
+  { id: 'under-review', label: 'قيد المراجعة', tone: 'warning' },
+  { id: 'accepted', label: 'مقبول', tone: 'info' },
+  { id: 'assigned', label: 'تم التعيين', tone: 'info' },
+  { id: 'in-progress', label: 'جاري التنفيذ', tone: 'info' },
+  { id: 'resolved', label: 'تم الحل', tone: 'success' },
+];
 
 function normalizeText(value) {
   return String(value || '').toLowerCase().trim();
@@ -120,33 +128,39 @@ function isRejectedReport(report = {}) {
   );
 }
 
-function isReportOwnedByUser(report, userId) {
-  if (!userId) return false;
-
-  if (report?.isOwnedByCurrentUser === true) return true;
-
-  const ownerId =
-    report?.ownerUserId ||
-    report?.userId ||
-    report?.UserId ||
-    report?.createdByUserId ||
-    report?.reporterId ||
-    report?.ownerId ||
-    report?.user?.id ||
-    report?.user?.userId ||
-    '';
-
-  return ownerId ? String(ownerId) === String(userId) : false;
+function getOwnerId(report = {}) {
+  return (
+    report.ownerUserId ||
+    report.OwnerUserId ||
+    report.userId ||
+    report.UserId ||
+    report.createdByUserId ||
+    report.CreatedByUserId ||
+    report.reporterId ||
+    report.ReporterId ||
+    report.ownerId ||
+    report.OwnerId ||
+    report.user?.id ||
+    report.user?.userId ||
+    report.User?.Id ||
+    ''
+  );
 }
 
-function doesReportMatchStatus(report, statusFilter) {
-  if (statusFilter === REPORT_STATUS_API_VALUES.all) return true;
+function isReportOwnedByUser(report = {}, userId = '') {
+  if (!userId) return false;
 
-  return (
-    report.statusKey === statusFilter ||
-    report.status === statusFilter ||
-    report.Status === statusFilter
-  );
+  if (report.isOwnedByCurrentUser === true) {
+    return true;
+  }
+
+  const ownerId = getOwnerId(report);
+
+  if (!ownerId) {
+    return true;
+  }
+
+  return String(ownerId) === String(userId);
 }
 
 function paginateItems(items = [], pageNumber = 1, pageSize = 10) {
@@ -185,6 +199,7 @@ function toMapReport(report = {}) {
       report.categoryLabel ||
       report.issueCategoryName ||
       'بلاغ المستخدم',
+
     typeLabel:
       report.issueCategoryName ||
       report.categoryLabel ||
@@ -226,7 +241,10 @@ function toMapMarker(report) {
 }
 
 function focusStateToMapReport(focusMapReport = {}) {
-  const reportId = focusMapReport.originalId || focusMapReport.reportId || focusMapReport.markerId;
+  const reportId =
+    focusMapReport.originalId ||
+    focusMapReport.reportId ||
+    focusMapReport.markerId;
 
   return {
     id: focusMapReport.markerId || `mine-${reportId}`,
@@ -262,62 +280,6 @@ function focusStateToMapReport(focusMapReport = {}) {
     images: focusMapReport.images || [],
     position: focusMapReport.position,
   };
-}
-
-function buildDashboardStats(reports = [], totalCount = 0) {
-  const pendingReports = reports.filter((report) => {
-    return [
-      REPORT_STATUS_API_VALUES.underReview,
-      REPORT_STATUS_API_VALUES.pending,
-    ].includes(report.statusKey);
-  }).length;
-
-  const inProgressReports = reports.filter((report) => {
-    return [
-      REPORT_STATUS_API_VALUES.accepted,
-      REPORT_STATUS_API_VALUES.assigned,
-      REPORT_STATUS_API_VALUES.inProgress,
-    ].includes(report.statusKey);
-  }).length;
-
-  const solvedReports = reports.filter((report) => {
-    return [
-      REPORT_STATUS_API_VALUES.resolved,
-      REPORT_STATUS_API_VALUES.completed,
-      REPORT_STATUS_API_VALUES.closed,
-    ].includes(report.statusKey);
-  }).length;
-
-  return [
-    {
-      id: 'total',
-      title: 'البلاغات المقدمة',
-      subtitle: 'Total Reports',
-      value: totalCount || reports.length,
-      tone: 'primary',
-    },
-    {
-      id: 'pending',
-      title: 'قيد المراجعة',
-      subtitle: 'Pending / Under Review',
-      value: pendingReports,
-      tone: 'warning',
-    },
-    {
-      id: 'in-progress',
-      title: 'جاري الحل',
-      subtitle: 'In Progress / Assigned',
-      value: inProgressReports,
-      tone: 'info',
-    },
-    {
-      id: 'solved',
-      title: 'تم الحل',
-      subtitle: 'Resolved / Closed',
-      value: solvedReports,
-      tone: 'success',
-    },
-  ];
 }
 
 function ReportsPaginationControls({ pagination, onPageChange, isLoading = false }) {
@@ -377,11 +339,6 @@ function MyReportsPage() {
   const [pageNumber, setPageNumber] = useState(1);
   const [clientPageNumber, setClientPageNumber] = useState(1);
 
-  const { reports, pagination, isLoading, errorMessage } = useUserReports(
-    userId,
-    pageNumber
-  );
-
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState(REPORT_STATUS_API_VALUES.all);
 
@@ -394,17 +351,44 @@ function MyReportsPage() {
   const [searchErrorMessage, setSearchErrorMessage] = useState('');
   const [statusErrorMessage, setStatusErrorMessage] = useState('');
 
+  const {
+    reports,
+    pagination,
+    dashboardStats,
+    isLoading,
+    errorMessage,
+  } = useUserReports(userId, {
+    pageNumber,
+    pageSize: 10,
+  });
+
   const [activeMarkerId, setActiveMarkerId] = useState(null);
   const [selectedMapReport, setSelectedMapReport] = useState(null);
   const [detailsMapReport, setDetailsMapReport] = useState(null);
   const [routeReportId, setRouteReportId] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
+
   const [highlightedReportId, setHighlightedReportId] = useState(
     location.state?.createdReportId ||
+      location.state?.notificationReportId ||
       location.state?.selectedReportId ||
       location.state?.highlightReportId ||
       null
   );
+
+  const [notificationFocusReportId, setNotificationFocusReportId] = useState(
+    location.state?.fromNotification
+      ? location.state?.notificationReportId ||
+          location.state?.selectedReportId ||
+          location.state?.highlightReportId ||
+          null
+      : null
+  );
+  const [notificationFocusResults, setNotificationFocusResults] = useState([]);
+  const [isNotificationFocusLoading, setIsNotificationFocusLoading] =
+    useState(false);
+  const [notificationFocusErrorMessage, setNotificationFocusErrorMessage] =
+    useState('');
 
   const successMessage = location.state?.successMessage || '';
   const focusMapReport = location.state?.focusMapReport || null;
@@ -413,84 +397,10 @@ function MyReportsPage() {
   const isStatusActive = statusFilter !== REPORT_STATUS_API_VALUES.all;
 
   useEffect(() => {
-    const nextHighlightedReportId =
-      location.state?.createdReportId ||
-      location.state?.selectedReportId ||
-      location.state?.highlightReportId ||
-      null;
-
-    setHighlightedReportId(nextHighlightedReportId);
-  }, [location.state]);
-
-  useEffect(() => {
-    if (!highlightedReportId) return;
-
-    const timer = window.setTimeout(() => {
-      document
-        .querySelector(`[data-report-row-id="${highlightedReportId}"]`)
-        ?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
-    }, 200);
-
-    return () => window.clearTimeout(timer);
-  }, [highlightedReportId, reports]);
-
-  useEffect(() => {
-    if (!isStatusActive) {
-      setStatusResults([]);
-      setStatusErrorMessage('');
-      setIsStatusLoading(false);
-      setClientPageNumber(1);
-      return undefined;
-    }
-
-    let isCanceled = false;
-
-    async function loadByStatus() {
-      try {
-        setIsStatusLoading(true);
-        setStatusErrorMessage('');
-
-        const response = await getReportsByStatus(statusFilter);
-
-        if (isCanceled) return;
-
-        const userOnlyReports = response.items.filter((report) =>
-          isReportOwnedByUser(report, userId)
-        );
-
-        setStatusResults(userOnlyReports);
-        setClientPageNumber(1);
-      } catch (error) {
-        if (isCanceled) return;
-
-        setStatusResults([]);
-        setStatusErrorMessage(
-          error?.message || 'تعذر فلترة البلاغات حسب الحالة حاليًا.'
-        );
-      } finally {
-        if (!isCanceled) {
-          setIsStatusLoading(false);
-        }
-      }
-    }
-
-    loadByStatus();
-
-    return () => {
-      isCanceled = true;
-    };
-  }, [isStatusActive, statusFilter, userId]);
-
-  useEffect(() => {
-    const term = searchQuery.trim();
-
-    if (!term) {
+    if (!isSearchActive) {
       setSearchResults([]);
-      setIsSearching(false);
       setSearchErrorMessage('');
+      setIsSearching(false);
       setClientPageNumber(1);
       return undefined;
     }
@@ -502,7 +412,7 @@ function MyReportsPage() {
         setIsSearching(true);
         setSearchErrorMessage('');
 
-        const results = await searchReports(term);
+        const results = await searchReports(searchQuery);
 
         if (isCanceled) return;
 
@@ -530,17 +440,168 @@ function MyReportsPage() {
       isCanceled = true;
       window.clearTimeout(timer);
     };
-  }, [searchQuery, userId]);
+  }, [isSearchActive, searchQuery, userId]);
 
-  const dashboardStats = useMemo(() => {
-    return buildDashboardStats(reports, pagination.totalCount || reports.length);
-  }, [reports, pagination.totalCount]);
+  useEffect(() => {
+    if (!isStatusActive) {
+      setStatusResults([]);
+      setStatusErrorMessage('');
+      setIsStatusLoading(false);
+      setClientPageNumber(1);
+      return undefined;
+    }
+
+    let isCanceled = false;
+
+    async function loadReportsByStatus() {
+      try {
+        setIsStatusLoading(true);
+        setStatusErrorMessage('');
+
+        const results = await getReportsByStatus(statusFilter);
+
+        if (isCanceled) return;
+
+        const userOnlyResults = results.filter((report) =>
+          isReportOwnedByUser(report, userId)
+        );
+
+        setStatusResults(userOnlyResults);
+        setClientPageNumber(1);
+      } catch (error) {
+        if (isCanceled) return;
+
+        setStatusResults([]);
+        setStatusErrorMessage(
+          error?.message || 'تعذر فلترة البلاغات حسب الحالة حاليًا.'
+        );
+      } finally {
+        if (!isCanceled) {
+          setIsStatusLoading(false);
+        }
+      }
+    }
+
+    loadReportsByStatus();
+
+    return () => {
+      isCanceled = true;
+    };
+  }, [isStatusActive, statusFilter, userId]);
+
+  useEffect(() => {
+    const nextNotificationReportId = location.state?.fromNotification
+      ? location.state?.notificationReportId ||
+        location.state?.selectedReportId ||
+        location.state?.highlightReportId ||
+        null
+      : null;
+
+    const nextHighlightedReportId =
+      location.state?.createdReportId ||
+      nextNotificationReportId ||
+      location.state?.selectedReportId ||
+      location.state?.highlightReportId ||
+      null;
+
+    setHighlightedReportId(nextHighlightedReportId);
+    setNotificationFocusReportId(nextNotificationReportId);
+  }, [location.state]);
+
+  useEffect(() => {
+    if (!notificationFocusReportId) {
+      setNotificationFocusResults([]);
+      setNotificationFocusErrorMessage('');
+      setIsNotificationFocusLoading(false);
+      return undefined;
+    }
+
+    let isCanceled = false;
+
+    async function loadNotificationReport() {
+      try {
+        setIsNotificationFocusLoading(true);
+        setNotificationFocusErrorMessage('');
+        setSearchQuery('');
+        setStatusFilter(REPORT_STATUS_API_VALUES.all);
+        setSearchResults([]);
+        setStatusResults([]);
+        setClientPageNumber(1);
+        setPageNumber(1);
+        clearMapSelection();
+
+        let report = null;
+
+        try {
+          report = await getReportById(notificationFocusReportId);
+        } catch {
+          report = null;
+        }
+
+        let results = report ? [report] : [];
+
+        if (!results.length) {
+          results = await searchReports(notificationFocusReportId);
+        }
+
+        if (isCanceled) return;
+
+        const userOnlyResults = results.filter((item) =>
+          isReportOwnedByUser(item, userId)
+        );
+
+        setNotificationFocusResults(userOnlyResults);
+
+        if (!userOnlyResults.length) {
+          setNotificationFocusErrorMessage(
+            'لم يتم العثور على البلاغ المرتبط بالإشعار داخل بلاغاتك.'
+          );
+        }
+      } catch (error) {
+        if (isCanceled) return;
+
+        setNotificationFocusResults([]);
+        setNotificationFocusErrorMessage(
+          error?.message || 'تعذر تحميل البلاغ المرتبط بالإشعار حاليًا.'
+        );
+      } finally {
+        if (!isCanceled) {
+          setIsNotificationFocusLoading(false);
+        }
+      }
+    }
+
+    loadNotificationReport();
+
+    return () => {
+      isCanceled = true;
+    };
+  }, [notificationFocusReportId, userId]);
+
+  useEffect(() => {
+    if (!highlightedReportId) return undefined;
+
+    const timer = window.setTimeout(() => {
+      document
+        .querySelector(`[data-report-row-id="${highlightedReportId}"]`)
+        ?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+    }, 200);
+
+    return () => window.clearTimeout(timer);
+  }, [highlightedReportId, reports]);
+
+  const isNotificationFocusActive = Boolean(notificationFocusReportId);
 
   const sourceReports = useMemo(() => {
+    if (isNotificationFocusActive) {
+      return notificationFocusResults;
+    }
+
     if (isSearchActive) {
-      return searchResults.filter((report) =>
-        doesReportMatchStatus(report, statusFilter)
-      );
+      return searchResults;
     }
 
     if (isStatusActive) {
@@ -549,10 +610,11 @@ function MyReportsPage() {
 
     return reports;
   }, [
+    isNotificationFocusActive,
+    notificationFocusResults,
     isSearchActive,
     searchResults,
     isStatusActive,
-    statusFilter,
     statusResults,
     reports,
   ]);
@@ -564,7 +626,7 @@ function MyReportsPage() {
   }, [sourceReports, clientPageNumber, pageSize]);
 
   const displayedReports = useMemo(() => {
-    if (!isSearchActive && !isStatusActive) {
+    if (isNotificationFocusActive || (!isSearchActive && !isStatusActive)) {
       return sourceReports;
     }
 
@@ -573,9 +635,18 @@ function MyReportsPage() {
       clientPagination.pageNumber,
       clientPagination.pageSize
     );
-  }, [sourceReports, isSearchActive, isStatusActive, clientPagination]);
+  }, [
+    sourceReports,
+    isNotificationFocusActive,
+    isSearchActive,
+    isStatusActive,
+    clientPagination,
+  ]);
 
-  const tablePagination = isSearchActive || isStatusActive ? clientPagination : pagination;
+  const tablePagination =
+    isNotificationFocusActive || isSearchActive || isStatusActive
+      ? clientPagination
+      : pagination;
 
   const mapReports = useMemo(() => {
     const reportsForMap = displayedReports
@@ -605,13 +676,13 @@ function MyReportsPage() {
   }, [mapReports, routeReportId]);
 
   useEffect(() => {
-    if (!focusMapReport?.markerId) return;
+    if (!focusMapReport?.markerId) return undefined;
 
     const report = mapReports.find(
       (item) => item.id === focusMapReport.markerId
     );
 
-    if (!report) return;
+    if (!report) return undefined;
 
     setRouteReportId(null);
     setActiveMarkerId(report.id);
@@ -628,11 +699,11 @@ function MyReportsPage() {
   }, [focusMapReport, mapReports]);
 
   useEffect(() => {
-    if (!selectedMapReport) return;
+    if (!selectedMapReport) return undefined;
 
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
-    if (!isMobile) return;
+    if (!isMobile) return undefined;
 
     const timer = window.setTimeout(() => {
       selectedReportCardRef.current?.scrollIntoView({
@@ -644,15 +715,20 @@ function MyReportsPage() {
     return () => window.clearTimeout(timer);
   }, [selectedMapReport]);
 
-
   const emptyMessage =
-    isLoading || isStatusLoading
+    isLoading ||
+    isSearching ||
+    isStatusLoading ||
+    isNotificationFocusLoading
       ? 'جاري تحميل البلاغات...'
-      : isSearching
-        ? 'جاري البحث في البلاغات...'
-        : isSearchActive || isStatusActive
-          ? 'لا توجد بلاغات مطابقة لعملية البحث أو الفلترة.'
-          : 'لم تقم بإضافة أي بلاغ حتى الآن.';
+      : isNotificationFocusActive
+        ? notificationFocusErrorMessage ||
+          'لا توجد بيانات للبلاغ المرتبط بالإشعار.'
+        : isSearchActive
+          ? 'لا توجد بلاغات مطابقة لعملية البحث.'
+          : isStatusActive
+            ? 'لا توجد بلاغات مطابقة للحالة المختارة.'
+            : 'لم تقم بإضافة أي بلاغ حتى الآن.';
 
   function clearMapSelection() {
     setActiveMarkerId(null);
@@ -661,19 +737,35 @@ function MyReportsPage() {
     setRouteReportId(null);
   }
 
+  function clearNotificationFocus() {
+    setNotificationFocusReportId(null);
+    setNotificationFocusResults([]);
+    setNotificationFocusErrorMessage('');
+    setIsNotificationFocusLoading(false);
+  }
+
   function handleSearchChange(value) {
+    clearNotificationFocus();
     setSearchQuery(value);
+    setStatusFilter(REPORT_STATUS_API_VALUES.all);
+    setStatusResults([]);
+    setStatusErrorMessage('');
     setClientPageNumber(1);
     clearMapSelection();
   }
 
   function handleStatusFilterChange(value) {
+    clearNotificationFocus();
     setStatusFilter(value);
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchErrorMessage('');
     setClientPageNumber(1);
     clearMapSelection();
   }
 
   function handleResetFilters() {
+    clearNotificationFocus();
     setSearchQuery('');
     setStatusFilter(REPORT_STATUS_API_VALUES.all);
     setSearchResults([]);
@@ -686,6 +778,7 @@ function MyReportsPage() {
   }
 
   function handlePageChange(nextPageNumber) {
+    clearNotificationFocus();
     clearMapSelection();
 
     if (isSearchActive || isStatusActive) {
@@ -709,7 +802,6 @@ function MyReportsPage() {
     setActiveMarkerId(marker.id);
     setSelectedMapReport(report || null);
   }
-
 
   function handleRequestDirections(report) {
     if (!report?.id) return;
@@ -826,10 +918,16 @@ function MyReportsPage() {
         </div>
       ) : null}
 
+      {notificationFocusErrorMessage ? (
+        <div className="user-reports__success-banner user-reports__success-banner--error">
+          {notificationFocusErrorMessage}
+        </div>
+      ) : null}
+
       <UserDashboardStats stats={dashboardStats} />
 
       <UserReportsFilters
-        totalReports={sourceReports.length}
+        totalReports={tablePagination.totalCount}
         filteredCount={displayedReports.length}
         searchQuery={searchQuery}
         onSearchChange={handleSearchChange}
@@ -837,7 +935,7 @@ function MyReportsPage() {
         onStatusFilterChange={handleStatusFilterChange}
         statusOptions={REPORT_STATUS_FILTER_OPTIONS}
         onReset={handleResetFilters}
-        isSearching={isSearching || isStatusLoading}
+        isSearching={isLoading || isSearching || isStatusLoading}
       />
 
       <section ref={mapSectionRef} className="user-dashboard-map-card">
@@ -845,7 +943,7 @@ function MyReportsPage() {
           <div>
             <h2>خريطة بلاغاتي</h2>
             <p>
-              الخريطة تعرض البلاغات الخاصة بك فقط حسب البحث والفلترة، مع استبعاد البلاغات المرفوضة.
+              الخريطة تعرض البلاغات الخاصة بك فقط حسب البحث أو الفلترة، مع استبعاد البلاغات المرفوضة.
             </p>
           </div>
 
@@ -873,7 +971,7 @@ function MyReportsPage() {
             <div className="user-reports-map-empty" dir="rtl">
               <strong>لا توجد بلاغات متاحة على الخريطة</strong>
               <span>
-                قد تكون كل النتائج بدون إحداثيات أو مرفوضة، أو لا توجد نتائج مطابقة للبحث والفلترة.
+                قد تكون كل النتائج بدون إحداثيات أو مرفوضة، أو لا توجد نتائج مطابقة.
               </span>
             </div>
           ) : null}
@@ -900,14 +998,35 @@ function MyReportsPage() {
           <ReportsPaginationControls
             pagination={tablePagination}
             onPageChange={handlePageChange}
-            isLoading={isLoading || isSearching || isStatusLoading}
+            isLoading={
+            isLoading ||
+            isSearching ||
+            isStatusLoading ||
+            isNotificationFocusLoading
+          }
           />
         </div>
       </section>
 
       <DashboardSectionCard
-        title={isSearchActive || isStatusActive ? 'نتائج البحث والفلترة' : 'جدول البلاغات'}
-        subtitle={isSearchActive || isStatusActive ? 'Search & Filter Results' : 'My Reports Table'}
+        title={
+          isNotificationFocusActive
+            ? 'البلاغ المرتبط بالإشعار'
+            : isSearchActive
+              ? 'نتائج البحث'
+              : isStatusActive
+                ? 'نتائج الفلترة'
+                : 'جدول البلاغات'
+        }
+        subtitle={
+          isNotificationFocusActive
+            ? 'Notification Report'
+            : isSearchActive
+              ? 'Search Results'
+              : isStatusActive
+                ? 'Filter Results'
+                : 'My Reports Table'
+        }
       >
         <RecentReportsTable
           reports={displayedReports}
@@ -915,7 +1034,12 @@ function MyReportsPage() {
           emptyMessage={emptyMessage}
           pagination={tablePagination}
           onPageChange={handlePageChange}
-          isLoading={isLoading || isSearching || isStatusLoading}
+          isLoading={
+            isLoading ||
+            isSearching ||
+            isStatusLoading ||
+            isNotificationFocusLoading
+          }
         />
       </DashboardSectionCard>
 

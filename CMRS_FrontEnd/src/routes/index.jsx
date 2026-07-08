@@ -24,6 +24,7 @@ import ReviewReportsPage from '../features/admin/reports/pages/ReviewReportsPage
 import AdminReportDetailsPage from '../features/admin/reports/pages/AdminReportDetailsPage';
 import AdminCompaniesPage from '../features/admin/companies/pages/AdminCompaniesPage';
 import AdminAnalyticsPage from '../features/admin/analytics/pages/AdminAnalyticsPage';
+import AdminNotificationsPage from '../features/admin/notifications/pages/AdminNotificationsPage';
 import AdminProfilePage from '../features/admin/profile/pages/AdminProfilePage';
 
 import CompanyDashboardPage from '../features/company/dashboard/pages/CompanyDashboardPage';
@@ -81,6 +82,7 @@ function AppRouter() {
             <Route path={ROUTES.ADMIN_REPORT_DETAILS} element={<AdminReportDetailsPage />} />
             <Route path={ROUTES.ADMIN_COMPANIES} element={<AdminCompaniesPage />} />
             <Route path={ROUTES.ADMIN_ANALYTICS} element={<AdminAnalyticsPage />} />
+            <Route path={ROUTES.ADMIN_NOTIFICATIONS} element={<AdminNotificationsPage />} />
             <Route path={ROUTES.ADMIN_PROFILE} element={<AdminProfilePage />} />
           </Route>
         </Route>

@@ -1,48 +1,26 @@
-import { FiFilter, FiSearch } from 'react-icons/fi';
+import { useState } from 'react';
+import { FiFilter, FiRefreshCcw, FiSearch, FiX } from 'react-icons/fi';
 import AdminReportFilterSelect from './AdminReportFilterSelect';
 
-const statusOptions = [
-  { value: 'all', label: 'كل الحالات' },
-  { value: 'قيد المراجعة', label: 'قيد المراجعة' },
-  { value: 'مقبول', label: 'مقبول' },
-  { value: 'تم التعيين', label: 'تم التعيين' },
-  { value: 'جاري الحل', label: 'جاري الحل' },
-  { value: 'بانتظار مراجعة الأدمن', label: 'بانتظار مراجعة الأدمن' },
-  { value: 'مطلوب استكمال', label: 'مطلوب استكمال' },
-  { value: 'بانتظار إعادة التعيين', label: 'بانتظار إعادة التعيين' },
-  { value: 'متعذر التنفيذ', label: 'متعذر التنفيذ' },
-  { value: 'مرفوض', label: 'مرفوض' },
-  { value: 'تم الحل', label: 'تم الحل' },
-];
-
-const priorityOptions = [
-  { value: 'all', label: 'كل الأولويات' },
-  { value: 'عالية', label: 'عالية' },
-  { value: 'متوسطة', label: 'متوسطة' },
-  { value: 'منخفضة', label: 'منخفضة' },
-];
-
-function AdminReportsToolbar({
-  searchTerm,
-  onSearchChange,
+function ReportsFilterControls({
   statusFilter,
   onStatusChange,
   priorityFilter,
   onPriorityChange,
+  issueCategoryFilter,
+  onIssueCategoryChange,
+  companyReviewStatusFilter,
+  onCompanyReviewStatusChange,
+  sortFilter,
+  onSortChange,
+  statusOptions = [],
+  priorityOptions = [],
+  issueCategoryOptions = [],
+  companyReviewStatusOptions = [],
+  sortOptions = [],
 }) {
   return (
-    <div className="admin-reports-toolbar admin-manage-reports-toolbar">
-      <div className="admin-reports-search admin-manage-reports-search">
-        <FiSearch />
-        <input
-          type="search"
-          value={searchTerm}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="ابحث عن بلاغ أو شركة أو منطقة..."
-          aria-label="البحث في البلاغات"
-        />
-      </div>
-
+    <div className="admin-reports-filter-controls">
       <AdminReportFilterSelect
         value={statusFilter}
         options={statusOptions}
@@ -57,14 +35,171 @@ function AdminReportsToolbar({
         ariaLabel="فلترة البلاغات حسب الأولوية"
       />
 
-      <button
-        type="button"
-        className="admin-filter-btn admin-manage-reports-filter-btn"
-        aria-label="تطبيق الفلاتر"
-      >
-        <FiFilter />
-      </button>
+      <AdminReportFilterSelect
+        value={issueCategoryFilter}
+        options={issueCategoryOptions}
+        onChange={onIssueCategoryChange}
+        ariaLabel="فلترة البلاغات حسب التصنيف"
+      />
+
+      <AdminReportFilterSelect
+        value={companyReviewStatusFilter}
+        options={companyReviewStatusOptions}
+        onChange={onCompanyReviewStatusChange}
+        ariaLabel="فلترة حسب مراجعة رد الشركة"
+      />
+
+      <AdminReportFilterSelect
+        value={sortFilter}
+        options={sortOptions}
+        onChange={onSortChange}
+        ariaLabel="ترتيب البلاغات"
+      />
     </div>
+  );
+}
+
+function AdminReportsToolbar({
+  searchTerm,
+  onSearchChange,
+  statusFilter,
+  onStatusChange,
+  priorityFilter,
+  onPriorityChange,
+  issueCategoryFilter,
+  onIssueCategoryChange,
+  companyReviewStatusFilter,
+  onCompanyReviewStatusChange,
+  sortFilter,
+  onSortChange,
+  statusOptions = [],
+  priorityOptions = [],
+  issueCategoryOptions = [],
+  companyReviewStatusOptions = [],
+  sortOptions = [],
+  totalCount = 0,
+  activeFiltersCount = 0,
+  onClearFilters,
+}) {
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+  function closeMobileFilters() {
+    setIsMobileFiltersOpen(false);
+  }
+
+  function handleClearFilters() {
+    onClearFilters?.();
+    closeMobileFilters();
+  }
+
+  const controlsProps = {
+    statusFilter,
+    onStatusChange,
+    priorityFilter,
+    onPriorityChange,
+    issueCategoryFilter,
+    onIssueCategoryChange,
+    companyReviewStatusFilter,
+    onCompanyReviewStatusChange,
+    sortFilter,
+    onSortChange,
+    statusOptions,
+    priorityOptions,
+    issueCategoryOptions,
+    companyReviewStatusOptions,
+    sortOptions,
+  };
+
+  return (
+    <section className="admin-reports-filter-box" aria-label="فلاتر البلاغات">
+      <div className="admin-reports-filter-box__header">
+        <div>
+          <h2>فلترة البلاغات</h2>
+          <p>
+            يتم عرض {totalCount} بلاغ طبقاً للفلاتر الحالية
+            {activeFiltersCount ? `، مع تطبيق ${activeFiltersCount} فلتر.` : '.'}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="admin-reports-clear-filters-btn"
+          onClick={handleClearFilters}
+          disabled={!activeFiltersCount}
+        >
+          <FiRefreshCcw />
+          مسح الفلاتر
+        </button>
+      </div>
+
+      <div className="admin-reports-filter-box__body">
+        <div className="admin-reports-search admin-manage-reports-search">
+          <FiSearch />
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="ابحث في العنوان أو الوصف أو الشركة..."
+            aria-label="البحث في البلاغات"
+          />
+        </div>
+
+        <div className="admin-reports-filter-box__desktop-controls">
+          <ReportsFilterControls {...controlsProps} />
+        </div>
+
+        <button
+          type="button"
+          className="admin-reports-mobile-filter-btn"
+          onClick={() => setIsMobileFiltersOpen(true)}
+        >
+          <FiFilter />
+          فلاتر
+          {activeFiltersCount ? <span>{activeFiltersCount}</span> : null}
+        </button>
+      </div>
+
+      {isMobileFiltersOpen ? (
+        <div className="admin-reports-mobile-filters" role="presentation">
+          <button
+            type="button"
+            className="admin-reports-mobile-filters__backdrop"
+            onClick={closeMobileFilters}
+            aria-label="إغلاق الفلاتر"
+          />
+
+          <div
+            className="admin-reports-mobile-filters__sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label="فلاتر البلاغات"
+          >
+            <header className="admin-reports-mobile-filters__header">
+              <div>
+                <h3>فلاتر البلاغات</h3>
+                <p>اختار الفلاتر المناسبة ثم ارجع للجدول.</p>
+              </div>
+
+              <button type="button" onClick={closeMobileFilters} aria-label="إغلاق">
+                <FiX />
+              </button>
+            </header>
+
+            <ReportsFilterControls {...controlsProps} />
+
+            <footer className="admin-reports-mobile-filters__actions">
+              <button type="button" onClick={handleClearFilters}>
+                مسح الفلاتر
+              </button>
+
+              <button type="button" onClick={closeMobileFilters}>
+                تطبيق الفلاتر
+              </button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 }
 

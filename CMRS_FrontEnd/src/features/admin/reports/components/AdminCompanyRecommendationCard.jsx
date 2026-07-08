@@ -1,19 +1,12 @@
 import {
-  FiAward,
   FiBriefcase,
   FiCheck,
   FiClock,
   FiMapPin,
   FiStar,
-  FiTarget,
 } from 'react-icons/fi';
 
-function AdminCompanyRecommendationCard({
-  company,
-  isSelected,
-  isTopRecommended,
-  onSelect,
-}) {
+function AdminCompanyRecommendationCard({ company, isSelected, onSelect }) {
   return (
     <article
       className={`admin-company-recommendation-card ${
@@ -24,25 +17,15 @@ function AdminCompanyRecommendationCard({
         <div>
           <div className="admin-company-recommendation-card__title-row">
             <h3>{company.name}</h3>
-
-            {isTopRecommended ? (
-              <span className="admin-company-recommended-badge">
-                <FiAward />
-                موصى بها
-              </span>
-            ) : null}
           </div>
 
           <p>{company.specialization}</p>
         </div>
-
-        <div className="admin-company-match-score">
-          <strong>{company.matchScore}%</strong>
-          <span>مطابقة</span>
-        </div>
       </div>
 
-      <p className="admin-company-description">{company.description}</p>
+      <p className="admin-company-description">
+        {company.description || 'لا يوجد وصف متاح لهذه الشركة.'}
+      </p>
 
       <div className="admin-company-metrics">
         <span>
@@ -82,21 +65,20 @@ function AdminCompanyRecommendationCard({
 
       <div className="admin-company-coverage">
         <FiMapPin />
-        <span>{company.coverageAreas.slice(0, 4).join('، ')}</span>
+        <span>
+          {company.coverageAreas?.length
+            ? company.coverageAreas.slice(0, 4).join('، ')
+            : 'لا توجد مناطق تغطية مسجلة'}
+        </span>
       </div>
 
-      <div className="admin-company-reasons">
-        <strong>
-          <FiTarget />
-          أسباب الترشيح
-        </strong>
-
-        <ul>
-          {company.matchReasons.slice(0, 3).map((reason) => (
-            <li key={reason}>{reason}</li>
+      {company.problemTypes?.length ? (
+        <div className="admin-company-details-tags admin-company-assignment-tags">
+          {company.problemTypes.slice(0, 4).map((type) => (
+            <span key={type}>{type}</span>
           ))}
-        </ul>
-      </div>
+        </div>
+      ) : null}
 
       <button
         type="button"

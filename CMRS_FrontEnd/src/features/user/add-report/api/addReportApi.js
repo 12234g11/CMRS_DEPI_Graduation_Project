@@ -75,11 +75,18 @@ function sortCategoriesById(categories = []) {
 
 function extractDuplicateReport(error) {
   const status = error?.response?.status;
-  const data = error?.response?.data || {};
+  const responseBody = error?.response?.data || {};
+  const duplicateData = responseBody.data || responseBody.Data || {};
 
   const duplicateReportId =
-    data.duplicateReportId ||
-    data.DuplicateReportId;
+    duplicateData.duplicateReportId ||
+    duplicateData.DuplicateReportId ||
+    duplicateData.reportId ||
+    duplicateData.ReportId ||
+    responseBody.duplicateReportId ||
+    responseBody.DuplicateReportId ||
+    responseBody.reportId ||
+    responseBody.ReportId;
 
   if (status !== 409 || !duplicateReportId) {
     return null;
@@ -87,12 +94,36 @@ function extractDuplicateReport(error) {
 
   return {
     id: String(duplicateReportId),
-    title: 'بلاغ مشابه موجود بالفعل',
+    duplicateReportId: String(duplicateReportId),
+    title:
+      duplicateData.title ||
+      duplicateData.Title ||
+      responseBody.title ||
+      responseBody.Title ||
+      'بلاغ مشابه موجود بالفعل',
+    address:
+      duplicateData.address ||
+      duplicateData.Address ||
+      responseBody.address ||
+      responseBody.Address ||
+      '',
+    status:
+      duplicateData.status ||
+      duplicateData.Status ||
+      responseBody.status ||
+      responseBody.Status ||
+      '',
+    distanceMeters:
+      duplicateData.distanceMeters ??
+      duplicateData.DistanceMeters ??
+      responseBody.distanceMeters ??
+      responseBody.DistanceMeters ??
+      null,
     message:
-      data.message ||
-      data.Message ||
+      responseBody.message ||
+      responseBody.Message ||
       'تم اكتشاف بلاغ مشابه في نفس المنطقة.',
-    raw: data,
+    raw: responseBody,
   };
 }
 
@@ -153,10 +184,13 @@ function buildCreateReportFormData(
 
   formData.append('IssueCategoryId', values.categoryId || '');
 
-  formData.append(
-    'IgnoreDuplicateCheck',
-    String(Boolean(ignoreDuplicateCheck))
-  );
+  const duplicateCheckValue = String(Boolean(ignoreDuplicateCheck));
+
+  // Send both names defensively because the request is multipart/form-data.
+  // Some .NET endpoints bind from the C# DTO property name, while the API
+  // contract documents the camelCase field name. Both carry the same value.
+  formData.append('ignoreDuplicateCheck', duplicateCheckValue);
+  formData.append('IgnoreDuplicateCheck', duplicateCheckValue);
 
   (values.images || []).forEach((file) => {
     formData.append('ReportImages', file);

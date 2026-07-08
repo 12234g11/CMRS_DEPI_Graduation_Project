@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getNearbyReports } from '../api/nearbyIssuesApi';
+import {
+  getNearbyReports,
+  NEARBY_REPORT_STATUS_API_VALUES,
+} from '../api/nearbyIssuesApi';
 
-function useNearbyIssues(currentLocation = null, pageNumber = 1) {
+function useNearbyIssues(
+  currentLocation = null,
+  pageNumber = 1,
+  statusFilter = NEARBY_REPORT_STATUS_API_VALUES.all
+) {
   const [issues, setIssues] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -24,6 +31,7 @@ function useNearbyIssues(currentLocation = null, pageNumber = 1) {
           lat: currentLocation.lat,
           lng: currentLocation.lng,
           pageNumber,
+          status: statusFilter,
         });
 
         if (!isCancelled) {
@@ -48,7 +56,12 @@ function useNearbyIssues(currentLocation = null, pageNumber = 1) {
     return () => {
       isCancelled = true;
     };
-  }, [currentLocation?.lat, currentLocation?.lng, pageNumber]);
+  }, [
+    currentLocation?.lat,
+    currentLocation?.lng,
+    pageNumber,
+    statusFilter,
+  ]);
 
   const updateIssue = useCallback((reportId, updater) => {
     setIssues((currentIssues) =>

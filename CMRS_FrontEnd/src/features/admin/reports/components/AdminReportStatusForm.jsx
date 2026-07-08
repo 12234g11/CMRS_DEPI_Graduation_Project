@@ -1,66 +1,132 @@
 import { useState } from 'react';
-import AdminReportFilterSelect from './AdminReportFilterSelect';
-import { adminReportStatusOptions } from '../mocks/adminReportsMockData';
+import {
+  FiAlertTriangle,
+  FiCheckCircle,
+  FiLock,
+} from 'react-icons/fi';
 
-function AdminReportStatusForm({ report, onSave }) {
-  const [selectedStatus, setSelectedStatus] = useState(report.status);
-  const [isSaving, setIsSaving] = useState(false);
+function getStatusText(report) {
+  return `${report?.statusValue || ''} ${report?.statusLabel || ''} ${report?.status || ''}`.toLowerCase();
+}
 
-  async function handleSubmit(event) {
-    event.preventDefault();
-    setIsSaving(true);
-
-    await onSave?.({
-      status: selectedStatus,
-    });
-
-    setIsSaving(false);
-  }
-
-  const currentStatusOption = adminReportStatusOptions.find(
-    (option) => option.value === report.status,
-  );
+function shouldShowCitizenReviewActions(report) {
+  const status = getStatusText(report);
 
   return (
-    <form className="admin-report-details-form" onSubmit={handleSubmit}>
-      <section className="admin-report-details-card admin-report-action-card">
-        <header className="admin-report-card-header">
-          <div>
-            <h2>تحديث الحالة</h2>
-            <p>Status</p>
-          </div>
-        </header>
+    status.includes('underreview') ||
+    status.includes('under review') ||
+    status.includes('pending') ||
+    status.includes('new') ||
+    status.includes('قيد المراجعة') ||
+    status.includes('بانتظار المراجعة')
+  );
+}
 
-        <div className="admin-report-form-group">
-          <label>الحالة الحالية</label>
+function AdminReportStatusForm({
+  report,
+  onApprove,
+  onReject,
+  onCloseReport,
+}) {
+  const [rejectionReason, setRejectionReason] = useState(report.rejectionReason || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [activeAction, setActiveAction] = useState('');
+  const [formError, setFormError] = useState('');
 
-          <span
-            className={`admin-report-status admin-report-status--${
-              currentStatusOption?.tone || report.statusTone
-            }`}
-          >
+  const canReviewCitizenReport = shouldShowCitizenReviewActions(report);
+
+  if (!canReviewCitizenReport) {
+    return null;
+  }
+
+  async function runAction(actionName, callback) {
+    setIsSaving(true);
+    setActiveAction(actionName);
+    setFormError('');
+
+    try {
+      await callback?.();
+    } catch {
+      setFormError('تعذر تنفيذ الإجراء. برجاء المحاولة مرة أخرى.');
+    } finally {
+      setIsSaving(false);
+      setActiveAction('');
+    }
+  }
+
+  async function handleReject() {
+    const trimmedReason = rejectionReason.trim();
+
+    if (!trimmedReason) {
+      setFormError('سبب الرفض مطلوب قبل رفض بلاغ المواطن.');
+      return;
+    }
+
+    await runAction('reject', () => onReject?.(trimmedReason));
+  }
+
+  return (
+    <section className="admin-report-details-card admin-report-action-card">
+      <header className="admin-report-card-header">
+        <div>
+          <h2>مراجعة بلاغ المواطن</h2>
+          <p>Citizen Report Review</p>
+        </div>
+      </header>
+
+      <div className="admin-report-action-card__body">
+        <div className="admin-report-current-status-block">
+          <span>الحالة الحالية</span>
+          <strong className={`admin-report-status admin-report-status--${report.statusTone}`}>
             {report.status}
-          </span>
+          </strong>
         </div>
 
-        <div className="admin-report-form-group">
-          <label>تغيير إلى</label>
+        <div className="admin-report-action-buttons admin-report-action-buttons--citizen-review">
+          <button
+            type="button"
+            className="admin-report-action-button admin-report-action-button--approve"
+            onClick={() => runAction('approve', onApprove)}
+            disabled={isSaving}
+          >
+            <FiCheckCircle />
+            {activeAction === 'approve' ? 'جاري الاعتماد...' : 'اعتماد البلاغ'}
+          </button>
 
-          <AdminReportFilterSelect
-            value={selectedStatus}
-            options={adminReportStatusOptions}
-            onChange={setSelectedStatus}
-            ariaLabel="تغيير حالة البلاغ"
-            placeholder="اختر الحالة..."
-            variant="inline"
+          <button
+            type="button"
+            className="admin-report-action-button admin-report-action-button--close"
+            onClick={() => runAction('close', onCloseReport)}
+            disabled={isSaving}
+          >
+            <FiLock />
+            {activeAction === 'close' ? 'جاري الإغلاق...' : 'إغلاق بدون عقوبة'}
+          </button>
+        </div>
+
+        <label className="admin-report-rejection-field">
+          <span>سبب الرفض</span>
+          <textarea
+            value={rejectionReason}
+            onChange={(event) => setRejectionReason(event.target.value)}
+            rows={3}
+            placeholder="اكتب سبب واضح قبل رفض بلاغ المواطن..."
           />
-        </div>
+        </label>
 
-        <button type="submit" className="admin-report-save-btn" disabled={isSaving}>
-          {isSaving ? 'جاري حفظ الحالة...' : 'حفظ الحالة'}
+        <button
+          type="button"
+          className="admin-report-action-button admin-report-action-button--reject"
+          onClick={handleReject}
+          disabled={isSaving}
+        >
+          <FiAlertTriangle />
+          {activeAction === 'reject' ? 'جاري الرفض...' : 'رفض بلاغ المواطن'}
         </button>
-      </section>
-    </form>
+
+        {formError ? <p className="admin-report-form-error">{formError}</p> : null}
+      </div>
+    </section>
   );
 }
 

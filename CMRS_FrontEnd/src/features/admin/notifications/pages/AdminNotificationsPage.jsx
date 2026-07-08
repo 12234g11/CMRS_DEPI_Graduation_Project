@@ -8,66 +8,63 @@ import {
   FiX,
 } from 'react-icons/fi';
 import PageHeader from '../../../../shared/components/ui/PageHeader';
-import { ROUTES } from '../../../../shared/navigation';
 import { useAuth } from '../../../auth/hooks/useAuth';
-import NotificationsList from '../components/NotificationsList';
+import AdminNotificationsList from '../components/AdminNotificationsList';
 import {
-  deleteUserNotification,
-  getUnreadUserNotificationsCount,
-  getUserNotifications,
-  markAllUserNotificationsAsRead,
-  markUserNotificationAsRead,
-  USER_NOTIFICATION_TYPE,
-} from '../api/userNotificationsApi';
-import '../user-notifications.css';
+  ADMIN_NOTIFICATION_READ_STATUS,
+  ADMIN_NOTIFICATION_TYPE,
+  deleteAdminNotification,
+  getAdminNotifications,
+  getUnreadAdminNotificationsCount,
+  markAdminNotificationAsRead,
+  markAllAdminNotificationsAsRead,
+} from '../api/adminNotificationsApi';
+import '../../../user/notifications/user-notifications.css';
+import '../admin-notifications.css';
 
-const USER_NOTIFICATION_TYPE_FILTERS = [
+const ADMIN_NOTIFICATION_TYPE_FILTERS = [
   {
-    value: USER_NOTIFICATION_TYPE.ALL,
+    value: ADMIN_NOTIFICATION_TYPE.ALL,
     label: 'كل الأنواع',
-    description: 'عرض جميع أنواع الإشعارات',
+    description: 'عرض جميع إشعارات الأدمن',
   },
   {
-    value: USER_NOTIFICATION_TYPE.REPORT_SUBMITTED,
-    label: 'إرسال البلاغ',
-    description: 'عند إرسال بلاغ جديد',
+    value: ADMIN_NOTIFICATION_TYPE.NEW_REPORT_IN_GOVERNORATE,
+    label: 'بلاغ جديد داخل المحافظة',
+    description: 'عند إرسال بلاغ داخل محافظة الأدمن',
   },
   {
-    value: USER_NOTIFICATION_TYPE.REPORT_ACCEPTED,
-    label: 'قبول البلاغ',
-    description: 'عند قبول البلاغ من الأدمن',
-  },
-  {
-    value: USER_NOTIFICATION_TYPE.REPORT_REJECTED,
-    label: 'رفض البلاغ',
-    description: 'عند رفض البلاغ مع توضيح السبب',
-  },
-  {
-    value: USER_NOTIFICATION_TYPE.REPORT_ASSIGNED_TO_COMPANY,
-    label: 'تحويل البلاغ للشركة',
-    description: 'عند تعيين شركة مسؤولة عن البلاغ',
-  },
-  {
-    value: USER_NOTIFICATION_TYPE.REPORT_IN_PROGRESS,
+    value: ADMIN_NOTIFICATION_TYPE.COMPANY_STARTED_EXECUTION,
     label: 'بدأ التنفيذ',
-    description: 'عند بدء الشركة في التنفيذ',
+    description: 'عند بدء الشركة العمل على البلاغ',
   },
   {
-    value: USER_NOTIFICATION_TYPE.REPORT_RESOLVED,
-    label: 'اعتماد الحل',
-    description: 'عند اعتماد حل البلاغ',
+    value: ADMIN_NOTIFICATION_TYPE.COMPANY_REQUESTED_CLOSURE,
+    label: 'طلب إغلاق البلاغ',
+    description: 'عند طلب الشركة اعتماد الحل النهائي',
+  },
+  {
+    value: ADMIN_NOTIFICATION_TYPE.COMPANY_EXECUTION_FAILED,
+    label: 'تعذر التنفيذ',
+    description: 'عند إبلاغ الشركة بتعذر تنفيذ البلاغ',
   },
 ];
 
-const READ_FILTERS = {
-  ALL: 'all',
-  UNREAD: 'unread',
-};
+const READ_FILTERS = [
+  {
+    value: ADMIN_NOTIFICATION_READ_STATUS.ALL,
+    label: 'كل الإشعارات',
+  },
+  {
+    value: ADMIN_NOTIFICATION_READ_STATUS.UNREAD,
+    label: 'غير مقروءة',
+  },
+];
 
 const PAGE_SIZE = 10;
 
-function resolveUserId(user) {
-  return user?.id || user?.userId || user?.UserId || user?.sub || '';
+function resolveAdminId(user) {
+  return user?.id || user?.adminId || user?.userId || user?.UserId || user?.sub || '';
 }
 
 function getTypeCount({
@@ -80,7 +77,7 @@ function getTypeCount({
   const normalizedType = String(type || '').toLowerCase();
   const normalizedActiveType = String(activeTypeFilter || '').toLowerCase();
 
-  if (normalizedType === String(USER_NOTIFICATION_TYPE.ALL).toLowerCase()) {
+  if (normalizedType === String(ADMIN_NOTIFICATION_TYPE.ALL).toLowerCase()) {
     const allCount = typeCounts.find(
       (item) => String(item.type || '').toLowerCase() === 'all'
     );
@@ -103,63 +100,18 @@ function getTypeCount({
   return 0;
 }
 
-
-function normalizeRouteTarget(value = '') {
-  return String(value || '')
-    .trim()
-    .replace(/[\s_-]+/g, '')
-    .toLowerCase();
-}
-
-function getNotificationReportTarget(notification = {}) {
-  if (notification.isNearbyReport) {
-    return 'nearby';
-  }
-
-  const rawTarget = normalizeRouteTarget(
-    notification.targetPage ||
-      notification.reportScope ||
-      notification.reportSource ||
-      notification.source
-  );
-
-  if (
-    rawTarget.includes('nearby') ||
-    rawTarget.includes('nearbyissues') ||
-    rawTarget.includes('nearbyreports') ||
-    rawTarget.includes('public') ||
-    rawTarget.includes('map') ||
-    rawTarget.includes('قريبة')
-  ) {
-    return 'nearby';
-  }
-
-  return 'mine';
-}
-
-function getMyReportsRoute() {
-  return ROUTES.MY_REPORTS || '/dashboard/my-reports';
-}
-
-function getNearbyIssuesRoute() {
-  return (
-    ROUTES.NEARBY_ISSUES ||
-    ROUTES.NEARBY_REPORTS ||
-    ROUTES.NEARBY ||
-    '/dashboard/nearby-issues'
-  );
-}
-
-function UserNotificationsPage() {
+function AdminNotificationsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const userId = resolveUserId(user);
+  const adminId = resolveAdminId(user);
 
   const [notifications, setNotifications] = useState([]);
   const [activeTypeFilter, setActiveTypeFilter] = useState(
-    USER_NOTIFICATION_TYPE.ALL
+    ADMIN_NOTIFICATION_TYPE.ALL
   );
-  const [activeReadFilter, setActiveReadFilter] = useState(READ_FILTERS.ALL);
+  const [activeReadFilter, setActiveReadFilter] = useState(
+    ADMIN_NOTIFICATION_READ_STATUS.ALL
+  );
 
   const [pageNumber, setPageNumber] = useState(1);
   const [pagination, setPagination] = useState({
@@ -181,28 +133,42 @@ function UserNotificationsPage() {
 
   const selectedTypeFilter = useMemo(
     () =>
-      USER_NOTIFICATION_TYPE_FILTERS.find(
+      ADMIN_NOTIFICATION_TYPE_FILTERS.find(
         (filter) => filter.value === activeTypeFilter
-      ) || USER_NOTIFICATION_TYPE_FILTERS[0],
+      ) || ADMIN_NOTIFICATION_TYPE_FILTERS[0],
     [activeTypeFilter]
   );
-
-  const visibleNotifications = useMemo(() => {
-    if (activeReadFilter === READ_FILTERS.UNREAD) {
-      return notifications.filter((notification) => !notification.isRead);
-    }
-
-    return notifications;
-  }, [activeReadFilter, notifications]);
 
   const currentPageUnreadCount = useMemo(
     () => notifications.filter((notification) => !notification.isRead).length,
     [notifications]
   );
 
+  const allTabCount = useMemo(() => {
+    const activeTypeCount = getTypeCount({
+      typeCounts,
+      type: activeTypeFilter,
+      activeTypeFilter,
+      totalCount: pagination.totalCount,
+      notificationsCount: notifications.length,
+    });
+
+    return activeReadFilter === ADMIN_NOTIFICATION_READ_STATUS.UNREAD
+      ? activeTypeCount || pagination.totalCount
+      : pagination.totalCount;
+  }, [activeReadFilter, activeTypeFilter, notifications.length, pagination.totalCount, typeCounts]);
+
+  const unreadTabCount = useMemo(() => {
+    if (activeReadFilter === ADMIN_NOTIFICATION_READ_STATUS.UNREAD) {
+      return pagination.totalCount || currentPageUnreadCount;
+    }
+
+    return unreadCount || currentPageUnreadCount;
+  }, [activeReadFilter, currentPageUnreadCount, pagination.totalCount, unreadCount]);
+
   const loadNotifications = useCallback(
     async ({ showLoading = true } = {}) => {
-      if (!userId) {
+      if (!adminId) {
         setNotifications([]);
         setUnreadCount(0);
         setTypeCounts([]);
@@ -215,7 +181,7 @@ function UserNotificationsPage() {
           hasPreviousPage: false,
         });
         setIsLoading(false);
-        setErrorMessage('تعذر تحديد المستخدم الحالي.');
+        setErrorMessage('تعذر تحديد حساب الأدمن الحالي.');
         return;
       }
 
@@ -227,19 +193,24 @@ function UserNotificationsPage() {
         setErrorMessage('');
 
         const [notificationsResponse, nextUnreadCount] = await Promise.all([
-          getUserNotifications({
-            userId,
+          getAdminNotifications({
+            adminId,
             type: activeTypeFilter,
+            readStatus: activeReadFilter,
             pageNumber,
             pageSize: PAGE_SIZE,
           }),
-          getUnreadUserNotificationsCount(userId),
+          getUnreadAdminNotificationsCount(adminId),
         ]);
 
-        setNotifications(notificationsResponse.items || []);
-        setUnreadCount(
-          notificationsResponse.unreadCount || nextUnreadCount || 0
+        const nextNotifications = notificationsResponse.items || [];
+
+        setNotifications(
+          activeReadFilter === ADMIN_NOTIFICATION_READ_STATUS.UNREAD
+            ? nextNotifications.filter((notification) => !notification.isRead)
+            : nextNotifications
         );
+        setUnreadCount(notificationsResponse.unreadCount || nextUnreadCount || 0);
         setTypeCounts(notificationsResponse.typeCounts || []);
 
         setPagination({
@@ -251,7 +222,7 @@ function UserNotificationsPage() {
           hasPreviousPage: Boolean(notificationsResponse.hasPreviousPage),
         });
       } catch (error) {
-        setErrorMessage(error?.message || 'حدث خطأ أثناء تحميل الإشعارات.');
+        setErrorMessage(error?.message || 'حدث خطأ أثناء تحميل إشعارات الأدمن.');
         setNotifications([]);
       } finally {
         if (showLoading) {
@@ -259,7 +230,7 @@ function UserNotificationsPage() {
         }
       }
     },
-    [activeTypeFilter, pageNumber, userId]
+    [activeReadFilter, activeTypeFilter, adminId, pageNumber]
   );
 
   useEffect(() => {
@@ -275,6 +246,7 @@ function UserNotificationsPage() {
 
   function handleReadFilterChange(nextFilter) {
     setActiveReadFilter(nextFilter);
+    setPageNumber(1);
   }
 
   async function refreshAfterAction() {
@@ -286,7 +258,7 @@ function UserNotificationsPage() {
       setIsActionLoading(true);
       setErrorMessage('');
 
-      await markUserNotificationAsRead(notificationId);
+      await markAdminNotificationAsRead(notificationId);
       await refreshAfterAction();
     } catch (error) {
       setErrorMessage(error?.message || 'حدث خطأ أثناء تحديث حالة الإشعار.');
@@ -296,18 +268,18 @@ function UserNotificationsPage() {
   };
 
   const handleMarkAllAsRead = async () => {
-    if (!unreadCount || !userId) return;
+    if (!unreadCount || !adminId) return;
 
     try {
       setIsActionLoading(true);
       setErrorMessage('');
 
-      await markAllUserNotificationsAsRead(userId);
-      setActiveReadFilter(READ_FILTERS.ALL);
+      await markAllAdminNotificationsAsRead(adminId);
+      setActiveReadFilter(ADMIN_NOTIFICATION_READ_STATUS.ALL);
       await refreshAfterAction();
     } catch (error) {
       setErrorMessage(
-        error?.message || 'حدث خطأ أثناء تحديد الإشعارات كمقروءة.'
+        error?.message || 'حدث خطأ أثناء تحديد إشعارات الأدمن كمقروءة.'
       );
     } finally {
       setIsActionLoading(false);
@@ -319,7 +291,7 @@ function UserNotificationsPage() {
       setIsActionLoading(true);
       setErrorMessage('');
 
-      await deleteUserNotification(notificationId);
+      await deleteAdminNotification(notificationId);
       await refreshAfterAction();
     } catch (error) {
       setErrorMessage(error?.message || 'حدث خطأ أثناء حذف الإشعار.');
@@ -328,50 +300,26 @@ function UserNotificationsPage() {
     }
   };
 
-  async function handleViewNotificationReport(notification) {
-    const reportId = notification?.reportId;
+  function handleViewReport(notification) {
+    const reportId = String(notification?.reportId || '').trim();
 
     if (!reportId) {
-      setErrorMessage('هذا الإشعار غير مرتبط برقم بلاغ صالح.');
       return;
     }
 
-    try {
-      if (!notification.isRead && notification.id) {
-        await markUserNotificationAsRead(notification.id);
-      }
-    } catch {
-      // لا نمنع المستخدم من فتح البلاغ لو تحديث حالة القراءة فشل.
-    }
+    const encodedReportId = encodeURIComponent(reportId);
 
-    const target = getNotificationReportTarget(notification);
-
-    if (target === 'nearby') {
-      navigate(getNearbyIssuesRoute(), {
+    navigate(
+      `/admin/reports/review?highlightReportId=${encodedReportId}&source=notification#selected-report-card`,
+      {
         state: {
-          fromNotification: true,
-          notificationId: notification.id,
-          notificationReportId: reportId,
-          selectedIssueId: reportId,
-          highlightIssueId: reportId,
-          forceEnableCurrentLocation: true,
-          successMessage:
-            'فعّل موقعك الحالي أولًا، وبعدها سيتم تحديد البلاغ القادم من الإشعار داخل قائمة البلاغات القريبة.',
+          highlightReportId: reportId,
+          selectedReportId: reportId,
+          selectedReportSource: 'notification',
+          scrollToReportsTable: true,
         },
-      });
-      return;
-    }
-
-    navigate(getMyReportsRoute(), {
-      state: {
-        fromNotification: true,
-        notificationId: notification.id,
-        notificationReportId: reportId,
-        selectedReportId: reportId,
-        highlightReportId: reportId,
-        successMessage: 'تم فتح البلاغ المرتبط بالإشعار داخل جدول بلاغاتي.',
-      },
-    });
+      }
+    );
   }
 
   function goToPreviousPage() {
@@ -389,10 +337,10 @@ function UserNotificationsPage() {
   }
 
   return (
-    <div className="dashboard-page user-notifications-page">
+    <div className="dashboard-page user-notifications-page admin-notifications-page">
       <PageHeader
-        title="الإشعارات"
-        subtitle="تابع تحديثات بلاغاتك أولًا بأول"
+        title="إشعارات الأدمن"
+        subtitle="تابع البلاغات الجديدة وتحديثات الشركات من مكان واحد"
       />
 
       <section className="user-notifications-panel">
@@ -401,23 +349,31 @@ function UserNotificationsPage() {
             <button
               type="button"
               className={`user-notifications-read-tab ${
-                activeReadFilter === READ_FILTERS.ALL ? 'is-active' : ''
+                activeReadFilter === ADMIN_NOTIFICATION_READ_STATUS.ALL
+                  ? 'is-active'
+                  : ''
               }`}
-              onClick={() => handleReadFilterChange(READ_FILTERS.ALL)}
+              onClick={() =>
+                handleReadFilterChange(ADMIN_NOTIFICATION_READ_STATUS.ALL)
+              }
             >
               <span>كل الإشعارات</span>
-              <strong>{notifications.length}</strong>
+              <strong>{allTabCount}</strong>
             </button>
 
             <button
               type="button"
               className={`user-notifications-read-tab ${
-                activeReadFilter === READ_FILTERS.UNREAD ? 'is-active' : ''
+                activeReadFilter === ADMIN_NOTIFICATION_READ_STATUS.UNREAD
+                  ? 'is-active'
+                  : ''
               }`}
-              onClick={() => handleReadFilterChange(READ_FILTERS.UNREAD)}
+              onClick={() =>
+                handleReadFilterChange(ADMIN_NOTIFICATION_READ_STATUS.UNREAD)
+              }
             >
               <span>غير مقروءة</span>
-              <strong>{currentPageUnreadCount}</strong>
+              <strong>{unreadTabCount}</strong>
             </button>
           </div>
 
@@ -427,7 +383,7 @@ function UserNotificationsPage() {
               className="user-notifications-filter-dropdown__button"
               onClick={() => setIsDesktopFilterOpen((current) => !current)}
               aria-expanded={isDesktopFilterOpen}
-              aria-label="فلترة الإشعارات حسب النوع"
+              aria-label="فلترة إشعارات الأدمن حسب النوع"
             >
               <span className="user-notifications-filter-dropdown__icon">
                 <FiFilter />
@@ -443,7 +399,7 @@ function UserNotificationsPage() {
 
             {isDesktopFilterOpen ? (
               <div className="user-notifications-filter-dropdown__menu">
-                {USER_NOTIFICATION_TYPE_FILTERS.map((filter) => {
+                {ADMIN_NOTIFICATION_TYPE_FILTERS.map((filter) => {
                   const isActive = activeTypeFilter === filter.value;
                   const count = getTypeCount({
                     typeCounts,
@@ -508,28 +464,28 @@ function UserNotificationsPage() {
         {isLoading ? (
           <div className="user-notifications-loading">
             <FiRefreshCcw />
-            <span>جارٍ تحميل الإشعارات...</span>
+            <span>جارٍ تحميل إشعارات الأدمن...</span>
           </div>
         ) : (
           <>
-            <NotificationsList
-              notifications={visibleNotifications}
+            <AdminNotificationsList
+              notifications={notifications}
               onMarkAsRead={handleMarkAsRead}
               onDelete={handleDeleteNotification}
-              onViewReport={handleViewNotificationReport}
+              onViewReport={handleViewReport}
               emptyTitle={
-                activeReadFilter === READ_FILTERS.UNREAD
+                activeReadFilter === ADMIN_NOTIFICATION_READ_STATUS.UNREAD
                   ? 'لا توجد إشعارات غير مقروءة'
-                  : activeTypeFilter !== USER_NOTIFICATION_TYPE.ALL
+                  : activeTypeFilter !== ADMIN_NOTIFICATION_TYPE.ALL
                     ? 'لا توجد إشعارات من هذا النوع'
                     : 'لا توجد إشعارات'
               }
               emptyMessage={
-                activeReadFilter === READ_FILTERS.UNREAD
-                  ? 'كل الإشعارات الحالية مقروءة.'
-                  : activeTypeFilter !== USER_NOTIFICATION_TYPE.ALL
+                activeReadFilter === ADMIN_NOTIFICATION_READ_STATUS.UNREAD
+                  ? 'كل إشعارات الأدمن الحالية مقروءة.'
+                  : activeTypeFilter !== ADMIN_NOTIFICATION_TYPE.ALL
                     ? 'جرّب اختيار نوع إشعار آخر.'
-                    : 'عند حدوث أي تحديث على بلاغاتك سيظهر هنا مباشرة.'
+                    : 'عند وصول بلاغات أو تحديثات جديدة ستظهر هنا مباشرة.'
               }
             />
 
@@ -565,7 +521,7 @@ function UserNotificationsPage() {
           className="user-notifications-filter-sheet"
           role="dialog"
           aria-modal="true"
-          aria-label="فلترة الإشعارات"
+          aria-label="فلترة إشعارات الأدمن"
         >
           <button
             type="button"
@@ -579,7 +535,7 @@ function UserNotificationsPage() {
 
             <div className="user-notifications-filter-sheet__header">
               <div>
-                <h3>فلترة الإشعارات</h3>
+                <h3>فلترة إشعارات الأدمن</h3>
                 <p>اختر حالة القراءة ونوع الإشعار</p>
               </div>
 
@@ -596,27 +552,27 @@ function UserNotificationsPage() {
               <h4>حالة القراءة</h4>
 
               <div className="user-notifications-filter-sheet__read-options">
-                <button
-                  type="button"
-                  className={`user-notifications-read-tab ${
-                    activeReadFilter === READ_FILTERS.ALL ? 'is-active' : ''
-                  }`}
-                  onClick={() => handleReadFilterChange(READ_FILTERS.ALL)}
-                >
-                  <span>كل الإشعارات</span>
-                  <strong>{notifications.length}</strong>
-                </button>
+                {READ_FILTERS.map((filter) => {
+                  const isActive = activeReadFilter === filter.value;
+                  const count =
+                    filter.value === ADMIN_NOTIFICATION_READ_STATUS.UNREAD
+                      ? unreadTabCount
+                      : allTabCount;
 
-                <button
-                  type="button"
-                  className={`user-notifications-read-tab ${
-                    activeReadFilter === READ_FILTERS.UNREAD ? 'is-active' : ''
-                  }`}
-                  onClick={() => handleReadFilterChange(READ_FILTERS.UNREAD)}
-                >
-                  <span>غير مقروءة</span>
-                  <strong>{currentPageUnreadCount}</strong>
-                </button>
+                  return (
+                    <button
+                      key={filter.value}
+                      type="button"
+                      className={`user-notifications-read-tab ${
+                        isActive ? 'is-active' : ''
+                      }`}
+                      onClick={() => handleReadFilterChange(filter.value)}
+                    >
+                      <span>{filter.label}</span>
+                      <strong>{count}</strong>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -624,7 +580,7 @@ function UserNotificationsPage() {
               <h4>نوع الإشعار</h4>
 
               <div className="user-notifications-filter-sheet__options">
-                {USER_NOTIFICATION_TYPE_FILTERS.map((filter) => {
+                {ADMIN_NOTIFICATION_TYPE_FILTERS.map((filter) => {
                   const isActive = activeTypeFilter === filter.value;
                   const count = getTypeCount({
                     typeCounts,
@@ -663,4 +619,4 @@ function UserNotificationsPage() {
   );
 }
 
-export default UserNotificationsPage;
+export default AdminNotificationsPage;

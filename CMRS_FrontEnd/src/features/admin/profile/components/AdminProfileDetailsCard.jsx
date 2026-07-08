@@ -1,4 +1,4 @@
-import { FiMapPin, FiShield, FiUser } from 'react-icons/fi';
+import { FiClock, FiMapPin, FiShield, FiUser } from 'react-icons/fi';
 
 function AdminProfileDetailsCard({ profile }) {
   if (!profile) return null;
@@ -43,6 +43,14 @@ function AdminProfileDetailsCard({ profile }) {
             الإدارة
           </span>
           <strong>{profile.department}</strong>
+        </div>
+
+        <div>
+          <span>
+            <FiClock />
+            آخر تسجيل دخول
+          </span>
+          <strong>{profile.lastLogin}</strong>
         </div>
       </div>
     </section>

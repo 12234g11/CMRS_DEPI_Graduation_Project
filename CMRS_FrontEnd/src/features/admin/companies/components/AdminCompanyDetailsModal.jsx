@@ -23,6 +23,8 @@ function AdminCompanyDetailsModal({ company, onClose, onEdit }) {
   const governorates = company.governorates?.length
     ? company.governorates
     : [company.governorate].filter(Boolean);
+  const specializations = company.specializations || [];
+  const problemTypes = company.problemTypes || [];
 
   return (
     <div className="admin-company-modal-backdrop" role="presentation">
@@ -138,11 +140,27 @@ function AdminCompanyDetailsModal({ company, onClose, onEdit }) {
           <h3>الخدمات</h3>
 
           <div className="admin-company-details-tags">
-            {company.specializations.map((service) => (
-              <span key={service}>{service}</span>
-            ))}
+            {specializations.length ? (
+              specializations.map((service) => (
+                <span key={service}>{service}</span>
+              ))
+            ) : (
+              <span>{company.specialization}</span>
+            )}
           </div>
         </section>
+
+        {problemTypes.length ? (
+          <section className="admin-company-details-section">
+            <h3>أنواع البلاغات التي تتعامل معها</h3>
+
+            <div className="admin-company-details-tags">
+              {problemTypes.map((type) => (
+                <span key={type}>{type}</span>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className="admin-company-details-section">
           <h3>وصف الشركة</h3>

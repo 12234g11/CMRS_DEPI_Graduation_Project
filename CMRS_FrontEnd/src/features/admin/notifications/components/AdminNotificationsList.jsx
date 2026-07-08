@@ -1,13 +1,13 @@
 import { FiBellOff } from 'react-icons/fi';
-import NotificationItem from './NotificationItem';
+import AdminNotificationItem from './AdminNotificationItem';
 
-function NotificationsList({
+function AdminNotificationsList({
   notifications = [],
   onMarkAsRead,
   onDelete,
   onViewReport,
   emptyTitle = 'لا توجد إشعارات',
-  emptyMessage = 'عند حدوث أي تحديث على بلاغاتك سيظهر هنا مباشرة.',
+  emptyMessage = 'عند حدوث أي تحديث يخص البلاغات سيظهر هنا مباشرة.',
 }) {
   if (!notifications.length) {
     return (
@@ -25,7 +25,7 @@ function NotificationsList({
   return (
     <div className="user-notifications-list">
       {notifications.map((notification) => (
-        <NotificationItem
+        <AdminNotificationItem
           key={notification.id}
           notification={notification}
           onMarkAsRead={onMarkAsRead}
@@ -37,4 +37,4 @@ function NotificationsList({
   );
 }
 
-export default NotificationsList;
+export default AdminNotificationsList;

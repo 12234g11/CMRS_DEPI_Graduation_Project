@@ -1,21 +1,25 @@
 import { FiCheckCircle, FiClipboard, FiTrendingUp, FiUsers } from 'react-icons/fi';
 
-function AdminCompaniesStatsCards({ companies = [] }) {
-  const totalCompanies = companies.length;
+function AdminCompaniesStatsCards({ companies = [], summary }) {
+  const totalCompanies = summary?.totalCompanies ?? companies.length;
 
-  const activeCompanies = companies.filter(
-    (company) => company.status === 'active',
-  ).length;
+  const activeCompanies =
+    summary?.activeCompanies ??
+    companies.filter((company) => company.status === 'active').length;
 
-  const activeTasks = companies.reduce(
-    (total, company) => total + Number(company.activeTasks || 0),
-    0,
-  );
+  const activeTasks =
+    summary?.activeTasks ??
+    companies.reduce(
+      (total, company) => total + Number(company.activeTasks || 0),
+      0,
+    );
 
-  const completedTasks = companies.reduce(
-    (total, company) => total + Number(company.completedTasks || 0),
-    0,
-  );
+  const completedTasks =
+    summary?.completedTasks ??
+    companies.reduce(
+      (total, company) => total + Number(company.completedTasks || 0),
+      0,
+    );
 
   const stats = [
     {

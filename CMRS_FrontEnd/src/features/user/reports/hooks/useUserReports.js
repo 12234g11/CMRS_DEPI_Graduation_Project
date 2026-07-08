@@ -8,7 +8,8 @@ function buildDashboardStats(reports = [], totalCount = reports.length) {
   const pendingReports = reports.filter((report) => {
     return [
       REPORT_STATUS_API_VALUES.underReview,
-      REPORT_STATUS_API_VALUES.pending,
+      REPORT_STATUS_API_VALUES.pendingAdminApproval,
+      REPORT_STATUS_API_VALUES.needsCompletion,
     ].includes(report.statusKey);
   }).length;
 
@@ -17,15 +18,12 @@ function buildDashboardStats(reports = [], totalCount = reports.length) {
       REPORT_STATUS_API_VALUES.accepted,
       REPORT_STATUS_API_VALUES.assigned,
       REPORT_STATUS_API_VALUES.inProgress,
+      REPORT_STATUS_API_VALUES.unableToExecute,
     ].includes(report.statusKey);
   }).length;
 
   const solvedReports = reports.filter((report) => {
-    return [
-      REPORT_STATUS_API_VALUES.resolved,
-      REPORT_STATUS_API_VALUES.completed,
-      REPORT_STATUS_API_VALUES.closed,
-    ].includes(report.statusKey);
+    return report.statusKey === REPORT_STATUS_API_VALUES.resolved;
   }).length;
 
   return [
@@ -39,21 +37,21 @@ function buildDashboardStats(reports = [], totalCount = reports.length) {
     {
       id: 'pending',
       title: 'قيد المراجعة',
-      subtitle: 'Pending',
+      subtitle: 'Under Review / Needs Action',
       value: pendingReports,
       tone: 'warning',
     },
     {
       id: 'in-progress',
-      title: 'جاري الحل',
-      subtitle: 'In Progress',
+      title: 'جاري التنفيذ',
+      subtitle: 'Accepted / Assigned / In Progress',
       value: inProgressReports,
       tone: 'info',
     },
     {
       id: 'solved',
       title: 'تم الحل',
-      subtitle: 'Solved',
+      subtitle: 'Resolved',
       value: solvedReports,
       tone: 'success',
     },
@@ -61,7 +59,10 @@ function buildDashboardStats(reports = [], totalCount = reports.length) {
 }
 
 function isRejectedReport(report = {}) {
-  return report.statusKey === REPORT_STATUS_API_VALUES.rejected || report.statusTone === 'danger';
+  return (
+    report.statusKey === REPORT_STATUS_API_VALUES.rejected ||
+    report.statusTone === 'danger'
+  );
 }
 
 function buildMapMarkers(reports = []) {
@@ -76,7 +77,11 @@ function buildMapMarkers(reports = []) {
 
       title: report.title,
       subtitle: report.issueCategoryName || report.categoryLabel,
-      area: typeof report.area === 'string' ? report.area : report.area?.city || '',
+
+      area:
+        typeof report.area === 'string'
+          ? report.area
+          : report.area?.city || report.areaText || '',
 
       statusLabel: report.statusLabel,
       tone: report.statusTone,
@@ -88,13 +93,20 @@ function buildMapMarkers(reports = []) {
     }));
 }
 
-export function useUserReports(userId, pageNumber = 1) {
+export function useUserReports(userId, pageNumberOrOptions = 1) {
+  const options =
+    typeof pageNumberOrOptions === 'object'
+      ? pageNumberOrOptions
+      : { pageNumber: pageNumberOrOptions };
+
+  const { pageNumber = 1, pageSize = 10 } = options;
+
   const [reports, setReports] = useState([]);
 
   const [pagination, setPagination] = useState({
     totalCount: 0,
     pageNumber: 1,
-    pageSize: 10,
+    pageSize,
     totalPages: 1,
   });
 
@@ -107,7 +119,7 @@ export function useUserReports(userId, pageNumber = 1) {
       setPagination({
         totalCount: 0,
         pageNumber: 1,
-        pageSize: 10,
+        pageSize,
         totalPages: 1,
       });
       setErrorMessage('');
@@ -121,13 +133,14 @@ export function useUserReports(userId, pageNumber = 1) {
       const response = await getUserReports({
         userId,
         pageNumber,
+        pageSize,
       });
 
       setReports(response.items || []);
       setPagination({
         totalCount: response.totalCount || 0,
-        pageNumber: response.pageNumber || 1,
-        pageSize: response.pageSize || 10,
+        pageNumber: response.pageNumber || pageNumber,
+        pageSize: response.pageSize || pageSize,
         totalPages: response.totalPages || 1,
       });
     } catch (error) {
@@ -135,14 +148,14 @@ export function useUserReports(userId, pageNumber = 1) {
       setPagination({
         totalCount: 0,
         pageNumber: 1,
-        pageSize: 10,
+        pageSize,
         totalPages: 1,
       });
       setErrorMessage(error?.message || 'تعذر تحميل بلاغاتك حاليًا.');
     } finally {
       setIsLoading(false);
     }
-  }, [userId, pageNumber]);
+  }, [userId, pageNumber, pageSize]);
 
   useEffect(() => {
     loadReports();

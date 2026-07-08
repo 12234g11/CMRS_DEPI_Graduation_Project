@@ -7,32 +7,159 @@ const JSON_BODY_CONFIG = {
   },
 };
 
+export const NEARBY_REPORT_STATUS_API_VALUES = {
+  all: 'all',
+  accepted: 'Accepted',
+  assigned: 'Assigned',
+  inProgress: 'InProgress',
+  resolved: 'Resolved',
+};
+
+export const NEARBY_VISIBLE_STATUS_VALUES = [
+  NEARBY_REPORT_STATUS_API_VALUES.accepted,
+  NEARBY_REPORT_STATUS_API_VALUES.assigned,
+  NEARBY_REPORT_STATUS_API_VALUES.inProgress,
+  NEARBY_REPORT_STATUS_API_VALUES.resolved,
+];
+
+export const NEARBY_STATUS_FILTER_OPTIONS = [
+  { label: 'كل الحالات', value: NEARBY_REPORT_STATUS_API_VALUES.all },
+  { label: 'مقبول', value: NEARBY_REPORT_STATUS_API_VALUES.accepted },
+  { label: 'تم التعيين', value: NEARBY_REPORT_STATUS_API_VALUES.assigned },
+  { label: 'جاري التنفيذ', value: NEARBY_REPORT_STATUS_API_VALUES.inProgress },
+  { label: 'تم الحل', value: NEARBY_REPORT_STATUS_API_VALUES.resolved },
+];
+
+export const NEARBY_STATUS_LEGEND_ITEMS = [
+  {
+    id: NEARBY_REPORT_STATUS_API_VALUES.accepted,
+    label: 'مقبول',
+    description: 'بلاغ تمت مراجعته والتأكد أنه صالح للظهور للمستخدمين القريبين.',
+    dotClassName: 'accepted',
+  },
+  {
+    id: NEARBY_REPORT_STATUS_API_VALUES.assigned,
+    label: 'تم التعيين',
+    description: 'تم إسناد البلاغ إلى شركة أو جهة مسؤولة عن التنفيذ.',
+    dotClassName: 'assigned',
+  },
+  {
+    id: NEARBY_REPORT_STATUS_API_VALUES.inProgress,
+    label: 'جاري التنفيذ',
+    description: 'الجهة المسؤولة بدأت التعامل مع البلاغ وتحديث حالته.',
+    dotClassName: 'in-progress',
+  },
+  {
+    id: NEARBY_REPORT_STATUS_API_VALUES.resolved,
+    label: 'تم الحل',
+    description: 'تم إنهاء المشكلة، ويمكن تقييم جودة الحل خلال فترة الظهور.',
+    dotClassName: 'resolved',
+  },
+];
+
 const STATUS_TONE = {
-  UnderReview: 'warning',
+  Accepted: 'warning',
+  Assigned: 'info',
   InProgress: 'info',
   Resolved: 'success',
 };
 
 const STATUS_LABEL = {
-  UnderReview: 'قيد المراجعة',
-  InProgress: 'جاري الحل',
+  Accepted: 'مقبول',
+  Assigned: 'تم التعيين',
+  InProgress: 'جاري التنفيذ',
   Resolved: 'تم الحل',
 };
 
+function normalizeStatusValue(status = '') {
+  return String(status || '')
+    .trim()
+    .replace(/[\s_-]+/g, '')
+    .toLowerCase();
+}
+
 function getResponseData(response) {
-  return response?.data || response?.Data || response;
+  return (
+    response?.data?.data ||
+    response?.data?.Data ||
+    response?.data ||
+    response?.Data ||
+    response
+  );
+}
+
+export function getNearbyReportStatusKey(status = '') {
+  const normalizedStatus = normalizeStatusValue(status);
+
+  if (['accepted', 'approved', 'مقبول', 'تمالقبول'].includes(normalizedStatus)) {
+    return NEARBY_REPORT_STATUS_API_VALUES.accepted;
+  }
+
+  if (['assigned', 'تمالتعيين'].includes(normalizedStatus)) {
+    return NEARBY_REPORT_STATUS_API_VALUES.assigned;
+  }
+
+  if (
+    [
+      'inprogress',
+      'progress',
+      'processing',
+      'working',
+      'inexecution',
+      'جاريالتنفيذ',
+      'جاريالحل',
+    ].includes(normalizedStatus)
+  ) {
+    return NEARBY_REPORT_STATUS_API_VALUES.inProgress;
+  }
+
+  if (
+    [
+      'resolved',
+      'solved',
+      'completed',
+      'complete',
+      'done',
+      'closed',
+      'close',
+      'تمالحل',
+    ].includes(normalizedStatus)
+  ) {
+    return NEARBY_REPORT_STATUS_API_VALUES.resolved;
+  }
+
+  return '';
+}
+
+function isVisibleNearbyStatus(status = '') {
+  return NEARBY_VISIBLE_STATUS_VALUES.includes(getNearbyReportStatusKey(status));
 }
 
 function getStatusTone(status) {
-  return STATUS_TONE[status] || 'warning';
+  const statusKey = getNearbyReportStatusKey(status);
+
+  return STATUS_TONE[statusKey] || 'warning';
 }
 
 function getStatusLabel(report = {}) {
-  return report.statusLabel || STATUS_LABEL[report.status] || 'قيد المراجعة';
+  const statusKey = getNearbyReportStatusKey(
+    report.status || report.Status || report.statusKey || report.StatusKey
+  );
+
+  return (
+    report.statusLabel ||
+    report.StatusLabel ||
+    STATUS_LABEL[statusKey] ||
+    'غير محدد'
+  );
 }
 
 function buildAddress(area = {}) {
-  return [area.city, area.address, area.detailedAddress]
+  return [
+    area.city || area.City,
+    area.address || area.Address,
+    area.detailedAddress || area.DetailedAddress,
+  ]
     .filter(Boolean)
     .join(' - ');
 }
@@ -59,62 +186,175 @@ function buildDeleteConfig(reportId, extra = {}) {
   };
 }
 
-function prepareNearbyReport(report = {}) {
-  const reportImages = Array.isArray(report.reportImages)
-    ? report.reportImages.map((image) => ({
-        ...image,
-        fullImageUrl: resolveAssetUrl(image.imageUrl || ''),
-      }))
-    : [];
+function getReportImages(report = {}) {
+  const rawImages =
+    report.reportImages ||
+    report.ReportImages ||
+    report.images ||
+    report.Images ||
+    [];
 
-  const address = buildAddress(report.area || {});
-  const latitude = Number(report.latitude);
-  const longitude = Number(report.longitude);
-  const statusTone = getStatusTone(report.status);
-  const categoryLabel = report.issueCategoryName || 'أخرى';
+  if (!Array.isArray(rawImages)) {
+    return [];
+  }
+
+  return rawImages
+    .map((image) => {
+      if (typeof image === 'string') {
+        return {
+          imageUrl: image,
+          fullImageUrl: resolveAssetUrl(image),
+        };
+      }
+
+      const imageUrl =
+        image.imageUrl ||
+        image.ImageUrl ||
+        image.url ||
+        image.Url ||
+        image.path ||
+        image.Path ||
+        '';
+
+      return {
+        ...image,
+        imageUrl,
+        fullImageUrl: resolveAssetUrl(imageUrl),
+      };
+    })
+    .filter((image) => image.fullImageUrl);
+}
+
+function prepareNearbyReport(report = {}) {
+  const reportImages = getReportImages(report);
+
+  const address = buildAddress(report.area || report.Area || {});
+  const latitude = Number(report.latitude ?? report.Latitude);
+  const longitude = Number(report.longitude ?? report.Longitude);
+
+  const rawStatus =
+    report.status ||
+    report.Status ||
+    report.statusKey ||
+    report.StatusKey ||
+    '';
+
+  const statusKey = getNearbyReportStatusKey(rawStatus);
+  const statusTone = getStatusTone(statusKey);
+
+  const categoryLabel =
+    report.issueCategoryName ||
+    report.IssueCategoryName ||
+    report.categoryLabel ||
+    report.CategoryLabel ||
+    report.categoryName ||
+    report.CategoryName ||
+    'أخرى';
 
   return {
     ...report,
 
-    id: report.reportId,
-    title: report.title || 'بلاغ قريب منك',
-    description: report.description || 'لا يوجد وصف متاح لهذا البلاغ.',
+    id: report.reportId || report.ReportId || report.id || report.Id,
+    reportId: report.reportId || report.ReportId || report.id || report.Id,
+
+    reportNumber:
+      report.reportNumber ||
+      report.ReportNumber ||
+      report.number ||
+      report.Number,
+
+    title:
+      report.title ||
+      report.Title ||
+      report.issueTitle ||
+      report.IssueTitle ||
+      'بلاغ قريب منك',
+
+    description:
+      report.description ||
+      report.Description ||
+      'لا يوجد وصف متاح لهذا البلاغ.',
+
     category: categoryLabel,
     typeLabel: categoryLabel,
+    issueCategoryName: categoryLabel,
 
-    area: report.area?.city || report.area?.address || 'موقع قريب',
-    address: address || 'لم يتم تحديد العنوان',
-
-    distanceLabel: buildDistanceLabel(report.distanceKm),
-    date: report.reportedAt || report.createdAt,
-
+    status: statusKey || rawStatus,
+    statusKey,
     statusLabel: getStatusLabel(report),
     tone: statusTone,
     statusTone,
+
+    area:
+      report.area?.city ||
+      report.Area?.City ||
+      report.area?.address ||
+      report.Area?.Address ||
+      'موقع قريب',
+
+    address: address || report.address || report.Address || 'لم يتم تحديد العنوان',
+
+    distanceLabel: buildDistanceLabel(report.distanceKm ?? report.DistanceKm),
+    date:
+      report.reportedAt ||
+      report.ReportedAt ||
+      report.createdAt ||
+      report.CreatedAt,
+
+    reportedAt: report.reportedAt || report.ReportedAt,
+    createdAt: report.createdAt || report.CreatedAt,
 
     reportImages,
     images: reportImages.map((image) => image.fullImageUrl).filter(Boolean),
     coverImage: reportImages[0]?.fullImageUrl || '',
 
-    followersCount: report.followersCount ?? 0,
-    isFollowedByCurrentUser: Boolean(report.isFollowedByCurrentUser),
-    canCurrentUserFollow: report.canCurrentUserFollow !== false,
+    followersCount: report.followersCount ?? report.FollowersCount ?? 0,
+    isFollowedByCurrentUser: Boolean(
+      report.isFollowedByCurrentUser ?? report.IsFollowedByCurrentUser
+    ),
+    canCurrentUserFollow:
+      (report.canCurrentUserFollow ?? report.CanCurrentUserFollow) !== false,
 
-    verifyCount: report.verifyCount ?? 0,
-    isVerifiedByCurrentUser: Boolean(report.isVerifiedByCurrentUser),
-    canCurrentUserVerify: report.canCurrentUserVerify !== false,
+    verifyCount: report.verifyCount ?? report.VerifyCount ?? 0,
+    isVerifiedByCurrentUser: Boolean(
+      report.isVerifiedByCurrentUser ?? report.IsVerifiedByCurrentUser
+    ),
+    canCurrentUserVerify:
+      (report.canCurrentUserVerify ?? report.CanCurrentUserVerify) !== false,
 
-    // لو الباك رجع قيمة vote الحالية للمستخدم هنستخدمها.
     currentUserVerifyVote:
       report.currentUserVerifyVote ??
+      report.CurrentUserVerifyVote ??
       report.verifyVote ??
+      report.VerifyVote ??
       report.userVerifyVote ??
+      report.UserVerifyVote ??
       report.userVote ??
+      report.UserVote ??
       null,
 
-    ratingCount: report.ratingCount ?? 0,
-    isRatedByCurrentUser: Boolean(report.isRatedByCurrentUser),
-    canCurrentUserRate: report.canCurrentUserRate !== false,
+    ratingCount: report.ratingCount ?? report.RatingCount ?? 0,
+    isRatedByCurrentUser: Boolean(
+      report.isRatedByCurrentUser ?? report.IsRatedByCurrentUser
+    ),
+    canCurrentUserRate:
+      (report.canCurrentUserRate ?? report.CanCurrentUserRate) !== false,
+
+    ownerUserName:
+      report.ownerUserName ||
+      report.OwnerUserName ||
+      report.userName ||
+      report.UserName ||
+      '—',
+
+    priorityLabel:
+      report.priorityLabel ||
+      report.PriorityLabel ||
+      report.severityLabel ||
+      report.SeverityLabel ||
+      report.priority ||
+      report.Priority ||
+      '—',
 
     position:
       Number.isFinite(latitude) && Number.isFinite(longitude)
@@ -126,27 +366,62 @@ function prepareNearbyReport(report = {}) {
   };
 }
 
-export async function getNearbyReports({ lat, lng, pageNumber = 1 } = {}) {
+export async function getNearbyReports({
+  lat,
+  lng,
+  pageNumber = 1,
+  status = NEARBY_REPORT_STATUS_API_VALUES.all,
+} = {}) {
   if (lat == null || lng == null) {
     return [];
   }
 
-  const response = await get('/api/Report/nearby', {
+  const cleanStatus = String(status || '').trim();
+
+  const isFilteringByStatus =
+    cleanStatus && cleanStatus !== NEARBY_REPORT_STATUS_API_VALUES.all;
+
+  if (isFilteringByStatus && !NEARBY_VISIBLE_STATUS_VALUES.includes(cleanStatus)) {
+    return [];
+  }
+
+  const endpoint = isFilteringByStatus
+    ? '/api/Report/nearby/status'
+    : '/api/Report/nearby';
+
+  const response = await get(endpoint, {
     params: {
       lat,
       lng,
       pageNumber,
+      ...(isFilteringByStatus ? { status: cleanStatus } : {}),
     },
   });
 
   const data = getResponseData(response);
-  const reports = Array.isArray(data) ? data : data?.items || [];
 
-  return reports
+  const reports = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.items)
+      ? data.items
+      : Array.isArray(data?.Items)
+        ? data.Items
+        : [];
+
+  const preparedReports = reports
     .map(prepareNearbyReport)
-    .filter((report) => report.id && report.position);
-}
+    .filter((report) => report.id && report.position)
+    .filter((report) => isVisibleNearbyStatus(report.statusKey || report.status));
 
+  if (!isFilteringByStatus) {
+    return preparedReports;
+  }
+
+  return preparedReports.filter(
+    (report) =>
+      getNearbyReportStatusKey(report.statusKey || report.status) === cleanStatus
+  );
+}
 export async function followReport(reportId) {
   const response = await post(
     `/api/Report/${encodeURIComponent(reportId)}/follow`,

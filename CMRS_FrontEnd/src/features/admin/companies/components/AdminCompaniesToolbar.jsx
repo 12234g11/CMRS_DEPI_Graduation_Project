@@ -1,9 +1,5 @@
 import { FiSearch } from 'react-icons/fi';
 import AdminReportFilterSelect from '../../reports/components/AdminReportFilterSelect';
-import {
-  adminCompanySpecializationOptions,
-  companyStatusOptions,
-} from '../mocks/adminCompaniesMockData';
 
 function AdminCompaniesToolbar({
   searchTerm,
@@ -12,6 +8,8 @@ function AdminCompaniesToolbar({
   onStatusChange,
   specializationFilter,
   onSpecializationChange,
+  statusOptions = [],
+  specializationOptions = [],
 }) {
   return (
     <div className="admin-companies-toolbar">
@@ -28,7 +26,7 @@ function AdminCompaniesToolbar({
 
       <AdminReportFilterSelect
         value={specializationFilter}
-        options={adminCompanySpecializationOptions}
+        options={specializationOptions}
         onChange={onSpecializationChange}
         ariaLabel="فلترة حسب الخدمة"
         variant="overlay"
@@ -36,7 +34,7 @@ function AdminCompaniesToolbar({
 
       <AdminReportFilterSelect
         value={statusFilter}
-        options={companyStatusOptions}
+        options={statusOptions}
         onChange={onStatusChange}
         ariaLabel="فلترة حسب الحالة"
         variant="overlay"

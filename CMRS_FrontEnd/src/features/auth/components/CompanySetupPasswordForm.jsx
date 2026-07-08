@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ROUTES } from '../../../shared/navigation';
+import PasswordInput from './PasswordInput';
 import { acceptCompanyInvitation } from '../api/authApi';
 
 const initialValues = {
@@ -39,6 +40,10 @@ function CompanySetupPasswordForm() {
 
   const [formData, setFormData] = useState(initialValues);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState({
+    password: false,
+    confirmPassword: false,
+  });
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -163,27 +168,37 @@ function CompanySetupPasswordForm() {
 
           <motion.div className="company-form__field" variants={itemVariants}>
             <label htmlFor="password">كلمة المرور</label>
-            <input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
-              placeholder="••••••••"
               value={formData.password}
               onChange={handleChange}
               autoComplete="new-password"
+              isVisible={visiblePasswords.password}
+              onToggleVisibility={() =>
+                setVisiblePasswords((prev) => ({
+                  ...prev,
+                  password: !prev.password,
+                }))
+              }
             />
           </motion.div>
 
           <motion.div className="company-form__field" variants={itemVariants}>
             <label htmlFor="confirmPassword">تأكيد كلمة المرور</label>
-            <input
+            <PasswordInput
               id="confirmPassword"
               name="confirmPassword"
-              type="password"
-              placeholder="••••••••"
               value={formData.confirmPassword}
               onChange={handleChange}
               autoComplete="new-password"
+              isVisible={visiblePasswords.confirmPassword}
+              onToggleVisibility={() =>
+                setVisiblePasswords((prev) => ({
+                  ...prev,
+                  confirmPassword: !prev.confirmPassword,
+                }))
+              }
             />
           </motion.div>
         </motion.div>

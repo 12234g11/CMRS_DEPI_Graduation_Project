@@ -7,10 +7,12 @@ import ReportsMap from '../../../map/components/ReportsMap';
 import {
   acceptCompanyCannotFix,
   acceptCompanyFix,
+  approveAdminReport,
+  closeAdminReport,
   getAdminReportById,
   prepareReportReassignment,
+  rejectAdminReport,
   requestCompanyCompletion,
-  updateAdminReport,
 } from '../api/adminReportsApi';
 import AdminCompanyAssignmentPanel from '../components/AdminCompanyAssignmentPanel';
 import AdminCompanyResponseReviewCard from '../components/AdminCompanyResponseReviewCard';
@@ -19,7 +21,6 @@ import AdminReporterCard from '../components/AdminReporterCard';
 import AdminReportStatusForm from '../components/AdminReportStatusForm';
 import AdminReportSummaryCard from '../components/AdminReportSummaryCard';
 import AdminReportTimelineCard from '../components/AdminReportTimelineCard';
-import { adminReports } from '../mocks/adminReportsMockData';
 import '../admin-reports.css';
 
 function AdminReportDetailsPage() {
@@ -27,18 +28,30 @@ function AdminReportDetailsPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [report, setReport] = useState(() => (
-    adminReports.find((item) => String(item.id) === String(reportId)) || null
-  ));
+  const [report, setReport] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
-    getAdminReportById(reportId).then((data) => {
-      if (isMounted) {
-        setReport(data);
-      }
-    });
+    setIsLoading(true);
+
+    getAdminReportById(reportId)
+      .then((data) => {
+        if (isMounted) {
+          setReport(data);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setReport(null);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
 
     return () => {
       isMounted = false;
@@ -81,8 +94,19 @@ function AdminReportDetailsPage() {
     ];
   }, [report]);
 
-  async function handleStatusSave(payload) {
-    const updatedReport = await updateAdminReport(report.id, payload);
+
+  async function handleApproveReport() {
+    const updatedReport = await approveAdminReport(report.id);
+    setReport(updatedReport);
+  }
+
+  async function handleRejectReport(rejectionReason) {
+    const updatedReport = await rejectAdminReport(report.id, rejectionReason);
+    setReport(updatedReport);
+  }
+
+  async function handleCloseReport() {
+    const updatedReport = await closeAdminReport(report.id);
     setReport(updatedReport);
   }
 
@@ -143,6 +167,19 @@ async function handleReassign(adminNote) {
     });
   }, 350);
 }
+  if (isLoading) {
+    return (
+      <div className="dashboard-page admin-report-details-page">
+        <PageHeader title="عرض البلاغ" subtitle="Report Details" />
+
+        <section className="admin-report-details-card admin-report-not-found">
+          <h2>جاري تحميل البلاغ...</h2>
+          <p>برجاء الانتظار حتى يتم تحميل تفاصيل البلاغ من الخادم.</p>
+        </section>
+      </div>
+    );
+  }
+
   if (!report) {
     return (
       <div className="dashboard-page admin-report-details-page">
@@ -162,6 +199,23 @@ async function handleReassign(adminNote) {
       </div>
     );
   }
+
+
+  const reportStatusText = `${report.statusValue || ''} ${report.statusLabel || ''} ${report.status || ''}`.toLowerCase();
+  const isCitizenReviewStage =
+    reportStatusText.includes('underreview') ||
+    reportStatusText.includes('under review') ||
+    reportStatusText.includes('pending') ||
+    reportStatusText.includes('قيد المراجعة') ||
+    reportStatusText.includes('بانتظار المراجعة');
+  const isTerminalReport =
+    reportStatusText.includes('resolved') ||
+    reportStatusText.includes('rejected') ||
+    reportStatusText.includes('closed') ||
+    reportStatusText.includes('تم الحل') ||
+    reportStatusText.includes('مرفوض') ||
+    reportStatusText.includes('مغلق');
+  const canShowCompanyAssignmentPanel = !isCitizenReviewStage && !isTerminalReport;
 
   return (
     <div className="dashboard-page admin-report-details-page">
@@ -195,6 +249,13 @@ async function handleReassign(adminNote) {
 
           <AdminReportSummaryCard report={report} />
 
+          <AdminReportStatusForm
+            report={report}
+            onApprove={handleApproveReport}
+            onReject={handleRejectReport}
+            onCloseReport={handleCloseReport}
+          />
+
           <AdminReportTimelineCard timeline={report.timeline || []} />
         </div>
 
@@ -226,12 +287,13 @@ async function handleReassign(adminNote) {
             onReassign={handleReassign}
           />
 
-          <AdminReportStatusForm report={report} onSave={handleStatusSave} />
 
-          <AdminCompanyAssignmentPanel
-            report={report}
-            onAssigned={handleCompanyAssigned}
-          />
+          {canShowCompanyAssignmentPanel ? (
+            <AdminCompanyAssignmentPanel
+              report={report}
+              onAssigned={handleCompanyAssigned}
+            />
+          ) : null}
         </div>
       </div>
     </div>

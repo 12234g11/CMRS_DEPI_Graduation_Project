@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  FiAlertCircle,
   FiArrowLeft,
   FiEye,
-  FiFilter,
   FiMapPin,
+  FiRefreshCw,
   FiSearch,
   FiX,
 } from 'react-icons/fi';
@@ -11,27 +12,58 @@ import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../../../shared/components/ui/PageHeader';
 import { ROUTES } from '../../../../shared/navigation';
 import ReportsMap from '../../../map/components/ReportsMap';
-import { getAdminDashboardData } from '../api/adminDashboardApi';
+import { getAdminDashboardData, isRejectedReport } from '../api/adminDashboardApi';
 import AdminDashboardReportDetailsModal from '../components/AdminDashboardReportDetailsModal';
 import AdminFilterSelect from '../components/AdminFilterSelect';
 import AdminStatsCards from '../components/AdminStatsCards';
-import {
-  adminDashboardPriorityOptions,
-  adminDashboardProblemTypeOptions,
-  adminDashboardReports,
-  adminDashboardStats,
-  adminDashboardStatusOptions,
-} from '../mocks/adminDashboardMockData';
 import '../admin-dashboard.css';
 
-function getReportTargetPath(report) {
-  const basePath = `${ROUTES.ADMIN_REVIEW_REPORTS}/${report.id}`;
+const DEFAULT_DASHBOARD_DATA = {
+  stats: [],
+  reports: [],
+  totalReportsCount: 0,
+  hiddenRejectedCount: 0,
+  filters: {
+    problemTypes: [{ value: 'all', label: 'كل الأنواع' }],
+    statuses: [{ value: 'all', label: 'كل الحالات المعروضة' }],
+    priorities: [{ value: 'all', label: 'كل الأولويات' }],
+  },
+};
 
-  if (report.companyResponse) {
-    return `${basePath}#company-response`;
-  }
+const FLAG_LEGEND = [
+  {
+    tone: 'warning',
+    label: 'قيد المراجعة',
+    description: 'بلاغ جديد أو بانتظار مراجعة الأدمن',
+  },
+  {
+    tone: 'info',
+    label: 'قيد التنفيذ',
+    description: 'مقبول أو تم تعيينه أو جاري الحل',
+  },
+  {
+    tone: 'success',
+    label: 'تم الحل',
+    description: 'تم اعتماد الحل أو إغلاق البلاغ',
+  },
+  {
+    tone: 'danger',
+    label: 'يحتاج إجراء',
+    description: 'مطلوب متابعة أو متعذر التنفيذ',
+  },
+];
 
-  return `${basePath}#company-assignment`;
+function getReportsTableTargetPath(report) {
+  const reportId = encodeURIComponent(report.id);
+
+  return `${ROUTES.ADMIN_REVIEW_REPORTS}?highlightReportId=${reportId}#reports-table`;
+}
+
+function hasValidPosition(report) {
+  const lat = Number(report.position?.lat);
+  const lng = Number(report.position?.lng);
+
+  return Number.isFinite(lat) && Number.isFinite(lng);
 }
 
 function buildMapMarker(report) {
@@ -43,24 +75,31 @@ function buildMapMarker(report) {
     area: report.location,
     statusLabel: report.status,
     tone: report.statusTone,
+    statusTone: report.statusTone,
     address: report.location,
-    position: report.position,
+    position: {
+      lat: Number(report.position.lat),
+      lng: Number(report.position.lng),
+    },
   };
+}
+
+function valueMatchesFilter(selectedValue, ...values) {
+  if (selectedValue === 'all') return true;
+
+  const normalizedSelectedValue = String(selectedValue || '').toLowerCase();
+
+  return values.some(
+    (value) => String(value || '').toLowerCase() === normalizedSelectedValue,
+  );
 }
 
 function AdminDashboardPage() {
   const navigate = useNavigate();
 
-  const [dashboardData, setDashboardData] = useState({
-    stats: adminDashboardStats,
-    reports: adminDashboardReports,
-    filters: {
-      problemTypes: adminDashboardProblemTypeOptions,
-      statuses: adminDashboardStatusOptions,
-      priorities: adminDashboardPriorityOptions,
-    },
-  });
-
+  const [dashboardData, setDashboardData] = useState(DEFAULT_DASHBOARD_DATA);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [problemTypeFilter, setProblemTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -72,11 +111,30 @@ function AdminDashboardPage() {
   useEffect(() => {
     let isMounted = true;
 
-    getAdminDashboardData().then((data) => {
-      if (!isMounted) return;
+    setIsLoading(true);
+    setErrorMessage('');
 
-      setDashboardData(data);
-    });
+    getAdminDashboardData()
+      .then((data) => {
+        if (!isMounted) return;
+
+        setDashboardData(data);
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+
+        setErrorMessage(
+          error?.response?.data?.message ||
+            error?.message ||
+            'تعذر تحميل بيانات لوحة التحكم.',
+        );
+        setDashboardData(DEFAULT_DASHBOARD_DATA);
+      })
+      .finally(() => {
+        if (!isMounted) return;
+
+        setIsLoading(false);
+      });
 
     return () => {
       isMounted = false;
@@ -87,30 +145,48 @@ function AdminDashboardPage() {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
     return dashboardData.reports.filter((report) => {
+      if (isRejectedReport(report)) return false;
+
       const matchesSearch = normalizedSearch
         ? [
-          report.id,
-          report.type,
-          report.title,
-          report.location,
-          report.status,
-          report.priority,
-          report.assignedCompany,
-          report.companyResponse?.companyName,
-        ]
-          .join(' ')
-          .toLowerCase()
-          .includes(normalizedSearch)
+            report.id,
+            report.type,
+            report.title,
+            report.issueCategoryName,
+            report.location,
+            report.city,
+            report.status,
+            report.statusValue,
+            report.priority,
+            report.priorityValue,
+            report.assignedCompany,
+            report.companyResponse?.companyName,
+          ]
+            .join(' ')
+            .toLowerCase()
+            .includes(normalizedSearch)
         : true;
 
-      const matchesProblemType =
-        problemTypeFilter === 'all' || report.type === problemTypeFilter;
+      const matchesProblemType = valueMatchesFilter(
+        problemTypeFilter,
+        report.issueCategoryId,
+        report.issueCategoryName,
+        report.type,
+      );
 
-      const matchesStatus =
-        statusFilter === 'all' || report.status === statusFilter;
+      const matchesStatus = valueMatchesFilter(
+        statusFilter,
+        report.statusValue,
+        report.status,
+        report.statusLabel,
+      );
 
-      const matchesPriority =
-        priorityFilter === 'all' || report.priority === priorityFilter;
+      const matchesPriority = valueMatchesFilter(
+        priorityFilter,
+        report.priorityValue,
+        report.priority,
+        report.priorityLabel,
+      );
 
       return (
         matchesSearch &&
@@ -127,16 +203,31 @@ function AdminDashboardPage() {
     statusFilter,
   ]);
 
-  const mapMarkers = useMemo(() => {
-    return filteredReports
-      .filter((report) => report.position?.lat && report.position?.lng)
-      .map(buildMapMarker);
+  const mapReports = useMemo(() => {
+    return filteredReports.filter(hasValidPosition);
   }, [filteredReports]);
+
+  const mapMarkers = useMemo(() => {
+    return mapReports.map(buildMapMarker);
+  }, [mapReports]);
+
+  useEffect(() => {
+    if (!selectedReport) return;
+
+    const stillVisible = mapReports.some(
+      (report) => String(report.id) === String(selectedReport.id),
+    );
+
+    if (!stillVisible) {
+      setSelectedReport(null);
+      setActiveMarkerId(null);
+    }
+  }, [mapReports, selectedReport]);
 
   function handleMarkerSelect(marker) {
     const reportId = marker?.reportId || String(marker?.id || '').replace('admin-dashboard-report-', '');
 
-    const report = filteredReports.find(
+    const report = mapReports.find(
       (item) => String(item.id) === String(reportId),
     );
 
@@ -149,7 +240,12 @@ function AdminDashboardPage() {
   }
 
   function handleGoToReport(report) {
-    navigate(getReportTargetPath(report));
+    navigate(getReportsTableTargetPath(report), {
+      state: {
+        highlightReportId: report.id,
+        scrollToReportsTable: true,
+      },
+    });
   }
 
   function handleResetFilters() {
@@ -165,7 +261,7 @@ function AdminDashboardPage() {
     <div className="dashboard-page admin-dashboard-page">
       <PageHeader
         title="لوحة تحكم المشرف"
-        subtitle="Admin Dashboard - إدارة البلاغات حسب الموقع والحالة"
+        subtitle="Admin Dashboard - متابعة البلاغات على الخريطة حسب الموقع والحالة"
       />
 
       <AdminStatsCards stats={dashboardData.stats} />
@@ -175,8 +271,14 @@ function AdminDashboardPage() {
           <div>
             <h2>فلترة البلاغات على الخريطة</h2>
             <p>
-              يتم عرض {filteredReports.length} بلاغ من إجمالي{' '}
-              {dashboardData.reports.length} بلاغ.
+              يتم عرض {mapReports.length} بلاغ على الخريطة من إجمالي{' '}
+              {filteredReports.length} بلاغ مطابق للفلاتر.
+              {dashboardData.hiddenRejectedCount ? (
+                <span>
+                  {' '}
+                  تم استبعاد {dashboardData.hiddenRejectedCount} بلاغ مرفوض من الخريطة.
+                </span>
+              ) : null}
             </p>
           </div>
 
@@ -184,6 +286,7 @@ function AdminDashboardPage() {
             type="button"
             className="admin-dashboard-reset-btn"
             onClick={handleResetFilters}
+            disabled={isLoading}
           >
             <FiX />
             مسح الفلاتر
@@ -199,6 +302,7 @@ function AdminDashboardPage() {
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="ابحث برقم البلاغ أو نوع المشكلة أو المنطقة..."
               aria-label="البحث في البلاغات"
+              disabled={isLoading}
             />
           </div>
 
@@ -222,14 +326,6 @@ function AdminDashboardPage() {
             onChange={setPriorityFilter}
             ariaLabel="فلترة البلاغات حسب الأولوية"
           />
-
-          <button
-            type="button"
-            className="admin-dashboard-filter-icon-btn"
-            aria-label="الفلاتر"
-          >
-            <FiFilter />
-          </button>
         </div>
       </section>
 
@@ -238,8 +334,8 @@ function AdminDashboardPage() {
           <div>
             <h2>خريطة البلاغات</h2>
             <p>
-              اضغط على أي بلاغ على الخريطة لعرض ملخص سريع، ثم افتح التفاصيل
-              الكاملة.
+              البلاغات المرفوضة لا تظهر على الخريطة. اضغط على أي Flag لعرض
+              ملخص سريع ثم الانتقال لصف البلاغ داخل جدول البلاغات.
             </p>
           </div>
 
@@ -254,6 +350,32 @@ function AdminDashboardPage() {
           )}
         </header>
 
+        <div className="admin-dashboard-map-legend" aria-label="معاني ألوان البلاغات على الخريطة">
+          {FLAG_LEGEND.map((item) => (
+            <div className="admin-dashboard-map-legend__item" key={item.tone}>
+              <span className={`admin-dashboard-map-legend__flag is-${item.tone}`} />
+              <div>
+                <strong>{item.label}</strong>
+                <small>{item.description}</small>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {errorMessage ? (
+          <div className="admin-dashboard-state-card is-error">
+            <FiAlertCircle />
+            <span>{errorMessage}</span>
+          </div>
+        ) : null}
+
+        {isLoading ? (
+          <div className="admin-dashboard-state-card">
+            <FiRefreshCw className="admin-dashboard-state-card__spinner" />
+            <span>جاري تحميل بلاغات الخريطة...</span>
+          </div>
+        ) : null}
+
         <div className="admin-dashboard-map-wrapper">
           <ReportsMap
             markers={mapMarkers}
@@ -262,6 +384,13 @@ function AdminDashboardPage() {
             height={560}
             showCurrentLocationControl={false}
           />
+
+          {!isLoading && !mapMarkers.length ? (
+            <div className="admin-dashboard-map-empty-card">
+              لا توجد بلاغات غير مرفوضة مطابقة للفلاتر الحالية ولديها إحداثيات
+              صالحة للعرض على الخريطة.
+            </div>
+          ) : null}
 
           {selectedReport ? (
             <div className="admin-dashboard-selected-report-card">
@@ -285,7 +414,7 @@ function AdminDashboardPage() {
                 <strong>{selectedReport.type}</strong>
               </div>
 
-              <p>{selectedReport.title}</p>
+              <p>{selectedReport.title || selectedReport.description}</p>
 
               <div className="admin-dashboard-selected-report-card__location">
                 <FiMapPin />

@@ -22,11 +22,20 @@ function AdminReportFilterSelect({
 
     const rect = buttonRef.current.getBoundingClientRect();
 
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+    const menuWidth = Math.max(rect.width, 1);
+    const left = Math.min(
+      Math.max(rect.left, 12),
+      Math.max(viewportWidth - menuWidth - 12, 12),
+    );
+
     setMenuStyle({
       position: 'fixed',
       top: `${rect.bottom + 8}px`,
-      left: `${rect.left}px`,
-      width: `${rect.width}px`,
+      left: `${left}px`,
+      width: `${menuWidth}px`,
+      minWidth: `${menuWidth}px`,
+      maxWidth: `${menuWidth}px`,
       zIndex: 999999,
     });
   }

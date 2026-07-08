@@ -4,6 +4,7 @@ import NearbyIssueDetails from './NearbyIssueDetails';
 function NearbyIssuesList({
   issues = [],
   activeIssueId = null,
+  highlightedIssueId = null,
   onSelectIssue,
   currentLocation = null,
   onRequestDirections,
@@ -22,6 +23,8 @@ function NearbyIssuesList({
     <div className="dashboard-side-list">
       {issues.map((issue) => {
         const isActive = String(issue.id) === String(activeIssueId);
+        const isHighlighted =
+          highlightedIssueId && String(issue.id) === String(highlightedIssueId);
 
         return (
           <div
@@ -29,7 +32,7 @@ function NearbyIssuesList({
             data-nearby-issue-id={issue.id}
             className={`dashboard-side-list__entry ${
               isActive ? 'is-active' : ''
-            }`}
+            } ${isHighlighted ? 'is-notification-highlight' : ''}`.trim()}
           >
             <button
               type="button"

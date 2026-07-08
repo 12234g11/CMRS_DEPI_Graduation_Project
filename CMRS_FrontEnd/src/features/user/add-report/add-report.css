@@ -3224,3 +3224,143 @@
   user-select: text !important;
   -webkit-user-select: text !important;
 }
+/* ===================================== */
+/* Add Report mobile image modal fix */
+/* ===================================== */
+
+.add-report-image-viewer,
+.add-report-review-image-viewer,
+.add-report-image-viewer *,
+.add-report-review-image-viewer * {
+  box-sizing: border-box;
+}
+
+.add-report-image-viewer,
+.add-report-review-image-viewer {
+  overflow: hidden;
+}
+
+.add-report-image-viewer__panel,
+.add-report-review-image-viewer__panel {
+  max-width: calc(100vw - 48px);
+  overflow: hidden;
+}
+
+.add-report-image-viewer__panel img,
+.add-report-review-image-viewer__panel img {
+  display: block;
+  max-width: 100%;
+}
+
+.add-report-image-viewer__footer,
+.add-report-review-image-viewer__footer {
+  min-width: 0;
+}
+
+.add-report-image-viewer__footer strong,
+.add-report-image-viewer__footer span,
+.add-report-review-image-viewer__footer strong,
+.add-report-review-image-viewer__footer span {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .add-report-image-viewer,
+  .add-report-review-image-viewer {
+    padding: 10px !important;
+    overflow: hidden;
+  }
+
+  .add-report-image-viewer__panel,
+  .add-report-review-image-viewer__panel {
+    width: calc(100dvw - 20px) !important;
+    max-width: calc(100dvw - 20px) !important;
+    max-height: calc(100dvh - 20px) !important;
+    padding: 10px !important;
+    border-radius: 18px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .add-report-image-viewer__panel img,
+  .add-report-review-image-viewer__panel img {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: calc(100dvh - 132px) !important;
+    height: auto !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    border-radius: 14px !important;
+  }
+
+  .add-report-image-viewer__close,
+  .add-report-review-image-viewer__close {
+    top: 10px !important;
+    left: 10px !important;
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .add-report-image-viewer__nav,
+  .add-report-review-image-viewer__nav {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .add-report-image-viewer__nav--prev,
+  .add-report-review-image-viewer__nav--prev {
+    left: 12px !important;
+  }
+
+  .add-report-image-viewer__nav--next,
+  .add-report-review-image-viewer__nav--next {
+    right: 12px !important;
+  }
+
+  .add-report-image-viewer__footer,
+  .add-report-review-image-viewer__footer {
+    width: 100% !important;
+    padding-inline: 2px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 4px !important;
+    text-align: right !important;
+  }
+
+  .add-report-image-viewer__footer strong,
+  .add-report-review-image-viewer__footer strong {
+    width: 100% !important;
+    font-size: 0.9rem !important;
+  }
+
+  .add-report-image-viewer__footer span,
+  .add-report-review-image-viewer__footer span {
+    width: 100% !important;
+    font-size: 0.78rem !important;
+  }
+}
+
+/* Very small mobile */
+@media (max-width: 420px) {
+  .add-report-image-viewer__panel,
+  .add-report-review-image-viewer__panel {
+    width: calc(100dvw - 16px) !important;
+    max-width: calc(100dvw - 16px) !important;
+    max-height: calc(100dvh - 16px) !important;
+    padding: 8px !important;
+    border-radius: 16px !important;
+  }
+
+  .add-report-image-viewer__panel img,
+  .add-report-review-image-viewer__panel img {
+    max-height: calc(100dvh - 142px) !important;
+    border-radius: 12px !important;
+  }
+}

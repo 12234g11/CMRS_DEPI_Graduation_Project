@@ -168,6 +168,25 @@ function getPriorityLabel(report = {}) {
   return 'غير محددة';
 }
 
+
+function getRejectionReason(report = {}) {
+  return (
+    report.rejectionReason ||
+    report.RejectionReason ||
+    report.rejectReason ||
+    report.RejectReason ||
+    report.refusalReason ||
+    report.RefusalReason ||
+    report.adminRejectionReason ||
+    report.AdminRejectionReason ||
+    report.statusReason ||
+    report.StatusReason ||
+    report.notes ||
+    report.Notes ||
+    ''
+  );
+}
+
 function isRejectedReport(report = {}) {
   const status = String(report.status || report.statusKey || '').toLowerCase();
   const statusLabel = String(report.statusLabel || '').toLowerCase();
@@ -258,6 +277,7 @@ function ReportDetailsModal({ report, onClose }) {
   const priorityLabel = getPriorityLabel(report);
 
   const isRejected = isRejectedReport(report);
+  const rejectionReason = getRejectionReason(report);
 
   const canShowOnMap =
     Boolean(position?.lat && position?.lng) && !isRejected;
@@ -376,6 +396,16 @@ function ReportDetailsModal({ report, onClose }) {
             <DetailBlock icon={<FiMapPin />} label="الموقع">
               <strong>{location}</strong>
             </DetailBlock>
+
+            {isRejected ? (
+              <DetailBlock
+                icon={<FiAlertTriangle />}
+                label="سبب الرفض"
+                className="user-report-modal__detail-card--rejection"
+              >
+                <p>{rejectionReason || 'لم يتم توضيح سبب الرفض من الإدارة.'}</p>
+              </DetailBlock>
+            ) : null}
 
             <DetailBlock icon={<FiAlertTriangle />} label="نوع المشكلة">
               <div className="user-report-modal__category-box">

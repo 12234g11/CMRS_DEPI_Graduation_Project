@@ -1,8 +1,40 @@
-import { useState } from 'react';
-import { FiCamera, FiStar } from 'react-icons/fi';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  FiCamera,
+  FiChevronLeft,
+  FiChevronRight,
+  FiMaximize2,
+  FiStar,
+  FiX,
+} from 'react-icons/fi';
 
 function AdminReportImagesCard({ report }) {
-  const [activeImage, setActiveImage] = useState(report.images?.[0]);
+  const images = useMemo(() => report.images?.filter(Boolean) || [], [report.images]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const activeImage = images[activeIndex] || '';
+  const hasImages = images.length > 0;
+  const hasMultipleImages = images.length > 1;
+
+  useEffect(() => {
+    setActiveIndex(0);
+    setPreviewOpen(false);
+  }, [report.id, images.length]);
+
+  const goToPreviousImage = () => {
+    if (!hasMultipleImages) return;
+    setActiveIndex((currentIndex) => (
+      currentIndex === 0 ? images.length - 1 : currentIndex - 1
+    ));
+  };
+
+  const goToNextImage = () => {
+    if (!hasMultipleImages) return;
+    setActiveIndex((currentIndex) => (
+      currentIndex === images.length - 1 ? 0 : currentIndex + 1
+    ));
+  };
 
   return (
     <section className="admin-report-details-card admin-report-images-card">
@@ -14,38 +46,120 @@ function AdminReportImagesCard({ report }) {
 
         <span className="admin-report-images-count">
           <FiCamera />
-          {report.images?.length || 0} صورة
+          {images.length} صورة
         </span>
       </header>
 
-      <div className="admin-report-image-preview">
-        <img src={activeImage} alt={report.title} />
-      </div>
+      {hasImages ? (
+        <>
+          <button
+            type="button"
+            className="admin-report-image-preview"
+            onClick={() => setPreviewOpen(true)}
+            aria-label="فتح معاينة الصورة بالحجم الكامل"
+          >
+            <img src={activeImage} alt={report.title} />
+            <span className="admin-report-image-preview__overlay">
+              <FiMaximize2 />
+              معاينة كاملة
+            </span>
+          </button>
 
-      <div className="admin-report-images-footer">
-        <div className="admin-report-community-rating">
-          <span>
-            <FiStar />
-            {report.rating}
-          </span>
-          <small>/ {report.votesCount}</small>
-          <b>التقييم المجتمعي</b>
-        </div>
+          <div className="admin-report-images-footer">
+            <div className="admin-report-community-rating">
+              <span>
+                <FiStar />
+                {report.rating}
+              </span>
+              <small>/ {report.votesCount}</small>
+              <b>التقييم المجتمعي</b>
+            </div>
 
-        <div className="admin-report-thumbnails">
-          {report.images?.map((image, index) => (
-            <button
-              type="button"
-              key={`${image}-${index}`}
-              className={image === activeImage ? 'is-active' : ''}
-              onClick={() => setActiveImage(image)}
-              aria-label={`عرض صورة رقم ${index + 1}`}
-            >
-              <img src={image} alt={`صورة البلاغ ${index + 1}`} />
-            </button>
-          ))}
+            <div className="admin-report-thumbnails">
+              {images.map((image, index) => (
+                <button
+                  type="button"
+                  key={`${image}-${index}`}
+                  className={index === activeIndex ? 'is-active' : ''}
+                  onClick={() => setActiveIndex(index)}
+                  aria-label={`عرض صورة رقم ${index + 1}`}
+                >
+                  <img src={image} alt={`صورة البلاغ ${index + 1}`} />
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : (
+        <p className="admin-report-images-empty">لا توجد صور مرفقة مع هذا البلاغ.</p>
+      )}
+
+      {previewOpen && hasImages ? (
+        <div className="admin-report-image-lightbox" role="dialog" aria-modal="true">
+          <button
+            type="button"
+            className="admin-report-image-lightbox__backdrop"
+            onClick={() => setPreviewOpen(false)}
+            aria-label="إغلاق المعاينة"
+          />
+
+          <div className="admin-report-image-lightbox__content">
+            <header className="admin-report-image-lightbox__header">
+              <strong>{report.title}</strong>
+              <span>{activeIndex + 1} / {images.length}</span>
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(false)}
+                aria-label="إغلاق"
+              >
+                <FiX />
+              </button>
+            </header>
+
+            <div className="admin-report-image-lightbox__stage">
+              {hasMultipleImages ? (
+                <button
+                  type="button"
+                  className="admin-report-image-lightbox__nav admin-report-image-lightbox__nav--prev"
+                  onClick={goToPreviousImage}
+                  aria-label="الصورة السابقة"
+                >
+                  <FiChevronRight />
+                </button>
+              ) : null}
+
+              <img src={activeImage} alt={`صورة البلاغ ${activeIndex + 1}`} />
+
+              {hasMultipleImages ? (
+                <button
+                  type="button"
+                  className="admin-report-image-lightbox__nav admin-report-image-lightbox__nav--next"
+                  onClick={goToNextImage}
+                  aria-label="الصورة التالية"
+                >
+                  <FiChevronLeft />
+                </button>
+              ) : null}
+            </div>
+
+            {hasMultipleImages ? (
+              <div className="admin-report-image-lightbox__thumbs">
+                {images.map((image, index) => (
+                  <button
+                    type="button"
+                    key={`preview-${image}-${index}`}
+                    className={index === activeIndex ? 'is-active' : ''}
+                    onClick={() => setActiveIndex(index)}
+                    aria-label={`فتح صورة رقم ${index + 1}`}
+                  >
+                    <img src={image} alt={`مصغرة ${index + 1}`} />
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
     </section>
   );
 }

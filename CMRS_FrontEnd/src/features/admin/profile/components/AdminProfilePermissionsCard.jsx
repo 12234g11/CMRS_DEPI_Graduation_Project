@@ -10,20 +10,24 @@ function AdminProfilePermissionsCard({ permissions = [] }) {
         </div>
       </header>
 
-      <div className="admin-profile-permissions-list">
-        {permissions.map((permission) => (
-          <article key={permission.id}>
-            <span>
-              <FiCheckCircle />
-            </span>
+      {permissions.length > 0 ? (
+        <div className="admin-profile-permissions-list">
+          {permissions.map((permission) => (
+            <article key={permission.id}>
+              <span>
+                <FiCheckCircle />
+              </span>
 
-            <div>
-              <h3>{permission.label}</h3>
-              <p>{permission.description}</p>
-            </div>
-          </article>
-        ))}
-      </div>
+              <div>
+                <h3>{permission.label}</h3>
+                <p>{permission.description}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="admin-profile-empty-text">لا توجد صلاحيات متاحة لهذا الحساب.</p>
+      )}
     </section>
   );
 }

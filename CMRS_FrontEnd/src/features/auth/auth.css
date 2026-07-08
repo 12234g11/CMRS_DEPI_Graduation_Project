@@ -1294,3 +1294,103 @@
   font-weight: 600;
   line-height: 1.6;
 }
+.auth-password-input {
+  position: relative;
+  width: 100%;
+  pointer-events: auto !important;
+  user-select: auto !important;
+  -webkit-user-select: auto !important;
+}
+
+.auth-password-input__control {
+  width: 100%;
+  padding-left: 48px !important;
+  pointer-events: auto !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  cursor: text !important;
+}
+
+.auth-password-input__control::selection {
+  background: rgba(37, 99, 235, 0.25);
+}
+
+.auth-password-input__toggle {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-primary, #2563eb);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transform: translateY(-50%);
+  z-index: 5;
+  pointer-events: auto !important;
+}
+
+.auth-password-input__toggle:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+/* Enable select / copy / paste inside all authentication forms */
+.login-form,
+.signup-form,
+.forgot-form,
+.company-form,
+.login-form *,
+.signup-form *,
+.forgot-form *,
+.company-form * {
+  -webkit-user-select: auto !important;
+  -moz-user-select: auto !important;
+  -ms-user-select: auto !important;
+  user-select: auto !important;
+}
+
+.login-form input,
+.signup-form input,
+.forgot-form input,
+.company-form input,
+.login-form textarea,
+.signup-form textarea,
+.forgot-form textarea,
+.company-form textarea {
+  pointer-events: auto !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+  cursor: text !important;
+}
+
+.login-form input::selection,
+.signup-form input::selection,
+.forgot-form input::selection,
+.company-form input::selection,
+.login-form textarea::selection,
+.signup-form textarea::selection,
+.forgot-form textarea::selection,
+.company-form textarea::selection {
+  background: rgba(37, 99, 235, 0.25);
+}
+
+/* Important for password input wrapper */
+.auth-password-input,
+.auth-password-input * {
+  pointer-events: auto !important;
+}
+
+.auth-password-input__control {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+  cursor: text !important;
+}

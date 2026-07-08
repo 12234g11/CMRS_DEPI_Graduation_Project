@@ -25,29 +25,29 @@ function AdminProfileHeader({ profile }) {
 
           <span className="admin-profile-status">
             <FiCheckCircle />
-            نشط
+            {profile.status || 'نشط'}
           </span>
         </div>
 
         <div className="admin-profile-header-card__info">
           <span>
             <FiMail />
-            {profile.email}
+            {profile.email || 'غير متاح'}
           </span>
 
           <span>
             <FiPhone />
-            {profile.phone}
+            {profile.phone || 'غير متاح'}
           </span>
 
           <span>
             <FiMapPin />
-            محافظة {profile.governorate}
+            محافظة {profile.governorate || 'غير محددة'}
           </span>
 
           <span>
             <FiCalendar />
-            منذ {profile.joinedAt}
+            منذ {profile.joinedAt || 'غير متاح'}
           </span>
         </div>
       </div>

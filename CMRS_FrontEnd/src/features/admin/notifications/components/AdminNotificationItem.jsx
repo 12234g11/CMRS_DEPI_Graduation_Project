@@ -1,14 +1,13 @@
 import {
-  FiArrowLeft,
+  FiAlertTriangle,
   FiBell,
   FiCheckCircle,
   FiClock,
   FiFileText,
-  FiInfo,
-  FiSend,
-  FiTool,
+  FiMapPin,
+  FiEye,
+  FiPlayCircle,
   FiTrash2,
-  FiXCircle,
 } from 'react-icons/fi';
 
 function normalizeType(type) {
@@ -18,13 +17,10 @@ function normalizeType(type) {
 function getNotificationIcon(type) {
   const normalizedType = normalizeType(type);
 
-  if (normalizedType === 'reportsubmitted') return <FiSend />;
-  if (normalizedType === 'reportaccepted') return <FiCheckCircle />;
-  if (normalizedType === 'reportrejected') return <FiXCircle />;
-  if (normalizedType === 'reportassignedtocompany') return <FiFileText />;
-  if (normalizedType === 'reportinprogress') return <FiTool />;
-  if (normalizedType === 'reportresolved') return <FiCheckCircle />;
-  if (normalizedType.includes('system')) return <FiInfo />;
+  if (normalizedType === 'newreport') return <FiFileText />;
+  if (normalizedType === 'companystartedexecution') return <FiPlayCircle />;
+  if (normalizedType === 'companyrequestedclosure') return <FiCheckCircle />;
+  if (normalizedType === 'companyexecutionfailed') return <FiAlertTriangle />;
 
   return <FiBell />;
 }
@@ -32,46 +28,31 @@ function getNotificationIcon(type) {
 function getNotificationTone(type) {
   const normalizedType = normalizeType(type);
 
-  if (normalizedType === 'reportsubmitted') return 'info';
-  if (normalizedType === 'reportaccepted') return 'success';
-  if (normalizedType === 'reportrejected') return 'danger';
-  if (normalizedType === 'reportassignedtocompany') return 'primary';
-  if (normalizedType === 'reportinprogress') return 'warning';
-  if (normalizedType === 'reportresolved') return 'success';
-  if (normalizedType.includes('system')) return 'neutral';
+  if (normalizedType === 'newreport') return 'info';
+  if (normalizedType === 'companystartedexecution') return 'primary';
+  if (normalizedType === 'companyrequestedclosure') return 'success';
+  if (normalizedType === 'companyexecutionfailed') return 'danger';
 
-  return 'primary';
+  return 'neutral';
 }
 
 function getNotificationTitle(type) {
   const normalizedType = normalizeType(type);
 
-  if (normalizedType === 'reportsubmitted') {
-    return 'تم إرسال البلاغ';
+  if (normalizedType === 'newreport') {
+    return 'بلاغ جديد داخل المحافظة';
   }
 
-  if (normalizedType === 'reportaccepted') {
-    return 'تم قبول البلاغ';
+  if (normalizedType === 'companystartedexecution') {
+    return 'بدأت الشركة التنفيذ';
   }
 
-  if (normalizedType === 'reportrejected') {
-    return 'تم رفض البلاغ';
+  if (normalizedType === 'companyrequestedclosure') {
+    return 'طلب اعتماد الحل النهائي';
   }
 
-  if (normalizedType === 'reportassignedtocompany') {
-    return 'تم تحويل البلاغ للشركة';
-  }
-
-  if (normalizedType === 'reportinprogress') {
-    return 'بدأ تنفيذ البلاغ';
-  }
-
-  if (normalizedType === 'reportresolved') {
-    return 'تم اعتماد الحل';
-  }
-
-  if (normalizedType.includes('system')) {
-    return 'إشعار من النظام';
+  if (normalizedType === 'companyexecutionfailed') {
+    return 'تعذر تنفيذ البلاغ';
   }
 
   return 'إشعار جديد';
@@ -138,7 +119,7 @@ function formatRelativeTime(createdAt) {
   });
 }
 
-function NotificationItem({ notification, onMarkAsRead, onDelete, onViewReport }) {
+function AdminNotificationItem({ notification, onMarkAsRead, onDelete, onViewReport }) {
   const isUnread = !notification.isRead;
   const tone = getNotificationTone(notification.type);
 
@@ -174,9 +155,20 @@ function NotificationItem({ notification, onMarkAsRead, onDelete, onViewReport }
 
         <p>{notification.message}</p>
 
-        {notification.reportId ? (
+        {(notification.reportId || notification.reportTitle || notification.area) ? (
           <div className="user-notification-item__meta">
-            <span>رقم البلاغ: {notification.reportId}</span>
+            {notification.reportTitle ? <span>{notification.reportTitle}</span> : null}
+
+            {notification.reportId ? (
+              <span>رقم البلاغ: {notification.reportId}</span>
+            ) : null}
+
+            {notification.area ? (
+              <span>
+                <FiMapPin />
+                {notification.area}
+              </span>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -185,11 +177,11 @@ function NotificationItem({ notification, onMarkAsRead, onDelete, onViewReport }
         {notification.reportId ? (
           <button
             type="button"
-            className="user-notification-item__action user-notification-item__action--view"
+            className="user-notification-item__action user-notification-item__action--report"
             onClick={() => onViewReport?.(notification)}
           >
+            <FiEye />
             عرض البلاغ
-            <FiArrowLeft />
           </button>
         ) : null}
 
@@ -222,4 +214,4 @@ function NotificationItem({ notification, onMarkAsRead, onDelete, onViewReport }
   );
 }
 
-export default NotificationItem;
+export default AdminNotificationItem;

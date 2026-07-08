@@ -4,19 +4,41 @@ import { getAdminAnalytics } from '../api/adminAnalyticsApi';
 import AdminAnalyticsStatsCards from '../components/AdminAnalyticsStatsCards';
 import AnalyticsReportsLineChart from '../components/AnalyticsReportsLineChart';
 import AnalyticsReportTypesChart from '../components/AnalyticsReportTypesChart';
-import { adminAnalyticsMockData } from '../mocks/adminAnalyticsMockData';
 import '../admin-analytics.css';
 
+const EMPTY_ANALYTICS_DATA = {
+  summaryCards: [],
+  reportsOverTime: [],
+  reportTypes: [],
+};
+
+function getErrorMessage(error) {
+  const responseData = error?.response?.data;
+
+  if (typeof responseData === 'string') return responseData;
+
+  return (
+    responseData?.message ||
+    responseData?.Message ||
+    error?.message ||
+    'حدث خطأ أثناء تحميل بيانات الإحصائيات.'
+  );
+}
+
 function AdminAnalyticsPage() {
-  const [analyticsData, setAnalyticsData] = useState(adminAnalyticsMockData);
+  const [analyticsData, setAnalyticsData] = useState(EMPTY_ANALYTICS_DATA);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   async function loadAnalytics() {
     setIsLoading(true);
+    setErrorMessage('');
 
     try {
       const data = await getAdminAnalytics();
       setAnalyticsData(data);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
@@ -40,10 +62,16 @@ function AdminAnalyticsPage() {
           onClick={loadAnalytics}
           disabled={isLoading}
         >
-          <FiRefreshCw />
+          <FiRefreshCw className={isLoading ? 'admin-analytics-spin' : ''} />
           {isLoading ? 'جاري التحديث...' : 'تحديث البيانات'}
         </button>
       </section>
+
+      {errorMessage ? (
+        <div className="admin-analytics-alert" role="alert">
+          {errorMessage}
+        </div>
+      ) : null}
 
       <AdminAnalyticsStatsCards cards={analyticsData.summaryCards} />
 

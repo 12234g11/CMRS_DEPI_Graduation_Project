@@ -66,6 +66,12 @@ export const DASHBOARD_LAYOUT_CONFIG = {
         icon: 'bar-chart',
       },
       {
+        key: 'notifications',
+        label: 'الإشعارات',
+        path: ROUTES.ADMIN_NOTIFICATIONS,
+        icon: 'bell',
+      },
+      {
         key: 'profile',
         label: 'الملف الشخصي',
         path: ROUTES.ADMIN_PROFILE,

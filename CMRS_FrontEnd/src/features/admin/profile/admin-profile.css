@@ -576,3 +576,80 @@
   font-weight: 950;
   text-align: right;
 }
+/* Loading, error, and empty states */
+
+.admin-profile-state-card {
+  min-height: 220px;
+  padding: 28px 22px;
+  border: 1.5px solid rgba(2, 95, 72, 0.08);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text);
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.admin-profile-state-card svg {
+  width: 34px;
+  height: 34px;
+  color: var(--color-primary);
+}
+
+.admin-profile-state-card h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.admin-profile-state-card p {
+  margin: 0;
+  color: var(--color-subtitle);
+  font-size: 0.86rem;
+  font-weight: 850;
+  line-height: 1.7;
+}
+
+.admin-profile-state-card--error {
+  border-color: rgba(220, 53, 69, 0.18);
+  background: rgba(220, 53, 69, 0.04);
+}
+
+.admin-profile-state-card--error svg {
+  color: #c62828;
+}
+
+.admin-profile-state-card__spinner {
+  animation: admin-profile-spin 0.9s linear infinite;
+}
+
+.admin-profile-empty-text {
+  margin: 0;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(2, 95, 72, 0.04);
+  color: var(--color-subtitle);
+  font-size: 0.82rem;
+  font-weight: 850;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.admin-profile-header-card__title-row h2,
+.admin-profile-header-card__info span,
+.admin-profile-details-list strong,
+.admin-profile-permissions-list h3,
+.admin-profile-permissions-list p,
+.admin-profile-activity-list h3,
+.admin-profile-activity-list p {
+  overflow-wrap: anywhere;
+}
+
+@keyframes admin-profile-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

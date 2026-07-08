@@ -10,21 +10,25 @@ function AdminProfileActivityCard({ activities = [] }) {
         </div>
       </header>
 
-      <div className="admin-profile-activity-list">
-        {activities.map((activity) => (
-          <article key={activity.id}>
-            <span>
-              <FiActivity />
-            </span>
+      {activities.length > 0 ? (
+        <div className="admin-profile-activity-list">
+          {activities.map((activity) => (
+            <article key={activity.id}>
+              <span>
+                <FiActivity />
+              </span>
 
-            <div>
-              <h3>{activity.title}</h3>
-              <p>{activity.description}</p>
-              <small>{activity.time}</small>
-            </div>
-          </article>
-        ))}
-      </div>
+              <div>
+                <h3>{activity.title}</h3>
+                <p>{activity.description}</p>
+                <small>{activity.time}</small>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="admin-profile-empty-text">لا توجد أنشطة حديثة حاليًا.</p>
+      )}
     </section>
   );
 }

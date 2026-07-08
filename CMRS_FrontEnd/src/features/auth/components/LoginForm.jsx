@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FiHome } from 'react-icons/fi';
+import PasswordInput from './PasswordInput';
 import { ROUTES, getPostLoginRedirectPath } from '../../../shared/navigation';
 import { useAuth } from '../hooks/useAuth';
 import { loginUser } from '../api/authApi';
@@ -65,6 +66,7 @@ function LoginForm() {
   }));
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState(
     location.state?.message || ''
@@ -181,14 +183,16 @@ function LoginForm() {
 
         <motion.div className="login-form__field" variants={itemVariants}>
           <label htmlFor="password">كلمة المرور</label>
-          <input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
-            placeholder="••••••••"
             value={formData.password}
             onChange={handleChange}
             autoComplete="current-password"
+            isVisible={isPasswordVisible}
+            onToggleVisibility={() =>
+              setIsPasswordVisible((current) => !current)
+            }
           />
         </motion.div>
 

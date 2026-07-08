@@ -4,39 +4,42 @@ import { resolveAssetUrl } from '../../../../shared/services/api/assetUrl';
 export const REPORT_STATUS_API_VALUES = {
   all: 'all',
   underReview: 'UnderReview',
-  pending: 'Pending',
   accepted: 'Accepted',
+  rejected: 'Rejected',
   assigned: 'Assigned',
   inProgress: 'InProgress',
+  pendingAdminApproval: 'PendingAdminApproval',
+  needsCompletion: 'NeedsCompletion',
+  unableToExecute: 'UnableToExecute',
   resolved: 'Resolved',
-  completed: 'Completed',
-  closed: 'Closed',
-  rejected: 'Rejected',
 };
 
 export const REPORT_STATUS_LABELS = {
   [REPORT_STATUS_API_VALUES.underReview]: 'قيد المراجعة',
-  [REPORT_STATUS_API_VALUES.pending]: 'معلق',
-  [REPORT_STATUS_API_VALUES.accepted]: 'تم القبول',
-  [REPORT_STATUS_API_VALUES.assigned]: 'تم التعيين',
-  [REPORT_STATUS_API_VALUES.inProgress]: 'جاري الحل',
-  [REPORT_STATUS_API_VALUES.resolved]: 'تم الحل',
-  [REPORT_STATUS_API_VALUES.completed]: 'مكتمل',
-  [REPORT_STATUS_API_VALUES.closed]: 'مغلق',
+  [REPORT_STATUS_API_VALUES.accepted]: 'مقبول',
   [REPORT_STATUS_API_VALUES.rejected]: 'مرفوض',
+  [REPORT_STATUS_API_VALUES.assigned]: 'تم التعيين',
+  [REPORT_STATUS_API_VALUES.inProgress]: 'جاري التنفيذ',
+  [REPORT_STATUS_API_VALUES.pendingAdminApproval]: 'بانتظار اعتماد الأدمن',
+  [REPORT_STATUS_API_VALUES.needsCompletion]: 'مطلوب استكمال',
+  [REPORT_STATUS_API_VALUES.unableToExecute]: 'متعذر التنفيذ',
+  [REPORT_STATUS_API_VALUES.resolved]: 'تم الحل',
 };
 
 export const REPORT_STATUS_FILTER_OPTIONS = [
   { value: REPORT_STATUS_API_VALUES.all, label: 'كل الحالات' },
   { value: REPORT_STATUS_API_VALUES.underReview, label: 'قيد المراجعة' },
-  { value: REPORT_STATUS_API_VALUES.pending, label: 'معلق' },
-  { value: REPORT_STATUS_API_VALUES.accepted, label: 'تم القبول' },
-  { value: REPORT_STATUS_API_VALUES.assigned, label: 'تم التعيين' },
-  { value: REPORT_STATUS_API_VALUES.inProgress, label: 'جاري الحل' },
-  { value: REPORT_STATUS_API_VALUES.resolved, label: 'تم الحل' },
-  { value: REPORT_STATUS_API_VALUES.completed, label: 'مكتمل' },
-  { value: REPORT_STATUS_API_VALUES.closed, label: 'مغلق' },
+  { value: REPORT_STATUS_API_VALUES.accepted, label: 'مقبول' },
   { value: REPORT_STATUS_API_VALUES.rejected, label: 'مرفوض' },
+  { value: REPORT_STATUS_API_VALUES.assigned, label: 'تم التعيين' },
+  { value: REPORT_STATUS_API_VALUES.inProgress, label: 'جاري التنفيذ' },
+  {
+    value: REPORT_STATUS_API_VALUES.pendingAdminApproval,
+    label: 'بانتظار اعتماد الأدمن',
+  },
+  { value: REPORT_STATUS_API_VALUES.needsCompletion, label: 'مطلوب استكمال' },
+  { value: REPORT_STATUS_API_VALUES.unableToExecute, label: 'متعذر التنفيذ' },
+  { value: REPORT_STATUS_API_VALUES.resolved, label: 'تم الحل' },
 ];
 
 function normalizeStatusValue(status = '') {
@@ -95,40 +98,105 @@ function getResponseData(response) {
 export function getReportStatusKey(status = '') {
   const normalizedStatus = normalizeStatusValue(status);
 
-  if (['resolved', 'solved'].includes(normalizedStatus)) {
-    return REPORT_STATUS_API_VALUES.resolved;
-  }
-
-  if (['inprogress', 'progress', 'processing', 'working'].includes(normalizedStatus)) {
-    return REPORT_STATUS_API_VALUES.inProgress;
-  }
-
-  if (['underreview', 'review', 'reviewing'].includes(normalizedStatus)) {
+  if (
+    [
+      'underreview',
+      'review',
+      'reviewing',
+      'pending',
+      'waiting',
+      'قيدالمراجعة',
+    ].includes(normalizedStatus)
+  ) {
     return REPORT_STATUS_API_VALUES.underReview;
   }
 
-  if (['pending', 'waiting'].includes(normalizedStatus)) {
-    return REPORT_STATUS_API_VALUES.pending;
-  }
-
-  if (['accepted', 'approved'].includes(normalizedStatus)) {
+  if (
+    ['accepted', 'approved', 'مقبول', 'تمالقبول'].includes(normalizedStatus)
+  ) {
     return REPORT_STATUS_API_VALUES.accepted;
   }
 
-  if (['assigned'].includes(normalizedStatus)) {
+  if (
+    ['rejected', 'refused', 'declined', 'مرفوض'].includes(normalizedStatus)
+  ) {
+    return REPORT_STATUS_API_VALUES.rejected;
+  }
+
+  if (['assigned', 'تمالتعيين'].includes(normalizedStatus)) {
     return REPORT_STATUS_API_VALUES.assigned;
   }
 
-  if (['completed', 'complete', 'done'].includes(normalizedStatus)) {
-    return REPORT_STATUS_API_VALUES.completed;
+  if (
+    [
+      'inprogress',
+      'progress',
+      'processing',
+      'working',
+      'inexecution',
+      'جاريالتنفيذ',
+      'جاريالحل',
+    ].includes(normalizedStatus)
+  ) {
+    return REPORT_STATUS_API_VALUES.inProgress;
   }
 
-  if (['closed', 'close'].includes(normalizedStatus)) {
-    return REPORT_STATUS_API_VALUES.closed;
+  if (
+    [
+      'pendingadminapproval',
+      'waitingadminapproval',
+      'awaitingadminapproval',
+      'pendingapproval',
+      'waitingapproval',
+      'awaitingapproval',
+      'بانتظاراعتمادالأدمن',
+      'فيانتظاراعتمادالأدمن',
+    ].includes(normalizedStatus)
+  ) {
+    return REPORT_STATUS_API_VALUES.pendingAdminApproval;
   }
 
-  if (['rejected', 'refused', 'declined'].includes(normalizedStatus)) {
-    return REPORT_STATUS_API_VALUES.rejected;
+  if (
+    [
+      'needscompletion',
+      'needcompletion',
+      'requiredcompletion',
+      'completionrequired',
+      'needmorework',
+      'moreworkrequired',
+      'مطلوباستكمال',
+    ].includes(normalizedStatus)
+  ) {
+    return REPORT_STATUS_API_VALUES.needsCompletion;
+  }
+
+  if (
+    [
+      'unabletoexecute',
+      'cannotexecute',
+      'executionblocked',
+      'blocked',
+      'failedexecution',
+      'executionfailed',
+      'متعذرالتنفيذ',
+    ].includes(normalizedStatus)
+  ) {
+    return REPORT_STATUS_API_VALUES.unableToExecute;
+  }
+
+  if (
+    [
+      'resolved',
+      'solved',
+      'completed',
+      'complete',
+      'done',
+      'closed',
+      'close',
+      'تمالحل',
+    ].includes(normalizedStatus)
+  ) {
+    return REPORT_STATUS_API_VALUES.resolved;
   }
 
   return REPORT_STATUS_API_VALUES.underReview;
@@ -137,23 +205,22 @@ export function getReportStatusKey(status = '') {
 export function getStatusTone(status = '') {
   const statusKey = getReportStatusKey(status);
 
-  if (
-    statusKey === REPORT_STATUS_API_VALUES.resolved ||
-    statusKey === REPORT_STATUS_API_VALUES.completed ||
-    statusKey === REPORT_STATUS_API_VALUES.closed
-  ) {
+  if (statusKey === REPORT_STATUS_API_VALUES.resolved) {
     return 'success';
   }
 
   if (
-    statusKey === REPORT_STATUS_API_VALUES.inProgress ||
+    statusKey === REPORT_STATUS_API_VALUES.accepted ||
     statusKey === REPORT_STATUS_API_VALUES.assigned ||
-    statusKey === REPORT_STATUS_API_VALUES.accepted
+    statusKey === REPORT_STATUS_API_VALUES.inProgress
   ) {
     return 'info';
   }
 
-  if (statusKey === REPORT_STATUS_API_VALUES.rejected) {
+  if (
+    statusKey === REPORT_STATUS_API_VALUES.rejected ||
+    statusKey === REPORT_STATUS_API_VALUES.unableToExecute
+  ) {
     return 'danger';
   }
 
@@ -171,65 +238,204 @@ function buildAreaText(area = {}) {
     return area;
   }
 
-  return [area.city, area.address, area.detailedAddress]
+  return [
+    area.city || area.City,
+    area.address || area.Address,
+    area.detailedAddress || area.DetailedAddress,
+  ]
     .filter(Boolean)
     .join(' - ');
 }
 
-function prepareReportForUi(report = {}) {
-  const reportImages = Array.isArray(report.reportImages)
-    ? report.reportImages.map((image) => ({
-        ...image,
-        imageUrl: image.imageUrl || '',
-        fullImageUrl: resolveAssetUrl(image.imageUrl || ''),
-      }))
-    : [];
+function getReportImages(report = {}) {
+  const rawImages =
+    report.reportImages ||
+    report.ReportImages ||
+    report.images ||
+    report.Images ||
+    [];
 
+  if (!Array.isArray(rawImages)) {
+    return [];
+  }
+
+  return rawImages
+    .map((image) => {
+      if (typeof image === 'string') {
+        return {
+          imageUrl: image,
+          fullImageUrl: resolveAssetUrl(image),
+        };
+      }
+
+      const imageUrl =
+        image.imageUrl ||
+        image.ImageUrl ||
+        image.url ||
+        image.Url ||
+        image.path ||
+        image.Path ||
+        '';
+
+      return {
+        ...image,
+        imageUrl,
+        fullImageUrl: resolveAssetUrl(imageUrl),
+      };
+    })
+    .filter((image) => image.fullImageUrl);
+}
+
+function getReportPosition(report = {}) {
+  const latitude =
+    report.latitude ??
+    report.Latitude ??
+    report.lat ??
+    report.Lat ??
+    report.position?.lat ??
+    report.position?.latitude;
+
+  const longitude =
+    report.longitude ??
+    report.Longitude ??
+    report.lng ??
+    report.Lng ??
+    report.position?.lng ??
+    report.position?.longitude;
+
+  if (Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude))) {
+    return {
+      lat: Number(latitude),
+      lng: Number(longitude),
+    };
+  }
+
+  return null;
+}
+
+export function prepareReportForUi(report = {}) {
+  const reportImages = getReportImages(report);
   const imageUrls = reportImages
     .map((image) => image.fullImageUrl)
     .filter(Boolean);
 
-  const areaText = buildAreaText(report.area || {});
-  const rawStatus = report.status || report.statusKey || report.Status || '';
+  const areaText = buildAreaText(report.area || report.Area || {});
+
+  const rawStatus =
+    report.status ||
+    report.Status ||
+    report.statusKey ||
+    report.StatusKey ||
+    '';
+
   const statusKey = getReportStatusKey(rawStatus);
 
   return {
     ...report,
 
-    id: report.reportId || report.id,
-    categoryLabel: report.issueCategoryName || report.categoryLabel,
+    id: report.reportId || report.ReportId || report.id || report.Id,
+
+    reportId: report.reportId || report.ReportId || report.id || report.Id,
+
+    reportNumber:
+      report.reportNumber ||
+      report.ReportNumber ||
+      report.number ||
+      report.Number,
+
+    title:
+      report.title ||
+      report.Title ||
+      report.issueTitle ||
+      report.IssueTitle ||
+      report.issueCategoryName ||
+      report.IssueCategoryName ||
+      'بلاغ',
+
+    description: report.description || report.Description || '',
+
+    rejectionReason:
+      report.rejectionReason ||
+      report.RejectionReason ||
+      report.rejectReason ||
+      report.RejectReason ||
+      report.refusalReason ||
+      report.RefusalReason ||
+      report.adminRejectionReason ||
+      report.AdminRejectionReason ||
+      report.statusReason ||
+      report.StatusReason ||
+      '',
+
+    categoryLabel:
+      report.issueCategoryName ||
+      report.IssueCategoryName ||
+      report.categoryLabel ||
+      report.CategoryLabel ||
+      report.categoryName ||
+      report.CategoryName ||
+      'أخرى',
+
+    issueCategoryName:
+      report.issueCategoryName ||
+      report.IssueCategoryName ||
+      report.categoryLabel ||
+      report.CategoryLabel ||
+      report.categoryName ||
+      report.CategoryName ||
+      'أخرى',
 
     status: rawStatus || statusKey,
-    statusLabel: report.statusLabel || report.StatusLabel || getStatusLabel(statusKey),
-    statusTone: report.statusTone || report.tone || getStatusTone(statusKey),
     statusKey,
+
+    statusLabel:
+      report.statusLabel ||
+      report.StatusLabel ||
+      getStatusLabel(statusKey),
+
+    statusTone:
+      report.statusTone ||
+      report.tone ||
+      report.Tone ||
+      getStatusTone(statusKey),
 
     ownerUserId:
       report.ownerUserId ||
+      report.OwnerUserId ||
       report.userId ||
       report.UserId ||
       report.createdByUserId ||
+      report.CreatedByUserId ||
       report.reporterId ||
+      report.ReporterId ||
       report.ownerId ||
+      report.OwnerId ||
       report.user?.id ||
       report.user?.userId ||
+      report.User?.Id ||
       '',
 
     areaText,
-    locationText: report.locationText || report.address || areaText,
+
+    locationText:
+      report.locationText ||
+      report.LocationText ||
+      report.address ||
+      report.Address ||
+      areaText,
 
     imageUrls,
-    images: imageUrls.length ? imageUrls : report.images || [],
-    coverImage: imageUrls[0] || report.coverImage || report.image || '',
+    images: imageUrls,
 
-    position:
-      Number.isFinite(Number(report.latitude)) &&
-      Number.isFinite(Number(report.longitude))
-        ? {
-            lat: Number(report.latitude),
-            lng: Number(report.longitude),
-          }
-        : report.position || null,
+    coverImage:
+      imageUrls[0] ||
+      report.coverImage ||
+      report.CoverImage ||
+      report.image ||
+      report.Image ||
+      '',
+
+    position: getReportPosition(report),
   };
 }
 
@@ -246,11 +452,16 @@ function extractReportsPage(response) {
     };
   }
 
-  const items = Array.isArray(data?.items)
-    ? data.items
-    : Array.isArray(data?.Items)
-      ? data.Items
-      : [];
+  const items =
+    data?.items ||
+    data?.Items ||
+    data?.reports ||
+    data?.Reports ||
+    data?.data ||
+    data?.Data ||
+    [];
+
+  const safeItems = Array.isArray(items) ? items : [];
 
   const totalCount = Number(
     data?.totalCount ??
@@ -259,17 +470,20 @@ function extractReportsPage(response) {
       data?.Count ??
       data?.totalItems ??
       data?.TotalItems ??
-      items.length
+      safeItems.length
   );
+
   const pageNumber = Number(data?.pageNumber ?? data?.PageNumber ?? 1);
-  const pageSize = Number(data?.pageSize ?? data?.PageSize ?? data?.size ?? data?.Size ?? 10);
+  const pageSize = Number(data?.pageSize ?? data?.PageSize ?? 10);
   const apiTotalPages = Number(data?.totalPages ?? data?.TotalPages ?? 0);
-  const totalPages = apiTotalPages > 0
-    ? apiTotalPages
-    : Math.max(1, Math.ceil(totalCount / Math.max(pageSize, 1)));
+
+  const totalPages =
+    apiTotalPages > 0
+      ? apiTotalPages
+      : Math.max(1, Math.ceil(totalCount / Math.max(pageSize, 1)));
 
   return {
-    items: items.map(prepareReportForUi),
+    items: safeItems.map(prepareReportForUi),
     totalCount,
     pageNumber,
     pageSize,
@@ -280,14 +494,14 @@ function extractReportsPage(response) {
 export async function getUserReports(input = {}) {
   const userId = typeof input === 'string' ? input : input.userId;
   const pageNumber = typeof input === 'string' ? 1 : input.pageNumber || 1;
-  const pageSize = typeof input === 'string' ? undefined : input.pageSize;
+  const pageSize = typeof input === 'string' ? 10 : input.pageSize || 10;
 
   if (!userId) {
     return {
       items: [],
       totalCount: 0,
       pageNumber: 1,
-      pageSize: 10,
+      pageSize,
       totalPages: 1,
     };
   }
@@ -298,7 +512,7 @@ export async function getUserReports(input = {}) {
       {
         params: {
           pageNumber,
-          ...(pageSize ? { pageSize } : {}),
+          pageSize,
         },
       }
     );
@@ -309,54 +523,70 @@ export async function getUserReports(input = {}) {
   }
 }
 
-export async function getReportsByStatus(status) {
-  const apiStatus = String(status || '').trim();
+export async function searchReports(term = '') {
+  const cleanTerm = String(term || '').trim();
 
-  if (!apiStatus || apiStatus === REPORT_STATUS_API_VALUES.all) {
-    return {
-      items: [],
-      totalCount: 0,
-      pageNumber: 1,
-      pageSize: 10,
-      totalPages: 1,
-    };
-  }
-
-  try {
-    const response = await axiosClient.get(
-      `/api/Report/Status/${encodeURIComponent(apiStatus)}`
-    );
-
-    return extractReportsPage(response);
-  } catch (error) {
-    throw new Error(getApiErrorMessage(error));
-  }
-}
-
-export async function searchReports(searchTerm = '') {
-  const term = String(searchTerm || '').trim();
-
-  if (!term) {
+  if (!cleanTerm) {
     return [];
   }
 
   try {
     const response = await axiosClient.get('/api/Report/search', {
       params: {
-        term,
+        term: cleanTerm,
       },
     });
 
-    const data = getResponseData(response);
-    const items = Array.isArray(data)
-      ? data
-      : Array.isArray(data?.items)
-        ? data.items
-        : Array.isArray(data?.Items)
-          ? data.Items
-          : [];
+    return extractReportsPage(response).items;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error));
+  }
+}
 
-    return items.map(prepareReportForUi);
+export async function getReportsByStatus(status = '') {
+  const cleanStatus = String(status || '').trim();
+
+  if (!cleanStatus || cleanStatus === REPORT_STATUS_API_VALUES.all) {
+    return [];
+  }
+
+  try {
+    const response = await axiosClient.get(
+      `/api/Report/Status/${encodeURIComponent(cleanStatus)}`
+    );
+
+    return extractReportsPage(response).items;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error));
+  }
+}
+
+export async function getReportById(reportId = '') {
+  const cleanReportId = String(reportId || '').trim();
+
+  if (!cleanReportId) {
+    return null;
+  }
+
+  try {
+    const response = await axiosClient.get(
+      `/api/Report/${encodeURIComponent(cleanReportId)}`
+    );
+
+    const data = getResponseData(response);
+
+    const report =
+      data?.report ||
+      data?.Report ||
+      data?.item ||
+      data?.Item ||
+      data;
+
+    if (!report || Array.isArray(report)) {
+      return null;
+    }
+
+    return prepareReportForUi(report);
   } catch (error) {
     throw new Error(getApiErrorMessage(error));
   }

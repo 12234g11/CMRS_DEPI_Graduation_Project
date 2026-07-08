@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiChevronDown, FiCheck, FiHome } from 'react-icons/fi';
 import { ROUTES } from '../../../shared/navigation';
+import PasswordInput from './PasswordInput';
 import { registerUser } from '../api/authApi';
 
 const GOVERNORATE_OPTIONS = [
@@ -47,6 +48,10 @@ function SignupForm() {
 
   const [formData, setFormData] = useState(initialValues);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState({
+    password: false,
+    confirmPassword: false,
+  });
   const [errorMessage, setErrorMessage] = useState('');
   const [isCityMenuOpen, setIsCityMenuOpen] = useState(false);
 
@@ -259,27 +264,37 @@ function SignupForm() {
 
           <motion.div className="signup-form__field" variants={itemVariants}>
             <label htmlFor="password">كلمة المرور</label>
-            <input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
-              placeholder="••••••••"
               value={formData.password}
               onChange={handleChange}
               autoComplete="new-password"
+              isVisible={visiblePasswords.password}
+              onToggleVisibility={() =>
+                setVisiblePasswords((prev) => ({
+                  ...prev,
+                  password: !prev.password,
+                }))
+              }
             />
           </motion.div>
 
           <motion.div className="signup-form__field" variants={itemVariants}>
             <label htmlFor="confirmPassword">تأكيد كلمة المرور</label>
-            <input
+            <PasswordInput
               id="confirmPassword"
               name="confirmPassword"
-              type="password"
-              placeholder="••••••••"
               value={formData.confirmPassword}
               onChange={handleChange}
               autoComplete="new-password"
+              isVisible={visiblePasswords.confirmPassword}
+              onToggleVisibility={() =>
+                setVisiblePasswords((prev) => ({
+                  ...prev,
+                  confirmPassword: !prev.confirmPassword,
+                }))
+              }
             />
           </motion.div>
         </motion.div>

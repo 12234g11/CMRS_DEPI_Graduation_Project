@@ -1,380 +1,467 @@
-import { adminCompanies } from '../../companies/mocks/adminCompaniesMockData';
-import { adminReports } from '../mocks/adminReportsMockData';
+import axiosClient from '../../../../shared/services/api/axiosClient';
 
-let reportsStore = adminReports.map((report) => ({ ...report }));
+function getAdminApiBase() {
+  const configuredBaseUrl = String(axiosClient?.defaults?.baseURL || '').replace(/\/$/, '');
 
-function wait(value, delay = 180) {
-  return new Promise((resolve) => {
-    window.setTimeout(() => resolve(value), delay);
+  return configuredBaseUrl.endsWith('/api') ? '/admin' : '/api/admin';
+}
+
+const ADMIN_API_BASE = getAdminApiBase();
+
+function buildAdminUrl(path) {
+  return `${ADMIN_API_BASE}${path}`;
+}
+
+function unwrapResponse(response) {
+  const root = response?.data ?? response;
+
+  return root?.data ?? root;
+}
+
+function removeEmptyParams(params = {}) {
+  return Object.entries(params).reduce((cleanParams, [key, value]) => {
+    if (value === undefined || value === null || value === '' || value === 'all') {
+      return cleanParams;
+    }
+
+    cleanParams[key] = value;
+    return cleanParams;
+  }, {});
+}
+
+function formatDate(value) {
+  if (!value) return '-';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString('ar-EG', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   });
 }
 
-function getStatusTone(status) {
-  if (status === 'تم الحل') return 'success';
+function formatDateTime(value) {
+  if (!value) return '-';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleString('ar-EG', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function getStatusTone(statusValue, statusLabel) {
+  const status = `${statusValue || ''} ${statusLabel || ''}`.toLowerCase();
 
   if (
-    status === 'جاري الحل' ||
-    status === 'مقبول' ||
-    status === 'تم التعيين'
+    status.includes('resolved') ||
+    status.includes('closed') ||
+    status.includes('تم الحل') ||
+    status.includes('مغلق')
   ) {
-    return 'info';
+    return 'success';
   }
 
-  if (status === 'مرفوض' || status === 'متعذر التنفيذ') {
+  if (
+    status.includes('rejected') ||
+    status.includes('cannot') ||
+    status.includes('مرفوض') ||
+    status.includes('متعذر')
+  ) {
     return 'danger';
+  }
+
+  if (
+    status.includes('assigned') ||
+    status.includes('inprogress') ||
+    status.includes('in progress') ||
+    status.includes('accepted') ||
+    status.includes('تم التعيين') ||
+    status.includes('جاري') ||
+    status.includes('مقبول')
+  ) {
+    return 'info';
   }
 
   return 'warning';
 }
 
-function cloneReport(report) {
+function getPriorityTone(priorityValue, priorityLabel) {
+  const priority = `${priorityValue || ''} ${priorityLabel || ''}`.toLowerCase();
+
+  if (priority.includes('high') || priority.includes('عالية')) return 'danger';
+  if (priority.includes('low') || priority.includes('منخفضة')) return 'success';
+
+  return 'warning';
+}
+
+function getBackendAssetBaseUrl() {
+  const explicitAssetBaseUrl = String(
+    import.meta.env?.VITE_ASSET_BASE_URL ||
+      import.meta.env?.VITE_UPLOADS_BASE_URL ||
+      '',
+  ).replace(/\/$/, '');
+
+  const configuredBaseUrl = String(
+    explicitAssetBaseUrl ||
+      import.meta.env?.VITE_API_BASE_URL ||
+      axiosClient?.defaults?.baseURL ||
+      '',
+  ).replace(/\/$/, '');
+
+  if (!configuredBaseUrl) return '';
+
+  try {
+    const browserOrigin = typeof window !== 'undefined' ? window.location.origin : undefined;
+    const absoluteBaseUrl = new URL(configuredBaseUrl, browserOrigin);
+    const pathname = absoluteBaseUrl.pathname.replace(/\/$/, '').replace(/\/api$/i, '');
+
+    return `${absoluteBaseUrl.origin}${pathname}`.replace(/\/$/, '');
+  } catch {
+    return configuredBaseUrl.replace(/\/api$/i, '');
+  }
+}
+
+const BACKEND_ASSET_BASE_URL = getBackendAssetBaseUrl();
+
+function resolveAssetUrl(value) {
+  if (!value || typeof value !== 'string') return '';
+
+  const url = value.trim();
+
+  if (/^(https?:)?\/\//i.test(url) || /^(data|blob):/i.test(url)) {
+    return url;
+  }
+
+  if (!BACKEND_ASSET_BASE_URL) return url;
+
+  const path = url.startsWith('/') ? url : `/${url}`;
+  return `${BACKEND_ASSET_BASE_URL}${path}`;
+}
+
+function imageToUrl(image) {
+  if (!image) return '';
+
+  const imageUrl = typeof image === 'string'
+    ? image
+    : image.imageUrl || image.thumbnailUrl || image.url || '';
+
+  return resolveAssetUrl(imageUrl);
+}
+
+function normalizeImages(images = []) {
+  return images.map(imageToUrl).filter(Boolean);
+}
+
+function normalizeCompanyResponse(response) {
+  if (!response) return null;
+
+  return {
+    ...response,
+    statusLabel: response.statusLabel || response.status || 'رد شركة',
+    reviewLabel: response.reviewLabel || response.reviewStatus || '-',
+    submittedAt: formatDateTime(response.submittedAt),
+    images: normalizeImages(response.images || []),
+  };
+}
+
+function normalizeReporter(reporter = {}) {
+  return {
+    id: reporter.id || '',
+    name: reporter.name || 'غير متاح',
+    email: reporter.email || '-',
+    phone: reporter.phone || '-',
+    reportsCount: reporter.reportsCount ?? 0,
+    trustScore: reporter.trustScore ?? 0,
+    verified: Boolean(reporter.verified),
+  };
+}
+
+function normalizeTimeline(timeline = []) {
+  return timeline.map((item, index) => ({
+    ...item,
+    id: item.id || `${item.createdAt || Date.now()}-${index}`,
+    actorType: item.actorType || 'system',
+    actor: item.actor || 'النظام',
+    title: item.title || 'تحديث على البلاغ',
+    description: item.description || '',
+    date: formatDateTime(item.createdAt || item.date),
+  }));
+}
+
+export function normalizeAdminReport(report = {}) {
+  const statusValue = report.status || '';
+  const statusLabel = report.statusLabel || statusValue || '-';
+  const priorityValue = report.priority || '';
+  const priorityLabel = report.priorityLabel || priorityValue || '-';
+  const images = normalizeImages(report.images || []);
+  const mainImageUrl = report.mainImageUrl || images[0] || '';
+
   return {
     ...report,
-    reporter: report.reporter ? { ...report.reporter } : null,
-    companyResponse: report.companyResponse ? { ...report.companyResponse } : null,
-    timeline: report.timeline ? report.timeline.map((item) => ({ ...item })) : [],
-    images: report.images ? [...report.images] : [],
-    excludedCompanyIds: report.excludedCompanyIds ? [...report.excludedCompanyIds] : [],
-    excludedCompanyNames: report.excludedCompanyNames ? [...report.excludedCompanyNames] : [],
+    type: report.type || report.issueCategoryName || report.title || '-',
+    issueCategoryId: report.issueCategoryId || '',
+    issueCategoryName: report.issueCategoryName || report.type || '-',
+    statusValue,
+    status: statusLabel,
+    statusLabel,
+    statusTone: getStatusTone(statusValue, statusLabel),
+    priorityValue,
+    priority: priorityLabel,
+    priorityLabel,
+    priorityTone: getPriorityTone(priorityValue, priorityLabel),
+    date: formatDate(report.createdAt || report.date),
+    createdAt: report.createdAt || report.date || '',
+    location: report.location || report.area?.address || report.area?.detailedAddress || '-',
+    city: report.city || report.area?.city || '',
+    position: report.position || {
+      lat: report.latitude ?? report.lat,
+      lng: report.longitude ?? report.lng,
+    },
+    assignedCompanyId: report.assignedCompanyId || '',
+    assignedCompany: report.assignedCompanyName || report.assignedCompany || 'غير معين',
+    assignedCompanyName: report.assignedCompanyName || report.assignedCompany || '',
+    concernedCompany: report.concernedCompanyName || report.concernedCompany || 'غير معين',
+    concernedCompanyName: report.concernedCompanyName || report.concernedCompany || '',
+    rating: report.rating ?? 0,
+    votesCount: report.votesCount ?? 0,
+    mainImageUrl,
+    imagesCount: report.imagesCount ?? images.length,
+    images: images.length ? images : [mainImageUrl].filter(Boolean),
+    reporter: normalizeReporter(report.reporter),
+    companyResponse: normalizeCompanyResponse(report.companyResponse),
+    excludedCompanyIds: report.excludedCompanyIds || [],
+    excludedCompanyNames: report.excludedCompanyNames || [],
+    timeline: normalizeTimeline(report.timeline || []),
   };
 }
 
-function findReport(reportId) {
-  return reportsStore.find((report) => String(report.id) === String(reportId));
-}
+function normalizeReportsPayload(payload = {}) {
+  const items = Array.isArray(payload) ? payload : payload.items || [];
 
-function updateReportById(reportId, updater) {
-  reportsStore = reportsStore.map((report) => {
-    if (String(report.id) !== String(reportId)) return report;
-
-    const updatedReport =
-      typeof updater === 'function'
-        ? updater(report)
-        : {
-            ...report,
-            ...updater,
-          };
-
-    return {
-      ...updatedReport,
-      statusTone: getStatusTone(updatedReport.status),
-    };
-  });
-
-  return cloneReport(findReport(reportId));
-}
-
-function createTimelineItem(reportId, data) {
   return {
-    id: `${reportId}-timeline-${Date.now()}`,
-    date: new Date().toLocaleString('ar-EG'),
-    ...data,
+    items: items.map(normalizeAdminReport),
+    totalCount: payload.totalCount ?? items.length,
+    pageNumber: payload.pageNumber ?? 1,
+    pageSize: payload.pageSize ?? items.length,
+    totalPages: payload.totalPages ?? 1,
+    summary: payload.summary || {
+      totalReports: items.length,
+      underReviewCount: 0,
+      pendingCompanyReviewCount: 0,
+      assignedCount: 0,
+      inProgressCount: 0,
+      resolvedCount: 0,
+      rejectedCount: 0,
+    },
   };
 }
 
-function getCompanyWorkloadLabel(company) {
-  const activeTasks = Number(company.activeTasks || company.currentTasks || 0);
-  const maxCapacity = Number(company.maxCapacity || 10);
-
-  return `${activeTasks}/${maxCapacity} مهام`;
+function normalizeOptions(options = []) {
+  return options.map((option) => ({
+    value: option.value ?? option.id ?? option.name,
+    label: option.label ?? option.name ?? option.value,
+  }));
 }
 
-function buildAssignmentCompany(company, report) {
+function normalizeIssueCategories(categories = []) {
+  return categories.map((category) => ({
+    value: category.id,
+    label: category.name,
+  }));
+}
+
+function normalizeAssignmentCompany(company = {}) {
   const activeTasks = Number(company.activeTasks || company.currentTasks || 0);
-  const maxCapacity = Number(company.maxCapacity || 10);
-  const capacityRatio = activeTasks / Math.max(maxCapacity, 1);
-
-  const companyProblemTypes = company.problemTypes || [];
-  const companySpecializations = company.specializations || [];
-
-  const matchesProblemType = companyProblemTypes.some((type) =>
-    report.type.includes(type) || type.includes(report.type),
-  );
-
-  const matchesSpecialization = companySpecializations.some((specialization) =>
-    report.type.includes(specialization) ||
-    company.specialization.includes(specialization),
-  );
-
-  const baseScore = matchesProblemType ? 92 : matchesSpecialization ? 82 : 64;
-  const workloadPenalty = Math.round(capacityRatio * 12);
-  const responseBonus =
-    company.avgResponseHours && company.avgResponseHours <= 3 ? 4 : 0;
-
-  const matchScore = Math.max(
-    48,
-    Math.min(98, baseScore - workloadPenalty + responseBonus),
-  );
+  const maxCapacity = Number(company.maxCapacity || 0);
+  const capacityRatio =
+    company.capacityRatio ?? (maxCapacity ? activeTasks / Math.max(maxCapacity, 1) : 0);
 
   return {
     ...company,
-    matchScore,
+    activeTasks,
+    currentTasks: company.currentTasks ?? activeTasks,
+    maxCapacity,
     capacityRatio,
-    workloadLabel: getCompanyWorkloadLabel(company),
+    workloadLabel:
+      company.workloadLabel ||
+      (maxCapacity ? `${activeTasks}/${maxCapacity} مهام` : `${activeTasks} مهام نشطة`),
     workloadTone:
-      capacityRatio >= 0.85
-        ? 'danger'
-        : capacityRatio >= 0.6
-          ? 'warning'
-          : 'success',
+      capacityRatio >= 0.85 ? 'danger' : capacityRatio >= 0.6 ? 'warning' : 'success',
     avgResponseTime: company.avgResponseTime || 'لا توجد بيانات بعد',
-    rating: company.rating || 'لا توجد بيانات',
-    successRate: company.successRate || 0,
+    rating: company.rating ?? 'لا توجد بيانات',
+    successRate: company.successRate ?? 0,
     coverageAreas: company.coverageAreas || [],
-    specializations: companySpecializations,
-    problemTypes: companyProblemTypes,
-    matchReasons: [
-      matchesProblemType
-        ? 'نوع البلاغ مطابق لتخصص الشركة'
-        : 'الشركة قريبة من نوع البلاغ',
-      'الشركة تعمل داخل نطاق البلاغ',
-      capacityRatio < 0.7
-        ? 'ضغط العمل الحالي مناسب'
-        : 'يوجد ضغط عمل متوسط ويحتاج متابعة',
+    specializations: company.specializations || [],
+    problemTypes: company.problemTypes || [],
+    matchReasons: company.matchReasons || [],
+    matchScore: company.matchScore ?? 0,
+  };
+}
+
+export async function getAdminReports(params = {}) {
+  const response = await axiosClient.get(buildAdminUrl('/reports'), {
+    params: removeEmptyParams(params),
+  });
+
+  return normalizeReportsPayload(unwrapResponse(response));
+}
+
+export async function getAdminReportFilterOptions() {
+  const response = await axiosClient.get(buildAdminUrl('/reports/filter-options'));
+  const data = unwrapResponse(response) || {};
+
+  return {
+    statuses: [{ value: 'all', label: 'كل الحالات' }, ...normalizeOptions(data.statuses || [])],
+    priorities: [{ value: 'all', label: 'كل الأولويات' }, ...normalizeOptions(data.priorities || [])],
+    issueCategories: [
+      { value: 'all', label: 'كل التصنيفات' },
+      ...normalizeIssueCategories(data.issueCategories || []),
     ],
   };
 }
 
-export async function getAdminReports() {
-  return wait(reportsStore.map(cloneReport));
-}
-
 export async function getAdminReportById(reportId) {
-  const report = findReport(reportId);
+  const response = await axiosClient.get(buildAdminUrl(`/reports/${reportId}`));
 
-  return wait(report ? cloneReport(report) : null);
+  return normalizeAdminReport(unwrapResponse(response));
 }
 
-export async function updateAdminReport(reportId, payload) {
-  const updatedReport = updateReportById(reportId, (report) => ({
-    ...report,
-    ...payload,
-    timeline: [
-      ...(report.timeline || []),
-      createTimelineItem(reportId, {
-        actorType: 'admin',
-        actor: 'الأدمن',
-        title: 'تم تحديث حالة البلاغ',
-        description: `تم تغيير حالة البلاغ إلى ${payload.status}.`,
-      }),
-    ],
-  }));
+export async function approveAdminReport(reportId) {
+  await axiosClient.put(buildAdminUrl(`/reports/${reportId}/approve`));
 
-  return wait(updatedReport);
+  return getAdminReportById(reportId);
 }
 
-export async function getRecommendedCompaniesForReport(reportId) {
-  const report = findReport(reportId);
+export async function rejectAdminReport(reportId, rejectionReason) {
+  await axiosClient.put(buildAdminUrl(`/reports/${reportId}/reject`), null, {
+    params: { RejectionReason: rejectionReason },
+  });
 
-  if (!report) return wait([]);
-
-  const companies = adminCompanies
-    .filter((company) => company.status === 'active' && company.accountStatus === 'active')
-    .map((company) => buildAssignmentCompany(company, report))
-    .filter((company) => company.matchScore >= 70)
-    .sort((a, b) => b.matchScore - a.matchScore);
-
-  return wait(companies);
+  return getAdminReportById(reportId);
 }
 
-export async function getAllCompaniesForReportAssignment(reportId) {
-  const report = findReport(reportId);
+export async function resolveAdminReport(reportId) {
+  await axiosClient.put(buildAdminUrl(`/reports/${reportId}/resolve`));
 
-  if (!report) return wait([]);
-
-  const companies = adminCompanies
-    .filter((company) => company.status === 'active' && company.accountStatus === 'active')
-    .map((company) => buildAssignmentCompany(company, report))
-    .sort((a, b) => b.matchScore - a.matchScore);
-
-  return wait(companies);
+  return getAdminReportById(reportId);
 }
+
+export async function requestAdminReportFollowUp(reportId) {
+  await axiosClient.put(buildAdminUrl(`/reports/${reportId}/request-followup`));
+
+  return getAdminReportById(reportId);
+}
+
+export async function closeAdminReport(reportId) {
+  await axiosClient.put(buildAdminUrl(`/reports/${reportId}/close`));
+
+  return getAdminReportById(reportId);
+}
+
+
+export async function getAssignmentCompaniesForReport(reportId, filters = {}) {
+  const response = await axiosClient.get(buildAdminUrl('/reports/assignment-companies'), {
+    params: removeEmptyParams({
+      id: reportId,
+      search: filters.search,
+      specialization: filters.specialization,
+    }),
+  });
+
+  const data = unwrapResponse(response) || [];
+
+  return Array.isArray(data) ? data.map(normalizeAssignmentCompany) : [];
+}
+
 
 export async function assignCompanyToReport(reportId, payload) {
-  const report = findReport(reportId);
-  const company = adminCompanies.find((item) => item.id === payload.companyId);
-
-  if (!report || !company) return wait(null);
-
-  const result = updateReportById(reportId, {
-    assignedCompanyId: company.id,
-    assignedCompany: company.name,
-    concernedCompany: company.name,
-    status: 'تم التعيين',
-    statusTone: 'info',
-    companyResponse: null,
-    assignment: {
-      companyId: company.id,
-      companyName: company.name,
-      adminNote: payload.adminNote || '',
-      assignmentSource: payload.assignmentSource,
-      assignedAt: new Date().toISOString(),
+  const response = await axiosClient.post(
+    buildAdminUrl(`/reports/${reportId}/assign-company`),
+    {
+      companyId: payload.companyId,
+      adminNote: payload.adminNote || null,
+      assignmentSource: payload.assignmentSource || 'manual',
     },
-    timeline: [
-      ...(report.timeline || []),
-      createTimelineItem(reportId, {
-        actorType: 'admin',
-        actor: 'الأدمن',
-        title: 'تم تعيين شركة',
-        description: `تم تعيين البلاغ إلى ${company.name}.`,
-      }),
-    ],
-  });
-
-  return wait({
-    companyId: company.id,
-    assignedCompany: company.name,
-    concernedCompany: company.name,
-    status: result.status,
-    statusTone: result.statusTone,
-    assignment: result.assignment,
-  });
-}
-
-export async function getPendingCompanyReviewReports() {
-  const reports = reportsStore.filter(
-    (report) => report.companyResponse?.reviewStatus === 'pending',
   );
 
-  return wait(reports.map(cloneReport));
+  const data = unwrapResponse(response) || {};
+
+  return {
+    ...data,
+    companyId: data.assignedCompanyId || data.assignment?.companyId || payload.companyId,
+    assignedCompany:
+      data.assignedCompanyName || data.assignment?.companyName || data.concernedCompanyName || '',
+    concernedCompany: data.concernedCompanyName || data.assignedCompanyName || '',
+    status: data.statusLabel || data.status || '',
+    statusValue: data.status || '',
+    statusTone: getStatusTone(data.status, data.statusLabel),
+  };
 }
 
-export async function getCompanyResponseForReport(reportId) {
-  const report = findReport(reportId);
+export async function reviewCompanyResponse(reportId, payload) {
+  const response = await axiosClient.post(
+    buildAdminUrl(`/reports/${reportId}/company-response/review`),
+    {
+      action: payload.action,
+      adminNote: payload.adminNote || null,
+      excludeCurrentCompany: Boolean(payload.excludeCurrentCompany),
+    },
+  );
 
-  return wait(report?.companyResponse || null);
+  return unwrapResponse(response);
 }
 
 export async function acceptCompanyFix(reportId, payload = {}) {
-  const report = findReport(reportId);
-
-  const updatedReport = updateReportById(reportId, {
-    status: 'تم الحل',
-    statusTone: 'success',
-    companyResponse: {
-      ...report.companyResponse,
-      reviewStatus: 'accepted',
-      reviewLabel: 'تم قبول الإصلاح',
-      adminNote: payload.adminNote || 'تمت مراجعة الإصلاح واعتماده.',
-    },
-    timeline: [
-      ...(report.timeline || []),
-      createTimelineItem(reportId, {
-        actorType: 'admin',
-        actor: 'الأدمن',
-        title: 'تم قبول إصلاح الشركة',
-        description: 'تم تحويل البلاغ إلى تم الحل وسيظهر للمستخدم بهذه الحالة.',
-      }),
-    ],
+  await reviewCompanyResponse(reportId, {
+    action: 'approve',
+    adminNote: payload.adminNote,
+    excludeCurrentCompany: false,
   });
 
-  return wait(updatedReport);
+  return getAdminReportById(reportId);
 }
 
 export async function requestCompanyCompletion(reportId, payload = {}) {
-  const report = findReport(reportId);
-
-  const updatedReport = updateReportById(reportId, {
-    status: 'مطلوب استكمال',
-    statusTone: 'warning',
-    companyResponse: {
-      ...report.companyResponse,
-      reviewStatus: 'needs_completion',
-      reviewLabel: 'مطلوب استكمال من الشركة',
-      adminNote: payload.adminNote || 'برجاء استكمال المطلوب وإرسال تحديث جديد.',
-    },
-    timeline: [
-      ...(report.timeline || []),
-      createTimelineItem(reportId, {
-        actorType: 'admin',
-        actor: 'الأدمن',
-        title: 'تم طلب استكمال من الشركة',
-        description:
-          payload.adminNote ||
-          'طلب الأدمن من الشركة استكمال العمل وإعادة إرسال الرد.',
-      }),
-    ],
+  await reviewCompanyResponse(reportId, {
+    action: 'reject',
+    adminNote: payload.adminNote,
+    excludeCurrentCompany: false,
   });
 
-  return wait(updatedReport);
+  return getAdminReportById(reportId);
 }
 
 export async function acceptCompanyCannotFix(reportId, payload = {}) {
-  const report = findReport(reportId);
+  await closeAdminReport(reportId, payload);
 
-  const updatedReport = updateReportById(reportId, {
-    status: 'متعذر التنفيذ',
-    statusTone: 'danger',
-    companyResponse: {
-      ...report.companyResponse,
-      reviewStatus: 'accepted_cannot_fix',
-      reviewLabel: 'تم قبول التعذر',
-      adminNote: payload.adminNote || 'تم قبول سبب التعذر من الشركة.',
-    },
-    timeline: [
-      ...(report.timeline || []),
-      createTimelineItem(reportId, {
-        actorType: 'admin',
-        actor: 'الأدمن',
-        title: 'تم قبول تعذر التنفيذ',
-        description:
-          payload.adminNote ||
-          'تم قبول تعذر التنفيذ وسيتم اتخاذ إجراء إداري لاحق.',
-      }),
-    ],
-  });
-
-  return wait(updatedReport);
+  return getAdminReportById(reportId);
 }
 
 export async function prepareReportReassignment(reportId, payload = {}) {
-  const report = findReport(reportId);
-
-  if (!report) return wait(null);
-
-  const failedCompanyId = report.assignedCompanyId;
-  const failedCompanyName =
-    report.assignedCompany ||
-    report.companyResponse?.companyName ||
-    'الشركة السابقة';
-
-  const previousExcludedCompanyIds = report.excludedCompanyIds || [];
-  const previousExcludedCompanyNames = report.excludedCompanyNames || [];
-
-  const nextExcludedCompanyIds = failedCompanyId
-    ? [...new Set([...previousExcludedCompanyIds, failedCompanyId])]
-    : previousExcludedCompanyIds;
-
-  const nextExcludedCompanyNames = failedCompanyName
-    ? [...new Set([...previousExcludedCompanyNames, failedCompanyName])]
-    : previousExcludedCompanyNames;
-
-  const updatedReport = updateReportById(reportId, {
-    status: 'بانتظار إعادة التعيين',
-    statusTone: 'warning',
-    assignedCompanyId: null,
-    assignedCompany: 'غير معين',
-    concernedCompany: 'الشركة المعينة',
-    excludedCompanyIds: nextExcludedCompanyIds,
-    excludedCompanyNames: nextExcludedCompanyNames,
-    companyResponse: {
-      ...report.companyResponse,
-      reviewStatus: 'reassignment_requested',
-      reviewLabel: 'تم توجيه البلاغ لإعادة التعيين',
-      adminNote: payload.adminNote || 'سيتم إعادة تعيين البلاغ لشركة أخرى.',
-    },
-    timeline: [
-      ...(report.timeline || []),
-      createTimelineItem(reportId, {
-        actorType: 'admin',
-        actor: 'الأدمن',
-        title: 'تم توجيه البلاغ لإعادة التعيين',
-        description:
-          payload.adminNote ||
-          `الأدمن قرر إعادة تعيين البلاغ لشركة أخرى، وتم استبعاد ${failedCompanyName} من الاختيارات.`,
-      }),
-    ],
+  await reviewCompanyResponse(reportId, {
+    action: 'reject',
+    adminNote: payload.adminNote,
+    excludeCurrentCompany: true,
   });
 
-  return wait(updatedReport);
+  return getAdminReportById(reportId);
+}
+
+export async function getPendingCompanyReviewReports(params = {}) {
+  const payload = await getAdminReports({
+    ...params,
+    companyReviewStatus: params.companyReviewStatus || 'pending',
+  });
+
+  return payload.items;
 }

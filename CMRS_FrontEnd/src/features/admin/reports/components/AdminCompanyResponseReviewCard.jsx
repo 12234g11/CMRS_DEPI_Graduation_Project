@@ -1,20 +1,54 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   FiAlertCircle,
   FiCheckCircle,
   FiClock,
   FiImage,
   FiRefreshCw,
-  FiRotateCcw,
   FiSend,
+  FiShield,
   FiTool,
   FiXCircle,
 } from 'react-icons/fi';
 
 function getResponseTone(responseStatus) {
-  if (responseStatus === 'fixed') return 'success';
-  if (responseStatus === 'cannot_fix') return 'danger';
+  const status = String(responseStatus || '').toLowerCase();
+
+  if (status.includes('fixed') || status.includes('resolved') || status.includes('complete')) {
+    return 'success';
+  }
+
+  if (
+    status.includes('cannot') ||
+    status.includes('reject') ||
+    status.includes('decline') ||
+    status.includes('تعذر') ||
+    status.includes('اعتذار')
+  ) {
+    return 'danger';
+  }
+
   return 'warning';
+}
+
+function getResponseScenario(response) {
+  const status = `${response?.status || ''} ${response?.statusLabel || ''}`.toLowerCase();
+
+  if (status.includes('fixed') || status.includes('resolved') || status.includes('complete') || status.includes('تم الإصلاح')) {
+    return 'fixed';
+  }
+
+  if (
+    status.includes('cannot') ||
+    status.includes('reject') ||
+    status.includes('decline') ||
+    status.includes('تعذر') ||
+    status.includes('اعتذار')
+  ) {
+    return 'cannot-fix';
+  }
+
+  return 'general';
 }
 
 function AdminCompanyResponseReviewCard({
@@ -27,8 +61,11 @@ function AdminCompanyResponseReviewCard({
   const [adminNote, setAdminNote] = useState('');
   const [noteError, setNoteError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [activeAction, setActiveAction] = useState('');
 
   const response = report.companyResponse;
+
+  const decisionScenario = useMemo(() => getResponseScenario(response), [response]);
 
   if (!response) {
     return (
@@ -55,7 +92,8 @@ function AdminCompanyResponseReviewCard({
     );
   }
 
-  const isPendingReview = response.reviewStatus === 'pending';
+  const reviewStatus = String(response.reviewStatus || '').toLowerCase();
+  const isPendingReview = reviewStatus === 'pending' || !reviewStatus;
   const responseTone = getResponseTone(response.status);
 
   function handleNoteChange(event) {
@@ -68,31 +106,37 @@ function AdminCompanyResponseReviewCard({
 
   async function handleDecision(action) {
     const trimmedNote = adminNote.trim();
+    const actionsNeedNote = ['request-completion', 'reassign', 'close-cannot-fix'];
 
-    if (action === 'request-completion' && !trimmedNote) {
-      setNoteError('يجب كتابة ملاحظة واضحة للشركة قبل إرسال طلب الاستكمال.');
+    if (actionsNeedNote.includes(action) && !trimmedNote) {
+      setNoteError('اكتب سبب واضح قبل تنفيذ هذا القرار حتى يظهر للشركة أو في سجل البلاغ.');
       return;
     }
 
     setIsSaving(true);
+    setActiveAction(action);
+    setNoteError('');
 
-    if (action === 'accept-fix') {
-      await onAcceptFix?.(trimmedNote);
+    try {
+      if (action === 'accept-fix') {
+        await onAcceptFix?.(trimmedNote);
+      }
+
+      if (action === 'request-completion') {
+        await onRequestCompletion?.(trimmedNote);
+      }
+
+      if (action === 'close-cannot-fix') {
+        await onAcceptCannotFix?.(trimmedNote);
+      }
+
+      if (action === 'reassign') {
+        await onReassign?.(trimmedNote);
+      }
+    } finally {
+      setIsSaving(false);
+      setActiveAction('');
     }
-
-    if (action === 'request-completion') {
-      await onRequestCompletion?.(trimmedNote);
-    }
-
-    if (action === 'accept-cannot-fix') {
-      await onAcceptCannotFix?.(trimmedNote);
-    }
-
-    if (action === 'reassign') {
-      await onReassign?.(trimmedNote);
-    }
-
-    setIsSaving(false);
   }
 
   return (
@@ -102,7 +146,7 @@ function AdminCompanyResponseReviewCard({
     >
       <header className="admin-report-card-header">
         <div>
-          <h2>رد الشركة</h2>
+          <h2>مراجعة رد الشركة</h2>
           <p>Company Response Review</p>
         </div>
 
@@ -138,14 +182,14 @@ function AdminCompanyResponseReviewCard({
           ملاحظة الشركة
         </strong>
 
-        <p>{response.note}</p>
+        <p>{response.note || 'لم ترسل الشركة ملاحظة نصية.'}</p>
       </div>
 
       {response.reason ? (
         <div className="admin-company-response-warning">
           <FiAlertCircle />
           <div>
-            <strong>سبب التعذر</strong>
+            <strong>سبب التعذر / الاعتذار</strong>
             <p>{response.reason}</p>
           </div>
         </div>
@@ -176,16 +220,32 @@ function AdminCompanyResponseReviewCard({
       </div>
 
       {isPendingReview ? (
-        <>
+        <div className="admin-company-response-decision-panel">
+          <div className="admin-company-response-decision-intro">
+            <FiShield />
+            <div>
+              <strong>
+                {decisionScenario === 'fixed'
+                  ? 'الشركة أرسلت أن المشكلة تم حلها'
+                  : decisionScenario === 'cannot-fix'
+                    ? 'الشركة أرسلت تعذر أو اعتذار عن التنفيذ'
+                    : 'يوجد رد جديد من الشركة يحتاج قرار'}
+              </strong>
+              <p>
+                اختار القرار المناسب. عند رفض رد الشركة أو إعادة التعيين لازم تكتب سبب واضح.
+              </p>
+            </div>
+          </div>
+
           <label className="admin-company-response-admin-note">
-            ملاحظة الأدمن للشركة
+            ملاحظة الأدمن / سبب القرار
 
             <textarea
               value={adminNote}
               onChange={handleNoteChange}
               rows={4}
               className={noteError ? 'is-invalid' : ''}
-              placeholder="اكتب ملاحظة واضحة للشركة عند طلب الاستكمال أو قبول التعذر..."
+              placeholder="مثال: الصور غير كافية، العمل لم يكتمل، أو المشكلة خارج نطاق التنفيذ الحالي..."
             />
 
             {noteError ? (
@@ -197,7 +257,7 @@ function AdminCompanyResponseReviewCard({
           </label>
 
           <div className="admin-company-response-actions">
-            {response.status === 'fixed' ? (
+            {decisionScenario === 'fixed' ? (
               <>
                 <button
                   type="button"
@@ -206,7 +266,7 @@ function AdminCompanyResponseReviewCard({
                   disabled={isSaving}
                 >
                   <FiCheckCircle />
-                  قبول الإصلاح وتحويله إلى تم الحل
+                  {activeAction === 'accept-fix' ? 'جاري قبول الحل...' : 'قبول الحل وإغلاق البلاغ'}
                 </button>
 
                 <button
@@ -215,13 +275,13 @@ function AdminCompanyResponseReviewCard({
                   onClick={() => handleDecision('request-completion')}
                   disabled={isSaving}
                 >
-                  <FiRotateCcw />
-                  طلب استكمال
+                  <FiSend />
+                  {activeAction === 'request-completion' ? 'جاري إرسال السبب...' : 'رفض الحل وطلب متابعة'}
                 </button>
               </>
             ) : null}
 
-            {response.status === 'cannot_fix' ? (
+            {decisionScenario === 'cannot-fix' ? (
               <>
                 <button
                   type="button"
@@ -230,7 +290,9 @@ function AdminCompanyResponseReviewCard({
                   disabled={isSaving}
                 >
                   <FiSend />
-                  طلب استكمال من نفس الشركة
+                  {activeAction === 'request-completion'
+                    ? 'جاري إجبار الشركة...'
+                    : 'إجبار نفس الشركة على المتابعة'}
                 </button>
 
                 <button
@@ -240,22 +302,48 @@ function AdminCompanyResponseReviewCard({
                   disabled={isSaving}
                 >
                   <FiRefreshCw />
-                  إعادة التعيين لشركة أخرى
+                  {activeAction === 'reassign' ? 'جاري تجهيز إعادة التعيين...' : 'تعيين شركة أخرى'}
                 </button>
 
                 <button
                   type="button"
                   className="admin-company-response-btn admin-company-response-btn--danger"
-                  onClick={() => handleDecision('accept-cannot-fix')}
+                  onClick={() => handleDecision('close-cannot-fix')}
                   disabled={isSaving}
                 >
                   <FiXCircle />
-                  قبول التعذر وتحويل البلاغ إلى متعذر التنفيذ
+                  {activeAction === 'close-cannot-fix'
+                    ? 'جاري إغلاق البلاغ...'
+                    : 'إغلاق البلاغ بدون عقوبة'}
+                </button>
+              </>
+            ) : null}
+
+            {decisionScenario === 'general' ? (
+              <>
+                <button
+                  type="button"
+                  className="admin-company-response-btn admin-company-response-btn--accept"
+                  onClick={() => handleDecision('accept-fix')}
+                  disabled={isSaving}
+                >
+                  <FiCheckCircle />
+                  {activeAction === 'accept-fix' ? 'جاري القبول...' : 'قبول رد الشركة'}
+                </button>
+
+                <button
+                  type="button"
+                  className="admin-company-response-btn admin-company-response-btn--complete"
+                  onClick={() => handleDecision('request-completion')}
+                  disabled={isSaving}
+                >
+                  <FiSend />
+                  {activeAction === 'request-completion' ? 'جاري إرسال السبب...' : 'رفض الرد وطلب متابعة'}
                 </button>
               </>
             ) : null}
           </div>
-        </>
+        </div>
       ) : (
         <div className="admin-company-response-reviewed">
           <FiCheckCircle />

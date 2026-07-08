@@ -5,6 +5,8 @@ import {
   changeAdminCompanyStatus,
   createAdminCompany,
   getAdminCompanies,
+  getAdminCompanyById,
+  getAdminCompanyOptions,
   resendCompanyInvitation,
   updateAdminCompany,
 } from '../api/adminCompaniesApi';
@@ -15,10 +17,16 @@ import AdminCompanyDetailsModal from '../components/AdminCompanyDetailsModal';
 import AdminCompanyFormModal from '../components/AdminCompanyFormModal';
 import AdminCompanyInviteModal from '../components/AdminCompanyInviteModal';
 import AdminCompanyStatusModal from '../components/AdminCompanyStatusModal';
-import { adminCompanies } from '../mocks/adminCompaniesMockData';
 import '../admin-companies.css';
 
 const DEFAULT_ADMIN_GOVERNORATE = 'القاهرة';
+
+const DEFAULT_COMPANY_OPTIONS = {
+  statuses: [{ value: 'all', label: 'كل الحالات' }],
+  accountStatuses: [{ value: 'all', label: 'كل حالات الحساب' }],
+  governorates: [{ value: 'all', label: 'كل المحافظات' }],
+  specializations: [{ value: 'all', label: 'كل الخدمات' }],
+};
 
 const GOVERNORATE_VALUE_TO_LABEL = {
   cairo: 'القاهرة',
@@ -48,10 +56,24 @@ function AdminCompaniesPage() {
 
   const adminGovernorate = getAdminGovernorate(user);
 
-  const [companies, setCompanies] = useState(adminCompanies);
+  const [companies, setCompanies] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 10,
+    totalItems: 0,
+    totalPages: 1,
+  });
+  const [companyOptions, setCompanyOptions] = useState(DEFAULT_COMPANY_OPTIONS);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [specializationFilter, setSpecializationFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const [formMode, setFormMode] = useState(null);
   const [selectedCompany, setSelectedCompany] = useState(null);
@@ -62,76 +84,104 @@ function AdminCompaniesPage() {
   useEffect(() => {
     let isMounted = true;
 
-    getAdminCompanies().then((data) => {
-      if (isMounted) {
-        setCompanies(data);
-      }
-    });
+    getAdminCompanyOptions()
+      .then((options) => {
+        if (isMounted) {
+          setCompanyOptions(options);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setCompanyOptions(DEFAULT_COMPANY_OPTIONS);
+        }
+      });
 
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const adminGovernorateCompanies = useMemo(() => {
-    return companies.filter((company) => {
-      const governorates = company.governorates?.length
-        ? company.governorates
-        : [company.governorate].filter(Boolean);
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, statusFilter, specializationFilter]);
 
-      return governorates.includes(adminGovernorate);
-    });
-  }, [adminGovernorate, companies]);
+  useEffect(() => {
+    let isMounted = true;
 
-  const filteredCompanies = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
+    setIsLoading(true);
+    setErrorMessage('');
 
-    return adminGovernorateCompanies.filter((company) => {
-      const governorates = company.governorates?.length
-        ? company.governorates
-        : [company.governorate].filter(Boolean);
+    getAdminCompanies({
+      governorate: adminGovernorate,
+      status: statusFilter,
+      specialization: specializationFilter,
+      search: searchTerm.trim(),
+      page,
+      pageSize,
+    })
+      .then((payload) => {
+        if (!isMounted) return;
 
-      const searchTarget = [
-        company.name,
-        company.code,
-        company.email,
-        company.specialization,
-        governorates.join(' '),
-        company.specializations?.join(' '),
-        company.managerName,
-      ]
-        .join(' ')
-        .toLowerCase();
+        setCompanies(payload.items);
+        setSummary(payload.summary);
+        setPagination(payload.pagination);
+      })
+      .catch(() => {
+        if (!isMounted) return;
 
-      const matchesSearch = normalizedSearch
-        ? searchTarget.includes(normalizedSearch)
-        : true;
+        setCompanies([]);
+        setSummary(null);
+        setPagination({ page: 1, pageSize, totalItems: 0, totalPages: 1 });
+        setErrorMessage('تعذر تحميل الشركات من الخادم. برجاء المحاولة مرة أخرى.');
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
 
-      const matchesStatus =
-        statusFilter === 'all' || company.status === statusFilter;
+    return () => {
+      isMounted = false;
+    };
+  }, [adminGovernorate, page, pageSize, refreshKey, searchTerm, specializationFilter, statusFilter]);
 
-      const matchesSpecialization =
-        specializationFilter === 'all' ||
-        company.specialization === specializationFilter;
+  const formGovernorateOptions = useMemo(() => {
+    return companyOptions.governorates?.filter((option) => option.value !== 'all') || [];
+  }, [companyOptions.governorates]);
 
-      return matchesSearch && matchesStatus && matchesSpecialization;
-    });
-  }, [
-    adminGovernorateCompanies,
-    searchTerm,
-    specializationFilter,
-    statusFilter,
-  ]);
+  const formSpecializationOptions = useMemo(() => {
+    return companyOptions.specializations?.filter((option) => option.value !== 'all') || [];
+  }, [companyOptions.specializations]);
 
   function handleOpenAddModal() {
     setSelectedCompany(null);
     setFormMode('add');
+    setSuccessMessage('');
   }
 
-  function handleOpenEditModal(company) {
-    setSelectedCompany(company);
+  async function handleOpenEditModal(company) {
     setDetailsCompany(null);
+    setSuccessMessage('');
+
+    try {
+      const fullCompany = await getAdminCompanyById(company.id);
+      setSelectedCompany(fullCompany);
+    } catch {
+      setSelectedCompany(company);
+    }
+
     setFormMode('edit');
+  }
+
+  async function handleOpenDetailsModal(company) {
+    setSuccessMessage('');
+
+    try {
+      const fullCompany = await getAdminCompanyById(company.id);
+      setDetailsCompany(fullCompany);
+    } catch {
+      setDetailsCompany(company);
+    }
   }
 
   async function handleSubmitCompany(payload) {
@@ -149,12 +199,10 @@ function AdminCompaniesPage() {
     if (formMode === 'add') {
       const result = await createAdminCompany(payloadWithAdminGovernorate);
 
-      setCompanies((currentCompanies) => [
-        result.company,
-        ...currentCompanies,
-      ]);
-
-      setInviteData(result);
+      setSuccessMessage(
+        result?.message || 'تم إنشاء حساب الشركة وإرسال دعوة التفعيل بنجاح.',
+      );
+      setRefreshKey((current) => current + 1);
     }
 
     if (formMode === 'edit' && selectedCompany) {
@@ -173,6 +221,8 @@ function AdminCompaniesPage() {
             : company,
         ),
       );
+
+      setSuccessMessage('تم تحديث بيانات الشركة بنجاح.');
     }
 
     setFormMode(null);
@@ -198,10 +248,11 @@ function AdminCompaniesPage() {
     );
 
     setStatusCompany(null);
+    setSuccessMessage('تم تغيير حالة الشركة بنجاح.');
   }
 
   async function handleResendInvitation(company) {
-    const result = await resendCompanyInvitation(company);
+    const result = await resendCompanyInvitation(company.id);
 
     setCompanies((currentCompanies) =>
       currentCompanies.map((item) =>
@@ -256,7 +307,19 @@ function AdminCompaniesPage() {
         </button>
       </section>
 
-      <AdminCompaniesStatsCards companies={adminGovernorateCompanies} />
+      {successMessage ? (
+        <div className="admin-company-page-message admin-company-page-message--success">
+          {successMessage}
+        </div>
+      ) : null}
+
+      {errorMessage ? (
+        <div className="admin-company-page-message admin-company-page-message--error">
+          {errorMessage}
+        </div>
+      ) : null}
+
+      <AdminCompaniesStatsCards companies={companies} summary={summary} />
 
       <section className="admin-companies-card">
         <AdminCompaniesToolbar
@@ -266,21 +329,55 @@ function AdminCompaniesPage() {
           onStatusChange={setStatusFilter}
           specializationFilter={specializationFilter}
           onSpecializationChange={setSpecializationFilter}
+          statusOptions={companyOptions.statuses}
+          specializationOptions={companyOptions.specializations}
         />
 
-        <AdminCompaniesTable
-          companies={filteredCompanies}
-          onView={setDetailsCompany}
-          onEdit={handleOpenEditModal}
-          onToggleStatus={setStatusCompany}
-          onResendInvitation={handleResendInvitation}
-        />
+        {isLoading ? (
+          <div className="admin-companies-empty">جاري تحميل الشركات...</div>
+        ) : (
+          <AdminCompaniesTable
+            companies={companies}
+            onView={handleOpenDetailsModal}
+            onEdit={handleOpenEditModal}
+            onToggleStatus={setStatusCompany}
+            onResendInvitation={handleResendInvitation}
+          />
+        )}
+
+        <div className="admin-companies-pagination">
+          <button
+            type="button"
+            onClick={() => setPage((current) => Math.max(current - 1, 1))}
+            disabled={page <= 1 || isLoading}
+          >
+            السابق
+          </button>
+
+          <span>
+            صفحة {pagination.page || page} من {pagination.totalPages || 1} - إجمالي{' '}
+            {pagination.totalItems || 0} شركة
+          </span>
+
+          <button
+            type="button"
+            onClick={() =>
+              setPage((current) => Math.min(current + 1, pagination.totalPages || 1))
+            }
+            disabled={page >= (pagination.totalPages || 1) || isLoading}
+          >
+            التالي
+          </button>
+        </div>
       </section>
 
       {formMode ? (
         <AdminCompanyFormModal
           mode={formMode}
           company={selectedCompany}
+          governorateOptions={formGovernorateOptions}
+          specializationOptions={formSpecializationOptions}
+          defaultGovernorate={adminGovernorate}
           onClose={() => {
             setFormMode(null);
             setSelectedCompany(null);

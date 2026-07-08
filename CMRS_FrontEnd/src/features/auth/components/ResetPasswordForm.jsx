@@ -7,6 +7,7 @@ import {
   useSearchParams,
 } from 'react-router-dom';
 import { ROUTES } from '../../../shared/navigation';
+import PasswordInput from './PasswordInput';
 import { resetPassword } from '../api/authApi';
 
 const containerVariants = {
@@ -46,6 +47,10 @@ function ResetPasswordForm() {
   }));
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState({
+    newPassword: false,
+    confirmPassword: false,
+  });
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -168,27 +173,37 @@ function ResetPasswordForm() {
 
         <motion.div className="forgot-form__field" variants={itemVariants}>
           <label htmlFor="newPassword">كلمة المرور الجديدة</label>
-          <input
+          <PasswordInput
             id="newPassword"
             name="newPassword"
-            type="password"
-            placeholder="••••••••"
             value={formData.newPassword}
             onChange={handleChange}
             autoComplete="new-password"
+            isVisible={visiblePasswords.newPassword}
+            onToggleVisibility={() =>
+              setVisiblePasswords((prev) => ({
+                ...prev,
+                newPassword: !prev.newPassword,
+              }))
+            }
           />
         </motion.div>
 
         <motion.div className="forgot-form__field" variants={itemVariants}>
           <label htmlFor="confirmPassword">تأكيد كلمة المرور</label>
-          <input
+          <PasswordInput
             id="confirmPassword"
             name="confirmPassword"
-            type="password"
-            placeholder="••••••••"
             value={formData.confirmPassword}
             onChange={handleChange}
             autoComplete="new-password"
+            isVisible={visiblePasswords.confirmPassword}
+            onToggleVisibility={() =>
+              setVisiblePasswords((prev) => ({
+                ...prev,
+                confirmPassword: !prev.confirmPassword,
+              }))
+            }
           />
         </motion.div>
 

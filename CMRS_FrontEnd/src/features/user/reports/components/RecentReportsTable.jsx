@@ -123,15 +123,6 @@ function RecentReportsTable({
                       <strong title={getReportTitle(report)}>
                         {getReportTitle(report)}
                       </strong>
-
-                      <span className="user-reports-table__report-number">
-                        <span className="user-reports-table__report-number-label">
-                          رقم البلاغ:
-                        </span>
-                        <span className="user-reports-table__report-number-value">
-                          {getReportNumber(report)}
-                        </span>
-                      </span>
                     </div>
                   </td>
 

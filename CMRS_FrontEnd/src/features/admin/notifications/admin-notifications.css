@@ -1,0 +1,33 @@
+.admin-notifications-page .user-notifications-panel {
+  overflow: visible;
+}
+
+
+/* Admin notification report navigation button */
+.admin-notifications-page .user-notification-item__action--report {
+  background: rgba(2, 95, 72, 0.09);
+  color: var(--color-primary);
+  border: 1px solid rgba(2, 95, 72, 0.16);
+}
+
+.admin-notifications-page .user-notification-item__action--report:hover {
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(2, 95, 72, 0.14);
+}
+
+.admin-notifications-page .user-notification-item__action--report svg {
+  width: 15px;
+  height: 15px;
+}
+
+@media (max-width: 768px) {
+  .admin-notifications-page .user-notification-item__actions {
+    align-items: stretch;
+  }
+
+  .admin-notifications-page .user-notification-item__action--report {
+    width: 100%;
+    justify-content: center;
+  }
+}
