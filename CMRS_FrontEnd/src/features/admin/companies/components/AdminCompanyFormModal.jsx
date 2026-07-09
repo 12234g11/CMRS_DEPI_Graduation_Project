@@ -39,7 +39,7 @@ function createEmptyForm({ defaultGovernorate, firstSpecialization }) {
   return {
     name: '',
     specialization: firstSpecialization || '1',
-    governorates: [defaultGovernorate || 'القاهرة'],
+    governorates: defaultGovernorate ? [defaultGovernorate] : [],
     maxCapacity: 10,
     phone: '',
     email: '',
@@ -70,7 +70,7 @@ function AdminCompanyFormModal({
   company,
   governorateOptions = FALLBACK_GOVERNORATES,
   specializationOptions = FALLBACK_SPECIALIZATIONS,
-  defaultGovernorate = 'القاهرة',
+  defaultGovernorate = '',
   onClose,
   onSubmit,
 }) {
@@ -222,7 +222,7 @@ function AdminCompanyFormModal({
                 placeholder="مثال: 10"
               />
               <small className="admin-company-field-hint">
-يتم استخدامه عند تعديل بيانات الشركة، أما عند إرسال دعوة جديدة فيتم الاعتماد على بيانات إنشاء الحساب الأساسية.              </small>
+يتم إرساله عند إنشاء الشركة وتعديلها، ويستخدم كحد أقصى للبلاغات النشطة المسندة للشركة.              </small>
             </label>
 
             <label>

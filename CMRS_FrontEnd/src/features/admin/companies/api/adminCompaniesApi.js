@@ -185,6 +185,13 @@ function mapUpdateCompanyPayload(payload = {}) {
   };
 }
 
+
+export async function getAdminProfile() {
+  const response = await axiosClient.get(buildAdminUrl('/profile'));
+
+  return unwrapResponse(response) || {};
+}
+
 export async function getAdminCompanies(params = {}) {
   const response = await axiosClient.get(buildAdminUrl('/companies'), {
     params: removeEmptyParams(params),

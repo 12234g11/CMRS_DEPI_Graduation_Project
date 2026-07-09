@@ -7,6 +7,7 @@ import {
   getAdminCompanies,
   getAdminCompanyById,
   getAdminCompanyOptions,
+  getAdminProfile,
   resendCompanyInvitation,
   updateAdminCompany,
 } from '../api/adminCompaniesApi';
@@ -19,7 +20,7 @@ import AdminCompanyInviteModal from '../components/AdminCompanyInviteModal';
 import AdminCompanyStatusModal from '../components/AdminCompanyStatusModal';
 import '../admin-companies.css';
 
-const DEFAULT_ADMIN_GOVERNORATE = 'القاهرة';
+const DEFAULT_ADMIN_GOVERNORATE = '';
 
 const DEFAULT_COMPANY_OPTIONS = {
   statuses: [{ value: 'all', label: 'كل الحالات' }],
@@ -40,21 +41,63 @@ const GOVERNORATE_VALUE_TO_LABEL = {
   القليوبيه: 'القليوبية',
 };
 
-function getAdminGovernorate(user) {
-  const rawGovernorate =
-    user?.governorateLabel ||
-    user?.governorate ||
-    user?.assignedGovernorate ||
-    user?.city ||
-    DEFAULT_ADMIN_GOVERNORATE;
+function normalizeGovernorateValue(value) {
+  const rawValue = String(value || '').trim();
 
-  return GOVERNORATE_VALUE_TO_LABEL[rawGovernorate] || rawGovernorate;
+  return GOVERNORATE_VALUE_TO_LABEL[rawValue] || rawValue;
+}
+
+function extractGovernorateFromObject(source, depth = 0) {
+  if (!source || depth > 4) return '';
+
+  if (typeof source === 'string') {
+    return normalizeGovernorateValue(source);
+  }
+
+  if (Array.isArray(source)) {
+    return source.map((item) => extractGovernorateFromObject(item, depth + 1)).find(Boolean) || '';
+  }
+
+  if (typeof source !== 'object') return '';
+
+  const directGovernorate = normalizeGovernorateValue(
+    source.governorateLabel ||
+      source.governorateName ||
+      source.governorate ||
+      source.assignedGovernorate,
+  );
+
+  if (directGovernorate) return directGovernorate;
+
+  return (
+    extractGovernorateFromObject(source.data, depth + 1) ||
+    extractGovernorateFromObject(source.profile, depth + 1) ||
+    extractGovernorateFromObject(source.user, depth + 1) ||
+    extractGovernorateFromObject(source.admin, depth + 1) ||
+    extractGovernorateFromObject(source.workScope, depth + 1) ||
+    ''
+  );
+}
+
+function getAdminGovernorate(adminProfile, authUser) {
+  return (
+    extractGovernorateFromObject(adminProfile) ||
+    extractGovernorateFromObject(authUser) ||
+    DEFAULT_ADMIN_GOVERNORATE
+  );
 }
 
 function AdminCompaniesPage() {
   const { user } = useAuth();
 
-  const adminGovernorate = getAdminGovernorate(user);
+  const [adminProfile, setAdminProfile] = useState(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+
+  const adminGovernorate = useMemo(
+    () => getAdminGovernorate(adminProfile, user),
+    [adminProfile, user],
+  );
+  const adminGovernorateLabel = adminGovernorate || 'نطاق الأدمن';
 
   const [companies, setCompanies] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -81,6 +124,33 @@ function AdminCompaniesPage() {
   const [detailsCompany, setDetailsCompany] = useState(null);
   const [statusCompany, setStatusCompany] = useState(null);
   const [inviteData, setInviteData] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    setProfileLoaded(false);
+
+    getAdminProfile()
+      .then((profile) => {
+        if (isMounted) {
+          setAdminProfile(profile || null);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setAdminProfile(null);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setProfileLoaded(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -112,7 +182,7 @@ function AdminCompaniesPage() {
   }, [searchTerm, statusFilter, specializationFilter]);
 
   useEffect(() => {
-    if (!optionsLoaded) {
+    if (!optionsLoaded || !profileLoaded) {
       return;
     }
 
@@ -122,7 +192,7 @@ function AdminCompaniesPage() {
     setErrorMessage('');
 
     getAdminCompanies({
-      governorate: adminGovernorate,
+      governorate: adminGovernorate || undefined,
       status: statusFilter,
       specialization: specializationFilter,
       search: searchTerm.trim(),
@@ -156,6 +226,7 @@ function AdminCompaniesPage() {
   }, [
     adminGovernorate,
     optionsLoaded,
+    profileLoaded,
     page,
     pageSize,
     refreshKey,
@@ -221,11 +292,11 @@ function AdminCompaniesPage() {
       ...payload,
       governorates: payload.governorates?.length
         ? payload.governorates
-        : [adminGovernorate],
-      governorate: payload.governorate || adminGovernorate,
+        : [adminGovernorate].filter(Boolean),
+      governorate: payload.governorate || adminGovernorate || payload.governorates?.[0],
       coverageAreas: payload.coverageAreas?.length
         ? payload.coverageAreas
-        : [adminGovernorate],
+        : [adminGovernorate].filter(Boolean),
     };
 
     if (formMode === 'add') {
@@ -335,7 +406,7 @@ function AdminCompaniesPage() {
         <div>
           <h1>الشركات</h1>
           <p>
-            Maintenance Companies - إدارة شركات الصيانة داخل محافظة {adminGovernorate}
+            Maintenance Companies - إدارة شركات الصيانة داخل محافظة {adminGovernorateLabel}
           </p>
         </div>
 
