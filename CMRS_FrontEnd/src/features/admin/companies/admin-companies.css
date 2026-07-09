@@ -1014,6 +1014,11 @@
   color: #c24a4a;
 }
 
+.admin-company-account-status--disabled {
+  background: rgba(100, 116, 139, 0.14);
+  color: #475569;
+}
+
 .admin-company-action-btn--invite {
   background: rgba(90, 107, 255, 0.12);
   color: #4352db;

@@ -72,6 +72,7 @@ function AdminCompaniesPage() {
   const [pageSize] = useState(10);
   const [refreshKey, setRefreshKey] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [optionsLoaded, setOptionsLoaded] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -94,6 +95,11 @@ function AdminCompaniesPage() {
         if (isMounted) {
           setCompanyOptions(DEFAULT_COMPANY_OPTIONS);
         }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setOptionsLoaded(true);
+        }
       });
 
     return () => {
@@ -106,6 +112,10 @@ function AdminCompaniesPage() {
   }, [searchTerm, statusFilter, specializationFilter]);
 
   useEffect(() => {
+    if (!optionsLoaded) {
+      return;
+    }
+
     let isMounted = true;
 
     setIsLoading(true);
@@ -143,7 +153,16 @@ function AdminCompaniesPage() {
     return () => {
       isMounted = false;
     };
-  }, [adminGovernorate, page, pageSize, refreshKey, searchTerm, specializationFilter, statusFilter]);
+  }, [
+    adminGovernorate,
+    optionsLoaded,
+    page,
+    pageSize,
+    refreshKey,
+    searchTerm,
+    specializationFilter,
+    statusFilter,
+  ]);
 
   const formGovernorateOptions = useMemo(() => {
     return companyOptions.governorates?.filter((option) => option.value !== 'all') || [];
@@ -151,6 +170,19 @@ function AdminCompaniesPage() {
 
   const formSpecializationOptions = useMemo(() => {
     return companyOptions.specializations?.filter((option) => option.value !== 'all') || [];
+  }, [companyOptions.specializations]);
+
+  const filterSpecializationOptions = useMemo(() => {
+    const options = companyOptions.specializations || [];
+
+    return options.map((option) =>
+      option.value === 'all'
+        ? option
+        : {
+            ...option,
+            value: option.label,
+          },
+    );
   }, [companyOptions.specializations]);
 
   function handleOpenAddModal() {
@@ -202,6 +234,16 @@ function AdminCompaniesPage() {
       setSuccessMessage(
         result?.message || 'تم إنشاء حساب الشركة وإرسال دعوة التفعيل بنجاح.',
       );
+
+      if (result?.inviteUrl) {
+        setInviteData({
+          company: result.company,
+          account: result.account,
+          inviteUrl: result.inviteUrl,
+          invitationExpiresAt: result.invitationExpiresAt,
+        });
+      }
+
       setRefreshKey((current) => current + 1);
     }
 
@@ -330,7 +372,7 @@ function AdminCompaniesPage() {
           specializationFilter={specializationFilter}
           onSpecializationChange={setSpecializationFilter}
           statusOptions={companyOptions.statuses}
-          specializationOptions={companyOptions.specializations}
+          specializationOptions={filterSpecializationOptions}
         />
 
         {isLoading ? (

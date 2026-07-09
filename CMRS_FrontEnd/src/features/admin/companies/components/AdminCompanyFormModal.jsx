@@ -3,12 +3,31 @@ import { FiX } from 'react-icons/fi';
 import AdminReportFilterSelect from '../../reports/components/AdminReportFilterSelect';
 
 const FALLBACK_SPECIALIZATIONS = [
-  { value: 'الطرق والرصف', label: 'الطرق والرصف' },
-  { value: 'الإنارة والكهرباء', label: 'الإنارة والكهرباء' },
-  { value: 'النظافة والمخلفات', label: 'النظافة والمخلفات' },
-  { value: 'المياه والصرف', label: 'المياه والصرف' },
-  { value: 'صيانة عامة', label: 'صيانة عامة' },
+  { value: '1', label: 'الطرق والرصف' },
+  { value: '2', label: 'الإنارة والكهرباء' },
+  { value: '3', label: 'النظافة والمخلفات' },
+  { value: '4', label: 'المياه والصرف' },
+  { value: '5', label: 'الإشارات والمرور' },
+  { value: '6', label: 'الأشجار والحدائق' },
+  { value: '7', label: 'السلامة العامة' },
+  { value: '8', label: 'الغاز' },
+  { value: '9', label: 'الشبكات' },
+  { value: '10', label: 'صيانة عامة' },
 ];
+
+const SPECIALIZATION_VALUE_ALIASES = {
+  'الطرق والرصف': '1',
+  'الإضاءة والكهرباء': '2',
+  'الإنارة والكهرباء': '2',
+  'النظافة والمخلفات': '3',
+  'المياه والصرف': '4',
+  'الإشارات والمرور': '5',
+  'الأشجار والحدائق': '6',
+  'السلامة العامة': '7',
+  الغاز: '8',
+  الشبكات: '9',
+  'صيانة عامة': '10',
+};
 
 const FALLBACK_GOVERNORATES = [
   { value: 'القاهرة', label: 'القاهرة' },
@@ -19,7 +38,7 @@ const FALLBACK_GOVERNORATES = [
 function createEmptyForm({ defaultGovernorate, firstSpecialization }) {
   return {
     name: '',
-    specialization: firstSpecialization || 'الطرق والرصف',
+    specialization: firstSpecialization || '1',
     governorates: [defaultGovernorate || 'القاهرة'],
     maxCapacity: 10,
     phone: '',
@@ -35,6 +54,15 @@ function toggleArrayValue(list, value) {
   return list.includes(value)
     ? list.filter((item) => item !== value)
     : [...list, value];
+}
+
+function resolveSpecializationValue(specialization, options) {
+  const value = String(specialization || '').trim();
+  const matchedOption = options.find(
+    (option) => option.value === value || option.label === value,
+  );
+
+  return matchedOption?.value || SPECIALIZATION_VALUE_ALIASES[value] || value;
 }
 
 function AdminCompanyFormModal({
@@ -75,6 +103,10 @@ function AdminCompanyFormModal({
       setFormData({
         ...emptyForm,
         ...company,
+        specialization: resolveSpecializationValue(
+          company.specialization,
+          cleanedSpecializationOptions,
+        ),
         governorates: company.governorates?.length
           ? company.governorates
           : [company.governorate].filter(Boolean),
@@ -85,7 +117,7 @@ function AdminCompanyFormModal({
     }
 
     setFormError('');
-  }, [company, emptyForm, isEditMode]);
+  }, [cleanedSpecializationOptions, company, emptyForm, isEditMode]);
 
   function handleChange(field, value) {
     setFormData((current) => ({

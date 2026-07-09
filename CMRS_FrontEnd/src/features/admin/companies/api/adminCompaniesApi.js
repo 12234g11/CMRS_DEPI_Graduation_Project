@@ -1,5 +1,39 @@
 import axiosClient from '../../../../shared/services/api/axiosClient';
 
+
+const ISSUE_CATEGORY_OPTIONS = [
+  { value: '1', label: 'الطرق والرصف' },
+  { value: '2', label: 'الإنارة والكهرباء' },
+  { value: '3', label: 'النظافة والمخلفات' },
+  { value: '4', label: 'المياه والصرف' },
+  { value: '5', label: 'الإشارات والمرور' },
+  { value: '6', label: 'الأشجار والحدائق' },
+  { value: '7', label: 'السلامة العامة' },
+  { value: '8', label: 'الغاز' },
+  { value: '9', label: 'الشبكات' },
+  { value: '10', label: 'صيانة عامة' },
+];
+
+const ISSUE_CATEGORY_ID_BY_LABEL = ISSUE_CATEGORY_OPTIONS.reduce(
+  (acc, option) => ({
+    ...acc,
+    [option.label]: option.value,
+  }),
+  {
+    'الإضاءة والكهرباء': '2',
+  },
+);
+
+function resolveIssueCategoryId(specialization) {
+  const value = String(specialization || '').trim();
+
+  if (!value || value === 'all') {
+    return value;
+  }
+
+  return ISSUE_CATEGORY_ID_BY_LABEL[value] || value;
+}
+
 function getAdminApiBase() {
   const configuredBaseUrl = String(axiosClient?.defaults?.baseURL || '').replace(/\/$/, '');
 
@@ -16,6 +50,10 @@ function unwrapResponse(response) {
   const root = response?.data ?? response;
 
   return root?.data ?? root;
+}
+
+function unwrapEnvelope(response) {
+  return response?.data ?? response ?? {};
 }
 
 function removeEmptyParams(params = {}) {
@@ -106,15 +144,23 @@ function normalizeCompaniesPayload(payload = {}) {
 }
 
 function mapCreateCompanyPayload(payload = {}) {
+  const governorates = payload.governorates?.length
+    ? payload.governorates
+    : [payload.governorate].filter(Boolean);
+
   return {
-    companyName: payload.companyName || payload.name,
+    name: payload.name || payload.companyName,
     email: payload.email,
     phone: payload.phone,
-    specialization: payload.specialization,
-    areaId: payload.areaId || null,
+    specialization: resolveIssueCategoryId(payload.specialization),
+    governorate: payload.governorate || governorates[0] || null,
+    governorates,
+    coverageAreas: payload.coverageAreas?.length ? payload.coverageAreas : governorates,
+    maxCapacity: Number(payload.maxCapacity || 0),
     managerName: payload.managerName || null,
     managerPhone: payload.managerPhone || null,
-    notes: payload.notes || payload.description || null,
+    address: payload.address || null,
+    description: payload.description || null,
   };
 }
 
@@ -125,7 +171,7 @@ function mapUpdateCompanyPayload(payload = {}) {
 
   return {
     name: payload.name || payload.companyName,
-    specialization: payload.specialization,
+    specialization: resolveIssueCategoryId(payload.specialization),
     governorates,
     governorate: payload.governorate || governorates[0] || null,
     coverageAreas: payload.coverageAreas?.length ? payload.coverageAreas : governorates,
@@ -174,17 +220,19 @@ export async function getAdminCompanyById(companyId) {
   return normalizeCompany(unwrapResponse(response));
 }
 
-export async function inviteAdminCompany(payload) {
+export async function createAdminCompany(payload) {
   const response = await axiosClient.post(
-    buildAdminUrl('/companies/invite'),
+    buildAdminUrl('/companies'),
     mapCreateCompanyPayload(payload),
   );
+  const root = unwrapEnvelope(response);
+  const data = root?.data || {};
 
-  return response?.data ?? response;
-}
-
-export async function createAdminCompany(payload) {
-  return inviteAdminCompany(payload);
+  return {
+    ...data,
+    company: normalizeCompany(data.company || {}),
+    message: root?.message,
+  };
 }
 
 export async function updateAdminCompany(companyId, payload) {

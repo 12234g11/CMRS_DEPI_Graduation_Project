@@ -13,6 +13,7 @@ import {
 function getAccountStatusLabel(status) {
   if (status === 'active') return 'مفعل';
   if (status === 'expired') return 'الدعوة منتهية';
+  if (status === 'disabled') return 'معطل';
   return 'بانتظار التفعيل';
 }
 
