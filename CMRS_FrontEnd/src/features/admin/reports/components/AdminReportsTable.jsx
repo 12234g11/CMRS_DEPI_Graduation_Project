@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { FiEye, FiMessageSquare, FiStar, FiUserPlus } from 'react-icons/fi';
+import { FiEye, FiMessageSquare, FiUserPlus } from 'react-icons/fi';
 import { ROUTES } from '../../../../shared/navigation';
 
 function getCompanyResponseLabel(response) {
@@ -45,7 +45,6 @@ function AdminReportsTable({ reports = [], highlightedReportId = '' }) {
         <thead>
           <tr>
             <th>نوع المشكلة</th>
-            <th>التقييم</th>
             <th>الحالة</th>
             <th>رد الشركة</th>
             <th>تاريخ البلاغ</th>
@@ -71,13 +70,6 @@ function AdminReportsTable({ reports = [], highlightedReportId = '' }) {
                   className={isHighlighted ? 'admin-report-row-highlight' : ''}
                 >
                   <td>{report.type}</td>
-
-                  <td>
-                    <span className="admin-report-rating">
-                      <FiStar />
-                      {report.rating}
-                    </span>
-                  </td>
 
                   <td>
                     <span className={`admin-report-status admin-report-status--${report.statusTone}`}>
@@ -145,7 +137,7 @@ function AdminReportsTable({ reports = [], highlightedReportId = '' }) {
             })
           ) : (
             <tr>
-              <td colSpan="9">
+              <td colSpan="8">
                 <div className="admin-reports-empty-state">
                   لا توجد بلاغات مطابقة للبحث أو الفلاتر الحالية.
                 </div>

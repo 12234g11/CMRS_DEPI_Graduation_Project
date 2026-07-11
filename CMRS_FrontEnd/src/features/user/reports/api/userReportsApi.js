@@ -313,6 +313,138 @@ function getReportPosition(report = {}) {
   return null;
 }
 
+
+function parseCounterValue(value, fallback = 0) {
+  if (value === null || value === undefined || value === '') {
+    return fallback;
+  }
+
+  const numericValue = Number(value);
+
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+}
+
+function pickCounter(report = {}, keys = []) {
+  const nestedSources = [
+    report,
+    report.verificationSummary,
+    report.VerificationSummary,
+    report.verificationStats,
+    report.VerificationStats,
+    report.verificationCounts,
+    report.VerificationCounts,
+    report.verifyCounts,
+    report.VerifyCounts,
+    report.verifications,
+    report.Verifications,
+    report.votes,
+    report.Votes,
+    report.verifySummary,
+    report.VerifySummary,
+    report.ratingSummary,
+    report.RatingSummary,
+    report.stats,
+    report.Stats,
+    report.summary,
+    report.Summary,
+  ].filter(Boolean);
+
+  for (const source of nestedSources) {
+    for (const key of keys) {
+      if (source[key] !== null && source[key] !== undefined) {
+        return parseCounterValue(source[key]);
+      }
+    }
+  }
+
+  return 0;
+}
+
+function getReportCounters(report = {}) {
+  return {
+    followersCount: pickCounter(report, [
+      'followersCount',
+      'FollowersCount',
+      'followCount',
+      'FollowCount',
+      'followers',
+      'Followers',
+      'followersTotal',
+      'FollowersTotal',
+    ]),
+
+    truthfulVerificationCount: pickCounter(report, [
+      'truthfulVerificationCount',
+      'TruthfulVerificationCount',
+      'trueVerificationCount',
+      'TrueVerificationCount',
+      'validVerificationCount',
+      'ValidVerificationCount',
+      'positiveVerificationCount',
+      'PositiveVerificationCount',
+      'positiveVerificationsCount',
+      'PositiveVerificationsCount',
+      'verifiedTrueCount',
+      'VerifiedTrueCount',
+      'upVoteCount',
+      'UpVoteCount',
+      'upVotesCount',
+      'UpVotesCount',
+      'upvotesCount',
+      'UpvotesCount',
+      'confirmationsCount',
+      'ConfirmationsCount',
+      'trueCount',
+      'TrueCount',
+      'yesCount',
+      'YesCount',
+      'truthful',
+      'Truthful',
+      'valid',
+      'Valid',
+      'positive',
+      'Positive',
+      'true',
+      'True',
+      'correct',
+      'Correct',
+    ]),
+
+    falseVerificationCount: pickCounter(report, [
+      'falseVerificationCount',
+      'FalseVerificationCount',
+      'invalidVerificationCount',
+      'InvalidVerificationCount',
+      'negativeVerificationCount',
+      'NegativeVerificationCount',
+      'negativeVerificationsCount',
+      'NegativeVerificationsCount',
+      'verifiedFalseCount',
+      'VerifiedFalseCount',
+      'downVoteCount',
+      'DownVoteCount',
+      'downVotesCount',
+      'DownVotesCount',
+      'downvotesCount',
+      'DownvotesCount',
+      'rejectionsCount',
+      'RejectionsCount',
+      'falseCount',
+      'FalseCount',
+      'noCount',
+      'NoCount',
+      'false',
+      'False',
+      'invalid',
+      'Invalid',
+      'negative',
+      'Negative',
+      'incorrect',
+      'Incorrect',
+    ]),
+  };
+}
+
 export function prepareReportForUi(report = {}) {
   const reportImages = getReportImages(report);
   const imageUrls = reportImages
@@ -329,6 +461,7 @@ export function prepareReportForUi(report = {}) {
     '';
 
   const statusKey = getReportStatusKey(rawStatus);
+  const counters = getReportCounters(report);
 
   return {
     ...report,
@@ -342,6 +475,10 @@ export function prepareReportForUi(report = {}) {
       report.ReportNumber ||
       report.number ||
       report.Number,
+
+    followersCount: counters.followersCount,
+    truthfulVerificationCount: counters.truthfulVerificationCount,
+    falseVerificationCount: counters.falseVerificationCount,
 
     title:
       report.title ||

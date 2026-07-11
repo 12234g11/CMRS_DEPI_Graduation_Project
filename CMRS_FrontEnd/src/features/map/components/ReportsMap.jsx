@@ -228,6 +228,7 @@ function ReportsMap({
   onCurrentLocationChange,
   routeDestination = null,
   showCurrentLocationControl = true,
+  showMarkerPopups = true,
   renderPopupContent,
 }) {
   const markerRefs = useRef({});
@@ -398,11 +399,15 @@ function ReportsMap({
                 },
               }}
             >
-              <Popup>
-                {typeof renderPopupContent === 'function'
-                  ? renderPopupContent(marker) || <DefaultPopupContent marker={marker} />
-                  : <DefaultPopupContent marker={marker} />}
-              </Popup>
+              {showMarkerPopups ? (
+                <Popup>
+                  {typeof renderPopupContent === 'function'
+                    ? renderPopupContent(marker) || (
+                        <DefaultPopupContent marker={marker} />
+                      )
+                    : <DefaultPopupContent marker={marker} />}
+                </Popup>
+              ) : null}
             </Marker>
           );
         })}

@@ -225,6 +225,131 @@ function getReportImages(report = {}) {
     .filter((image) => image.fullImageUrl);
 }
 
+function normalizeCount(value, fallback = 0) {
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue)) {
+    return fallback;
+  }
+
+  return Math.max(0, numberValue);
+}
+
+function normalizeBoolean(value, fallback = false) {
+  if (typeof value === 'boolean') return value;
+  if (value === 1 || value === '1') return true;
+  if (value === 0 || value === '0') return false;
+
+  if (typeof value === 'string') {
+    const normalizedValue = value.trim().toLowerCase();
+
+    if (['true', 'yes', 'up', 'upvote', 'correct'].includes(normalizedValue)) {
+      return true;
+    }
+
+    if (['false', 'no', 'down', 'downvote', 'incorrect'].includes(normalizedValue)) {
+      return false;
+    }
+  }
+
+  return fallback;
+}
+
+function normalizeVerifyVote(value) {
+  if (value == null || value === '') return null;
+
+  if (typeof value === 'boolean') return value ? 1 : -1;
+
+  const numericValue = Number(value);
+
+  if (Number.isFinite(numericValue)) {
+    if (numericValue === -1) return -1;
+    if (numericValue === 1) return 1;
+    return null;
+  }
+
+  const normalizedValue = String(value).trim().toLowerCase();
+
+  if (
+    [
+      '1',
+      '+1',
+      'up',
+      'upvote',
+      'true',
+      'valid',
+      'correct',
+      'right',
+      'positive',
+      'صحيح',
+      'بلاغ صحيح',
+    ].includes(normalizedValue)
+  ) {
+    return 1;
+  }
+
+  if (
+    [
+      '-1',
+      'down',
+      'downvote',
+      'false',
+      'invalid',
+      'incorrect',
+      'wrong',
+      'negative',
+      'غير صحيح',
+      'بلاغ غير صحيح',
+    ].includes(normalizedValue)
+  ) {
+    return -1;
+  }
+
+  return null;
+}
+
+function getCurrentUserVerifyVote(report = {}) {
+  const explicitVote = normalizeVerifyVote(
+    report.currentUserVerifyVote ??
+      report.CurrentUserVerifyVote ??
+      report.verifyVote ??
+      report.VerifyVote ??
+      report.userVerifyVote ??
+      report.UserVerifyVote ??
+      report.userVote ??
+      report.UserVote
+  );
+
+  if (explicitVote) return explicitVote;
+
+  const isDownvotedByCurrentUser = normalizeBoolean(
+    report.isDownvotedByCurrentUser ??
+      report.IsDownvotedByCurrentUser ??
+      report.isRejectedByCurrentUser ??
+      report.IsRejectedByCurrentUser,
+    false
+  );
+
+  if (isDownvotedByCurrentUser) return -1;
+
+  const isUpvotedByCurrentUser = normalizeBoolean(
+    report.isUpvotedByCurrentUser ??
+      report.IsUpvotedByCurrentUser ??
+      report.isConfirmedByCurrentUser ??
+      report.IsConfirmedByCurrentUser,
+    false
+  );
+
+  if (isUpvotedByCurrentUser) return 1;
+
+  const isVerifiedByCurrentUser = normalizeBoolean(
+    report.isVerifiedByCurrentUser ?? report.IsVerifiedByCurrentUser,
+    false
+  );
+
+  return isVerifiedByCurrentUser ? 1 : null;
+}
+
 function prepareNearbyReport(report = {}) {
   const reportImages = getReportImages(report);
 
@@ -308,37 +433,48 @@ function prepareNearbyReport(report = {}) {
     images: reportImages.map((image) => image.fullImageUrl).filter(Boolean),
     coverImage: reportImages[0]?.fullImageUrl || '',
 
-    followersCount: report.followersCount ?? report.FollowersCount ?? 0,
-    isFollowedByCurrentUser: Boolean(
-      report.isFollowedByCurrentUser ?? report.IsFollowedByCurrentUser
+    followersCount: normalizeCount(report.followersCount ?? report.FollowersCount),
+    isFollowedByCurrentUser: normalizeBoolean(
+      report.isFollowedByCurrentUser ?? report.IsFollowedByCurrentUser,
+      false
     ),
-    canCurrentUserFollow:
-      (report.canCurrentUserFollow ?? report.CanCurrentUserFollow) !== false,
-
-    verifyCount: report.verifyCount ?? report.VerifyCount ?? 0,
-    isVerifiedByCurrentUser: Boolean(
-      report.isVerifiedByCurrentUser ?? report.IsVerifiedByCurrentUser
+    canCurrentUserFollow: normalizeBoolean(
+      report.canCurrentUserFollow ?? report.CanCurrentUserFollow,
+      true
     ),
-    canCurrentUserVerify:
-      (report.canCurrentUserVerify ?? report.CanCurrentUserVerify) !== false,
 
-    currentUserVerifyVote:
-      report.currentUserVerifyVote ??
-      report.CurrentUserVerifyVote ??
-      report.verifyVote ??
-      report.VerifyVote ??
-      report.userVerifyVote ??
-      report.UserVerifyVote ??
-      report.userVote ??
-      report.UserVote ??
-      null,
-
-    ratingCount: report.ratingCount ?? report.RatingCount ?? 0,
-    isRatedByCurrentUser: Boolean(
-      report.isRatedByCurrentUser ?? report.IsRatedByCurrentUser
+    verifyCount: normalizeCount(
+      report.verifyCount ??
+        report.VerifyCount ??
+        Number(report.upvoteCount ?? report.UpvoteCount ?? 0) +
+          Number(report.downvoteCount ?? report.DownvoteCount ?? 0)
     ),
-    canCurrentUserRate:
-      (report.canCurrentUserRate ?? report.CanCurrentUserRate) !== false,
+    upvoteCount: normalizeCount(
+      report.upvoteCount ??
+        report.UpvoteCount ??
+        report.validReportCount ??
+        report.ValidReportCount ??
+        report.correctReportCount ??
+        report.CorrectReportCount
+    ),
+    downvoteCount: normalizeCount(
+      report.downvoteCount ??
+        report.DownvoteCount ??
+        report.invalidReportCount ??
+        report.InvalidReportCount ??
+        report.wrongReportCount ??
+        report.WrongReportCount
+    ),
+    isVerifiedByCurrentUser: normalizeBoolean(
+      report.isVerifiedByCurrentUser ?? report.IsVerifiedByCurrentUser,
+      false
+    ),
+    canCurrentUserVerify: normalizeBoolean(
+      report.canCurrentUserVerify ?? report.CanCurrentUserVerify,
+      true
+    ),
+
+    currentUserVerifyVote: getCurrentUserVerifyVote(report),
 
     ownerUserName:
       report.ownerUserName ||
@@ -464,21 +600,3 @@ export async function unverifyReport(reportId) {
   return getResponseData(response);
 }
 
-export async function rateReport(reportId) {
-  const response = await post(
-    `/api/Report/${encodeURIComponent(reportId)}/ratings`,
-    buildReportActionBody(reportId),
-    JSON_BODY_CONFIG
-  );
-
-  return getResponseData(response);
-}
-
-export async function unrateReport(reportId) {
-  const response = await remove(
-    `/api/Report/${encodeURIComponent(reportId)}/ratings`,
-    buildDeleteConfig(reportId)
-  );
-
-  return getResponseData(response);
-}

@@ -13,11 +13,21 @@ export const USER_NOTIFICATION_TYPE = {
 function getResponseData(response) {
   if (!response) return null;
 
-  if (Object.prototype.hasOwnProperty.call(response, 'data')) {
-    return response.data;
+  const responseBody = Object.prototype.hasOwnProperty.call(response, 'data')
+    ? response.data
+    : response;
+
+  if (
+    responseBody &&
+    Object.prototype.hasOwnProperty.call(responseBody, 'data') &&
+    (Object.prototype.hasOwnProperty.call(responseBody, 'success') ||
+      Object.prototype.hasOwnProperty.call(responseBody, 'isSuccess') ||
+      Object.prototype.hasOwnProperty.call(responseBody, 'message'))
+  ) {
+    return responseBody.data;
   }
 
-  return response;
+  return responseBody;
 }
 
 function normalizeNotification(notification = {}) {
@@ -160,11 +170,145 @@ function normalizeNotificationsResponse(response) {
   };
 }
 
-function normalizeCount(response) {
-  const data = getResponseData(response);
-  const count = Number(data);
+function normalizeImage(image = {}) {
+  const imageUrl =
+    image.imageUrl ||
+    image.ImageUrl ||
+    image.url ||
+    image.Url ||
+    image.src ||
+    image.Src ||
+    image.path ||
+    image.Path ||
+    '';
 
-  return Number.isFinite(count) ? count : 0;
+  const thumbnailUrl =
+    image.thumbnailUrl ||
+    image.ThumbnailUrl ||
+    image.thumbUrl ||
+    image.ThumbUrl ||
+    imageUrl;
+
+  return {
+    id: String(image.id || image.Id || image.imageId || image.ImageId || imageUrl),
+    imageUrl: String(imageUrl || ''),
+    thumbnailUrl: String(thumbnailUrl || imageUrl || ''),
+    label: image.label || image.Label || image.type || image.Type || '',
+  };
+}
+
+function normalizeImages(images = [], fallbackUrl = '') {
+  const normalizedImages = Array.isArray(images)
+    ? images.map(normalizeImage).filter((image) => image.imageUrl)
+    : [];
+
+  if (fallbackUrl && !normalizedImages.some((image) => image.imageUrl === fallbackUrl)) {
+    normalizedImages.unshift({
+      id: String(fallbackUrl),
+      imageUrl: String(fallbackUrl),
+      thumbnailUrl: String(fallbackUrl),
+      label: 'main',
+    });
+  }
+
+  return normalizedImages;
+}
+
+function normalizeTimeline(timeline = []) {
+  if (!Array.isArray(timeline)) return [];
+
+  return timeline.map((item, index) => ({
+    id: String(item.id || item.Id || `timeline-${index}`),
+    actorType: item.actorType || item.ActorType || item.type || item.Type || 'system',
+    actor: item.actor || item.Actor || item.createdBy || item.CreatedBy || '',
+    title: item.title || item.Title || item.statusLabel || item.StatusLabel || 'تحديث على البلاغ',
+    description:
+      item.description ||
+      item.Description ||
+      item.note ||
+      item.Note ||
+      item.reason ||
+      item.Reason ||
+      '',
+    createdAt:
+      item.createdAt ||
+      item.CreatedAt ||
+      item.updatedAt ||
+      item.UpdatedAt ||
+      item.date ||
+      item.Date ||
+      '',
+  }));
+}
+
+function normalizeCompanyResponse(companyResponse = null) {
+  if (!companyResponse) return null;
+
+  return {
+    id: String(companyResponse.id || companyResponse.Id || ''),
+    status: companyResponse.status || companyResponse.Status || '',
+    statusLabel: companyResponse.statusLabel || companyResponse.StatusLabel || '',
+    reviewStatus: companyResponse.reviewStatus || companyResponse.ReviewStatus || '',
+    reviewLabel: companyResponse.reviewLabel || companyResponse.ReviewLabel || '',
+    companyName: companyResponse.companyName || companyResponse.CompanyName || '',
+    submittedAt: companyResponse.submittedAt || companyResponse.SubmittedAt || '',
+    note: companyResponse.note || companyResponse.Note || '',
+    reason: companyResponse.reason || companyResponse.Reason || '',
+    adminNote: companyResponse.adminNote || companyResponse.AdminNote || '',
+    images: normalizeImages(companyResponse.images || companyResponse.Images || []),
+  };
+}
+
+function normalizeReportDetails(report = {}) {
+  const fallbackMainImage =
+    report.mainImageUrl ||
+    report.MainImageUrl ||
+    report.coverImage ||
+    report.CoverImage ||
+    report.imageUrl ||
+    report.ImageUrl ||
+    '';
+
+  const companyResponse = normalizeCompanyResponse(
+    report.companyResponse || report.CompanyResponse || null
+  );
+
+  return {
+    id: String(report.id || report.Id || report.reportId || report.ReportId || ''),
+    title: report.title || report.Title || report.type || report.Type || 'تفاصيل البلاغ',
+    type: report.type || report.Type || '',
+    issueCategoryId: report.issueCategoryId || report.IssueCategoryId || '',
+    issueCategoryName:
+      report.issueCategoryName ||
+      report.IssueCategoryName ||
+      report.categoryLabel ||
+      report.CategoryLabel ||
+      report.type ||
+      report.Type ||
+      '',
+    description: report.description || report.Description || '',
+    status: report.status || report.Status || '',
+    statusLabel: report.statusLabel || report.StatusLabel || report.status || report.Status || '—',
+    priority: report.priority || report.Priority || '',
+    priorityLabel: report.priorityLabel || report.PriorityLabel || report.priority || report.Priority || '—',
+    rating: Number(report.rating ?? report.Rating ?? 0),
+    votesCount: Number(report.votesCount ?? report.VotesCount ?? 0),
+    createdAt: report.createdAt || report.CreatedAt || '',
+    location: report.location || report.Location || report.address || report.Address || '',
+    city: report.city || report.City || report.governorate || report.Governorate || '',
+    position: report.position || report.Position || null,
+    assignedCompanyId: report.assignedCompanyId || report.AssignedCompanyId || '',
+    assignedCompanyName: report.assignedCompanyName || report.AssignedCompanyName || '',
+    concernedCompanyName: report.concernedCompanyName || report.ConcernedCompanyName || '',
+    mainImageUrl: String(fallbackMainImage || ''),
+    imagesCount: Number(report.imagesCount ?? report.ImagesCount ?? 0),
+    rejectionReason: report.rejectionReason || report.RejectionReason || '',
+    area: report.area || report.Area || null,
+    reporter: report.reporter || report.Reporter || null,
+    images: normalizeImages(report.images || report.Images || [], fallbackMainImage),
+    companyResponse,
+    timeline: normalizeTimeline(report.timeline || report.Timeline || []),
+  };
 }
 
 function encode(value) {
@@ -174,20 +318,31 @@ function encode(value) {
 export async function getUserNotifications({
   userId,
   type = USER_NOTIFICATION_TYPE.ALL,
+  isRead,
   pageNumber = 1,
   pageSize = 10,
+  sortBy = 'createdAt',
+  sortDirection = 'desc',
 }) {
   if (!userId) {
     return normalizeNotificationsResponse(null);
   }
 
+  // Swagger exposes these query params in PascalCase, so keep the same
+  // names to match the backend binding exactly.
   const params = {
-    pageNumber,
-    pageSize,
+    PageNumber: pageNumber,
+    PageSize: pageSize,
+    SortBy: sortBy,
+    SortDirection: sortDirection,
   };
 
   if (type && type !== USER_NOTIFICATION_TYPE.ALL) {
-    params.type = type;
+    params.Type = type;
+  }
+
+  if (typeof isRead === 'boolean') {
+    params.IsRead = isRead;
   }
 
   const response = await get(`/api/Notification/user/${encode(userId)}`, {
@@ -200,8 +355,12 @@ export async function getUserNotifications({
 export async function getUnreadUserNotifications(userId) {
   if (!userId) return [];
 
-  const response = await get(`/api/Notification/user/${encode(userId)}/unread`);
-  const normalizedResponse = normalizeNotificationsResponse(response);
+  const normalizedResponse = await getUserNotifications({
+    userId,
+    isRead: false,
+    pageNumber: 1,
+    pageSize: 10,
+  });
 
   return normalizedResponse.items;
 }
@@ -209,11 +368,43 @@ export async function getUnreadUserNotifications(userId) {
 export async function getUnreadUserNotificationsCount(userId) {
   if (!userId) return 0;
 
-  const response = await get(
-    `/api/Notification/user/${encode(userId)}/unread/count`
-  );
+  const normalizedResponse = await getUserNotifications({
+    userId,
+    pageNumber: 1,
+    pageSize: 1,
+  });
 
-  return normalizeCount(response);
+  return normalizedResponse.unreadCount;
+}
+
+export async function getNotificationReportDetails(reportId) {
+  if (!reportId) return null;
+
+  const encodedReportId = encode(reportId);
+
+  const candidateEndpoints = [
+    `/api/reports/${encodedReportId}`,
+    `/api/Report/${encodedReportId}`,
+    `/api/Notification/report/${encodedReportId}`,
+    `/api/admin/reports/${encodedReportId}`,
+  ];
+
+  let lastError = null;
+
+  for (const endpoint of candidateEndpoints) {
+    try {
+      const response = await get(endpoint);
+      const data = getResponseData(response);
+
+      if (data) {
+        return normalizeReportDetails(data);
+      }
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error('تعذر تحميل تفاصيل البلاغ.');
 }
 
 export async function markUserNotificationAsRead(notificationId) {

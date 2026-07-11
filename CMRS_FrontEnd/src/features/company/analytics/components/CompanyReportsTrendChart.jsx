@@ -1,7 +1,44 @@
-function getPolylinePoints(data, key, chartWidth, chartHeight, padding) {
-  const values = data.map((item) => Number(item[key] || 0));
-  const maxValue = Math.max(...values, 1);
+function getYAxisConfig(data = []) {
+  const highestValue = Math.max(
+    ...data.flatMap((item) => [
+      Number(item.assigned || 0),
+      Number(item.solved || 0),
+    ]),
+    1,
+  );
 
+  const roundedMaxValue = Math.ceil(highestValue);
+
+  if (roundedMaxValue <= 5) {
+    return {
+      maxValue: roundedMaxValue,
+      ticks: Array.from({ length: roundedMaxValue + 1 }, (_, index) =>
+        roundedMaxValue - index,
+      ),
+    };
+  }
+
+  const step = Math.ceil(roundedMaxValue / 4);
+  const maxValue = step * 4;
+
+  return {
+    maxValue,
+    ticks: [maxValue, maxValue - step, maxValue - step * 2, step, 0],
+  };
+}
+
+function getPointY(value, chartHeight, padding, maxValue) {
+  const safeMaxValue = Math.max(Number(maxValue) || 0, 1);
+  const safeValue = Number(value || 0);
+
+  return (
+    padding.top +
+    (1 - safeValue / safeMaxValue) *
+      (chartHeight - padding.top - padding.bottom)
+  );
+}
+
+function getPolylinePoints(data, key, chartWidth, chartHeight, padding, maxValue) {
   return data
     .map((item, index) => {
       const x =
@@ -9,10 +46,7 @@ function getPolylinePoints(data, key, chartWidth, chartHeight, padding) {
         (index * (chartWidth - padding.left - padding.right)) /
           Math.max(data.length - 1, 1);
 
-      const y =
-        padding.top +
-        (1 - Number(item[key] || 0) / maxValue) *
-          (chartHeight - padding.top - padding.bottom);
+      const y = getPointY(item[key], chartHeight, padding, maxValue);
 
       return `${x},${y}`;
     })
@@ -29,12 +63,15 @@ function CompanyReportsTrendChart({ data = [] }) {
     left: 38,
   };
 
+  const { maxValue, ticks } = getYAxisConfig(data);
+
   const assignedPoints = getPolylinePoints(
     data,
     'assigned',
     chartWidth,
     chartHeight,
     padding,
+    maxValue,
   );
 
   const solvedPoints = getPolylinePoints(
@@ -43,11 +80,7 @@ function CompanyReportsTrendChart({ data = [] }) {
     chartWidth,
     chartHeight,
     padding,
-  );
-
-  const maxValue = Math.max(
-    ...data.flatMap((item) => [item.assigned, item.solved]),
-    1,
+    maxValue,
   );
 
   return (
@@ -77,13 +110,11 @@ function CompanyReportsTrendChart({ data = [] }) {
           role="img"
           aria-label="تطور البلاغات المسندة والمحلولة"
         >
-          {[0, 1, 2, 3].map((line) => {
-            const y =
-              padding.top +
-              (line * (chartHeight - padding.top - padding.bottom)) / 3;
+          {ticks.map((tick) => {
+            const y = getPointY(tick, chartHeight, padding, maxValue);
 
             return (
-              <g key={line}>
+              <g key={tick}>
                 <line
                   x1={padding.left}
                   y1={y}
@@ -98,7 +129,7 @@ function CompanyReportsTrendChart({ data = [] }) {
                   className="company-analytics-axis-text"
                   textAnchor="end"
                 >
-                  {Math.round(maxValue - (line * maxValue) / 3)}
+                  {tick}
                 </text>
               </g>
             );

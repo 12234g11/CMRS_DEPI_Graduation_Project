@@ -2124,3 +2124,58 @@
     box-shadow: inset 4px 0 0 var(--color-primary), 0 0 0 7px rgba(2, 95, 72, 0.12);
   }
 }
+
+/* ============================= */
+/* Engagement counters + table centering */
+/* ============================= */
+
+.user-report-modal__engagement-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.user-report-modal__engagement-grid .user-report-modal__summary-card {
+  min-height: 118px;
+}
+
+.user-report-modal__engagement-grid .user-report-modal__summary-label {
+  justify-content: center;
+}
+
+.user-report-modal__engagement-grid .user-report-modal__summary-label svg {
+  width: 21px;
+  height: 21px;
+}
+
+.user-report-modal__engagement-grid .user-report-modal__summary-value strong {
+  display: block;
+  color: var(--color-primary);
+  font-size: 1.35rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.user-reports-table__report-cell {
+  text-align: center;
+}
+
+.user-reports-table__report-summary {
+  justify-items: center;
+  text-align: center;
+}
+
+.user-reports-table__report-summary strong {
+  margin-inline: auto;
+  text-align: center;
+}
+
+.user-reports-table__report-summary span {
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .user-report-modal__engagement-grid {
+    grid-template-columns: 1fr;
+  }
+}

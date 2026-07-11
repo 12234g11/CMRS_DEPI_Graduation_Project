@@ -27,7 +27,6 @@ import AdminAnalyticsPage from '../features/admin/analytics/pages/AdminAnalytics
 import AdminNotificationsPage from '../features/admin/notifications/pages/AdminNotificationsPage';
 import AdminProfilePage from '../features/admin/profile/pages/AdminProfilePage';
 
-import CompanyDashboardPage from '../features/company/dashboard/pages/CompanyDashboardPage';
 import CompanyReportsPage from '../features/company/reports/pages/CompanyReportsPage';
 import CompanyReportDetailsPage from '../features/company/reports/pages/CompanyReportDetailsPage';
 import CompanyNotificationsPage from '../features/company/notifications/pages/CompanyNotificationsPage';
@@ -91,7 +90,10 @@ function AppRouter() {
       <Route element={<ProtectedRoute />}>
         <Route element={<RoleRoute allowedRoles={[ROLES.COMPANY]} />}>
           <Route element={<DashboardLayout />}>
-            <Route path={ROUTES.COMPANY_DASHBOARD} element={<CompanyDashboardPage />} />
+            <Route
+              path={ROUTES.COMPANY_DASHBOARD}
+              element={<Navigate to={ROUTES.COMPANY_REPORTS} replace />}
+            />
             <Route path={ROUTES.COMPANY_REPORTS} element={<CompanyReportsPage />} />
             <Route
               path={`${ROUTES.COMPANY_REPORTS}/:reportId`}

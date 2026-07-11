@@ -3,7 +3,6 @@ import {
   FiCheck,
   FiClock,
   FiMapPin,
-  FiStar,
 } from 'react-icons/fi';
 
 function AdminCompanyRecommendationCard({ company, isSelected, onSelect }) {
@@ -36,11 +35,6 @@ function AdminCompanyRecommendationCard({ company, isSelected, onSelect }) {
         <span>
           <FiClock />
           {company.avgResponseTime}
-        </span>
-
-        <span>
-          <FiStar />
-          {company.rating}
         </span>
 
         <span>

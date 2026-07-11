@@ -39,7 +39,7 @@ function AdminReporterCard({ reporter }) {
 
           <div className="admin-reporter-trust__content">
             <span>درجة الموثوقية</span>
-            <b>{reporter.verified ? 'موثوق' : 'قيد التقييم'}</b>
+            <b>{reporter.verified ? 'موثوق' : 'غير موثق'}</b>
 
             <div className="admin-reporter-trust__bar">
               <span style={{ width: `${reporter.trustScore}%` }} />

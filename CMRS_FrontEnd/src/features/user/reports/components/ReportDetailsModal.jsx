@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   FiAlertTriangle,
   FiCalendar,
+  FiCheckCircle,
   FiChevronLeft,
   FiChevronRight,
   FiEye,
@@ -15,6 +16,7 @@ import {
   FiUser,
   FiUsers,
   FiX,
+  FiXCircle,
 } from 'react-icons/fi';
 
 import { ROUTES } from '../../../../shared/navigation';
@@ -169,6 +171,138 @@ function getPriorityLabel(report = {}) {
 }
 
 
+
+function parseCounterValue(value, fallback = 0) {
+  if (value === null || value === undefined || value === '') {
+    return fallback;
+  }
+
+  const numericValue = Number(value);
+
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+}
+
+function pickCounter(report = {}, keys = []) {
+  const nestedSources = [
+    report,
+    report.verificationSummary,
+    report.VerificationSummary,
+    report.verificationStats,
+    report.VerificationStats,
+    report.verificationCounts,
+    report.VerificationCounts,
+    report.verifyCounts,
+    report.VerifyCounts,
+    report.verifications,
+    report.Verifications,
+    report.votes,
+    report.Votes,
+    report.verifySummary,
+    report.VerifySummary,
+    report.ratingSummary,
+    report.RatingSummary,
+    report.stats,
+    report.Stats,
+    report.summary,
+    report.Summary,
+  ].filter(Boolean);
+
+  for (const source of nestedSources) {
+    for (const key of keys) {
+      if (source[key] !== null && source[key] !== undefined) {
+        return parseCounterValue(source[key]);
+      }
+    }
+  }
+
+  return 0;
+}
+
+function getReportEngagementStats(report = {}) {
+  return {
+    followersCount: pickCounter(report, [
+      'followersCount',
+      'FollowersCount',
+      'followCount',
+      'FollowCount',
+      'followers',
+      'Followers',
+      'followersTotal',
+      'FollowersTotal',
+    ]),
+
+    truthfulVerificationCount: pickCounter(report, [
+      'truthfulVerificationCount',
+      'TruthfulVerificationCount',
+      'trueVerificationCount',
+      'TrueVerificationCount',
+      'validVerificationCount',
+      'ValidVerificationCount',
+      'positiveVerificationCount',
+      'PositiveVerificationCount',
+      'positiveVerificationsCount',
+      'PositiveVerificationsCount',
+      'verifiedTrueCount',
+      'VerifiedTrueCount',
+      'upVoteCount',
+      'UpVoteCount',
+      'upVotesCount',
+      'UpVotesCount',
+      'upvotesCount',
+      'UpvotesCount',
+      'confirmationsCount',
+      'ConfirmationsCount',
+      'trueCount',
+      'TrueCount',
+      'yesCount',
+      'YesCount',
+      'truthful',
+      'Truthful',
+      'valid',
+      'Valid',
+      'positive',
+      'Positive',
+      'true',
+      'True',
+      'correct',
+      'Correct',
+    ]),
+
+    falseVerificationCount: pickCounter(report, [
+      'falseVerificationCount',
+      'FalseVerificationCount',
+      'invalidVerificationCount',
+      'InvalidVerificationCount',
+      'negativeVerificationCount',
+      'NegativeVerificationCount',
+      'negativeVerificationsCount',
+      'NegativeVerificationsCount',
+      'verifiedFalseCount',
+      'VerifiedFalseCount',
+      'downVoteCount',
+      'DownVoteCount',
+      'downVotesCount',
+      'DownVotesCount',
+      'downvotesCount',
+      'DownvotesCount',
+      'rejectionsCount',
+      'RejectionsCount',
+      'falseCount',
+      'FalseCount',
+      'noCount',
+      'NoCount',
+      'false',
+      'False',
+      'invalid',
+      'Invalid',
+      'negative',
+      'Negative',
+      'incorrect',
+      'Incorrect',
+    ]),
+  };
+}
+
 function getRejectionReason(report = {}) {
   return (
     report.rejectionReason ||
@@ -271,7 +405,11 @@ function ReportDetailsModal({ report, onClose }) {
   const hasMultipleImages = images.length > 1;
 
   const rating = report.ratingCount ?? report.rating ?? 0;
-  const followersCount = report.followersCount ?? 0;
+  const {
+    followersCount,
+    truthfulVerificationCount,
+    falseVerificationCount,
+  } = getReportEngagementStats(report);
   const reportNumber = report.reportNumber || reportId || '—';
   const ownerName = report.ownerUserName || '—';
   const priorityLabel = getPriorityLabel(report);
@@ -532,11 +670,19 @@ function ReportDetailsModal({ report, onClose }) {
                 </ReportStatusBadge>
               </SummaryCard>
 
-              <SummaryCard icon={<FiStar />} label="التقييم">
-                <div className="user-report-modal__rating">
-                  <span>★</span>
-                  <strong>{rating}</strong>
-                </div>
+            </div>
+
+            <div className="user-report-modal__engagement-grid" aria-label="إحصائيات متابعة وتوثيق البلاغ">
+              <SummaryCard icon={<FiUsers />} label="المتابعات">
+                <strong>{followersCount}</strong>
+              </SummaryCard>
+
+              <SummaryCard icon={<FiCheckCircle />} label="توثيق صادق">
+                <strong>{truthfulVerificationCount}</strong>
+              </SummaryCard>
+
+              <SummaryCard icon={<FiXCircle />} label="توثيق كاذب">
+                <strong>{falseVerificationCount}</strong>
               </SummaryCard>
             </div>
 

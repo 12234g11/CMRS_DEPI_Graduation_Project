@@ -7,6 +7,7 @@ import {
 } from 'react-icons/fi';
 import ReportStatusBadge from './ReportStatusBadge';
 import ReportDetailsModal from './ReportDetailsModal';
+import { getReportById } from '../api/userReportsApi';
 
 function formatReportDate(value) {
   if (!value) {
@@ -51,6 +52,7 @@ function RecentReportsTable({
   isLoading = false,
 }) {
   const [selectedReport, setSelectedReport] = useState(null);
+  const [loadingReportId, setLoadingReportId] = useState('');
 
   const pageNumber = Number(pagination?.pageNumber || 1);
   const totalPages = Number(pagination?.totalPages || 1);
@@ -74,6 +76,26 @@ function RecentReportsTable({
 
     return () => window.clearTimeout(timer);
   }, [highlightedReportId, reports]);
+
+
+  async function handleOpenReportDetails(report) {
+    const reportId = getReportId(report);
+
+    if (!reportId) {
+      setSelectedReport(report);
+      return;
+    }
+
+    try {
+      setLoadingReportId(reportId);
+      const latestReport = await getReportById(reportId);
+      setSelectedReport(latestReport ? { ...report, ...latestReport } : report);
+    } catch {
+      setSelectedReport(report);
+    } finally {
+      setLoadingReportId('');
+    }
+  }
 
   if (!reports.length) {
     return <p className="no-data-message">{emptyMessage}</p>;
@@ -112,9 +134,10 @@ function RecentReportsTable({
                     <button
                       type="button"
                       className="dashboard-action-btn dashboard-action-btn--primary"
-                      onClick={() => setSelectedReport(report)}
+                      onClick={() => handleOpenReportDetails(report)}
+                      disabled={loadingReportId === reportId}
                     >
-                      عرض <FiEye />
+                      {loadingReportId === reportId ? 'جاري التحميل...' : 'عرض'} <FiEye />
                     </button>
                   </td>
 

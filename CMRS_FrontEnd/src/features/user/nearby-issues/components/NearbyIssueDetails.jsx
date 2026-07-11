@@ -1,3 +1,5 @@
+import { FiBell, FiCheckCircle, FiXCircle } from 'react-icons/fi';
+
 function formatDate(value) {
   if (!value) return '—';
 
@@ -14,10 +16,6 @@ function formatDate(value) {
   }).format(parsedDate);
 }
 
-function isResolvedIssue(issue = {}) {
-  return issue.status === 'Resolved' || issue.tone === 'success';
-}
-
 function NearbyIssueDetails({
   issue,
   currentLocation = null,
@@ -25,7 +23,6 @@ function NearbyIssueDetails({
   onClearSelection,
   onToggleFollow,
   onToggleVerify,
-  onToggleRating,
   activeAction = '',
   inline = false,
 }) {
@@ -36,8 +33,6 @@ function NearbyIssueDetails({
   );
 
   const reportId = issue.reportId || issue.id;
-  const isResolved = isResolvedIssue(issue);
-
   const currentVerifyVote = Number(issue.currentUserVerifyVote || 0);
   const isPositiveVerified =
     issue.isVerifiedByCurrentUser && currentVerifyVote !== -1;
@@ -47,17 +42,12 @@ function NearbyIssueDetails({
   const isFollowLoading = activeAction === `follow:${reportId}`;
   const isVerifyUpLoading = activeAction === `verify:${reportId}:1`;
   const isVerifyDownLoading = activeAction === `verify:${reportId}:-1`;
-  const isRatingLoading = activeAction === `rating:${reportId}`;
 
   const canToggleFollow =
     issue.canCurrentUserFollow !== false || issue.isFollowedByCurrentUser;
 
   const canToggleVerify =
     issue.canCurrentUserVerify !== false || issue.isVerifiedByCurrentUser;
-
-  const canToggleRating =
-    isResolved &&
-    (issue.canCurrentUserRate !== false || issue.isRatedByCurrentUser);
 
   const handleRouteClick = () => {
     if (!hasCurrentLocation) {
@@ -147,62 +137,76 @@ function NearbyIssueDetails({
       <div className="nearby-issue-details__community">
         <button
           type="button"
-          className={`nearby-issue-details__community-btn ${
+          className={`nearby-issue-details__community-btn nearby-issue-details__community-btn--follow ${
             issue.isFollowedByCurrentUser ? 'is-active' : ''
           }`}
           onClick={() => onToggleFollow?.(issue)}
           disabled={!canToggleFollow || isFollowLoading}
+          title={issue.isFollowedByCurrentUser ? 'إلغاء متابعة البلاغ' : 'متابعة البلاغ'}
         >
-          <span>{issue.followersCount ?? 0}</span>
-          {issue.isFollowedByCurrentUser ? 'إلغاء المتابعة' : 'متابعة'}
+          <span className="nearby-issue-details__community-icon" aria-hidden="true">
+            <FiBell />
+          </span>
+
+          <span className="nearby-issue-details__community-content">
+            <strong>{issue.isFollowedByCurrentUser ? 'إلغاء المتابعة' : 'متابعة'}</strong>
+            <small>
+              <span className="nearby-issue-details__community-count">
+                {issue.followersCount ?? 0}
+              </span>
+              متابع
+            </small>
+          </span>
         </button>
 
         <button
           type="button"
-          className={`nearby-issue-details__community-btn ${
+          className={`nearby-issue-details__community-btn nearby-issue-details__community-btn--upvote ${
             isPositiveVerified ? 'is-active' : ''
           }`}
           onClick={() => onToggleVerify?.(issue, 1)}
           disabled={!canToggleVerify || isVerifyUpLoading}
+          title={isPositiveVerified ? 'إلغاء تصديق البلاغ' : 'البلاغ صحيح'}
         >
-          <span>{issue.verifyCount ?? 0}</span>
-          {isPositiveVerified ? 'إلغاء التأكيد' : 'البلاغ صحيح'}
+          <span className="nearby-issue-details__community-icon" aria-hidden="true">
+            <FiCheckCircle />
+          </span>
+
+          <span className="nearby-issue-details__community-content">
+            <strong>{isPositiveVerified ? 'إلغاء التصديق' : 'البلاغ صحيح'}</strong>
+            <small>
+              <span className="nearby-issue-details__community-count">
+                {issue.upvoteCount ?? 0}
+              </span>
+              تصديق
+            </small>
+          </span>
         </button>
 
         <button
           type="button"
-          className={`nearby-issue-details__community-btn ${
+          className={`nearby-issue-details__community-btn nearby-issue-details__community-btn--downvote ${
             isNegativeVerified ? 'is-active' : ''
           }`}
           onClick={() => onToggleVerify?.(issue, -1)}
           disabled={!canToggleVerify || isVerifyDownLoading}
+          title={isNegativeVerified ? 'إلغاء تكذيب البلاغ' : 'البلاغ غير صحيح'}
         >
-          {isNegativeVerified ? 'إلغاء عدم الصحة' : 'البلاغ غير صحيح'}
-        </button>
+          <span className="nearby-issue-details__community-icon" aria-hidden="true">
+            <FiXCircle />
+          </span>
 
-        <button
-          type="button"
-          className={`nearby-issue-details__community-btn ${
-            issue.isRatedByCurrentUser ? 'is-active' : ''
-          }`}
-          onClick={() => onToggleRating?.(issue)}
-          disabled={!canToggleRating || isRatingLoading}
-          title={
-            isResolved
-              ? undefined
-              : 'التقييم متاح فقط بعد تحويل حالة البلاغ إلى تم الحل'
-          }
-        >
-          <span>{issue.ratingCount ?? 0}</span>
-          {issue.isRatedByCurrentUser ? 'إلغاء تقييم الحل' : 'تقييم جودة الحل'}
+          <span className="nearby-issue-details__community-content">
+            <strong>{isNegativeVerified ? 'إلغاء عدم الصحة' : 'البلاغ غير صحيح'}</strong>
+            <small>
+              <span className="nearby-issue-details__community-count">
+                {issue.downvoteCount ?? 0}
+              </span>
+              تكذيب
+            </small>
+          </span>
         </button>
       </div>
-
-      {!isResolved ? (
-        <p className="nearby-issue-details__helper-text">
-          تقييم جودة الحل يظهر بعد أن تصبح حالة البلاغ: تم الحل.
-        </p>
-      ) : null}
 
       <div className="nearby-issue-details__actions">
         <button

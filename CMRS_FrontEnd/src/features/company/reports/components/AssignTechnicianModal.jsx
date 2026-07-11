@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FiCheckCircle, FiPhone, FiUserCheck, FiUsers, FiX } from 'react-icons/fi';
+import { FiAlertCircle, FiCheckCircle, FiPhone, FiUserCheck, FiUsers, FiX } from 'react-icons/fi';
 import {
   assignTechnicianToReport,
   getCompanyTechnicians,
@@ -14,16 +14,25 @@ function AssignTechnicianModal({
   const [technicians, setTechnicians] = useState([]);
   const [selectedTechnicianId, setSelectedTechnicianId] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
 
-    getCompanyTechnicians().then((data) => {
-      setTechnicians(data);
+    setError('');
 
-      const currentTeamId = report?.assignedTeam?.id;
-      setSelectedTechnicianId(currentTeamId || data[0]?.id || '');
-    });
+    getCompanyTechnicians()
+      .then((data) => {
+        setTechnicians(data);
+
+        const currentTeamId = report?.assignedTeam?.id;
+        setSelectedTechnicianId(currentTeamId || data[0]?.id || '');
+      })
+      .catch((requestError) => {
+        setTechnicians([]);
+        setSelectedTechnicianId('');
+        setError(requestError.message || 'تعذر تحميل فرق الصيانة التابعة للشركة.');
+      });
   }, [isOpen, report]);
 
   if (!isOpen || !report) return null;
@@ -35,13 +44,19 @@ function AssignTechnicianModal({
 
     setIsSaving(true);
 
-    const updatedReport = await assignTechnicianToReport(report.id, {
-      technicianId: selectedTechnicianId,
-    });
+    try {
+      const updatedReport = await assignTechnicianToReport(report.id, {
+        technicianId: selectedTechnicianId,
+      });
 
-    onAssigned?.(updatedReport);
-    setIsSaving(false);
-    onClose();
+      onAssigned?.(updatedReport);
+      setError('');
+      onClose();
+    } catch (requestError) {
+      setError(requestError.message || 'تعذر تعيين فرقة الصيانة لهذا البلاغ.');
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -76,6 +91,13 @@ function AssignTechnicianModal({
           <strong>{report.title}</strong>
           <span>{report.location}</span>
         </div>
+
+        {error ? (
+          <p className="company-report-form-error">
+            <FiAlertCircle />
+            {error}
+          </p>
+        ) : null}
 
         <div className="company-technicians-list">
           {technicians.map((technician) => {

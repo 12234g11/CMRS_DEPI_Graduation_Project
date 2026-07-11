@@ -83,13 +83,6 @@ export const DASHBOARD_LAYOUT_CONFIG = {
   [ROLES.COMPANY]: {
     navItems: [
       {
-        key: 'dashboard',
-        label: 'الصفحة الرئيسية',
-        path: ROUTES.COMPANY_DASHBOARD,
-        icon: 'home',
-        end: true,
-      },
-      {
         key: 'reports',
         label: 'البلاغات',
         path: ROUTES.COMPANY_REPORTS,

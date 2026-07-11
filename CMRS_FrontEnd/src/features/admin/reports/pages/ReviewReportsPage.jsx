@@ -41,7 +41,6 @@ const SORT_OPTIONS = [
   { value: 'createdAt-desc', label: 'الأحدث أولاً' },
   { value: 'createdAt-asc', label: 'الأقدم أولاً' },
   { value: 'priority-desc', label: 'الأولوية الأعلى' },
-  { value: 'rating-desc', label: 'الأعلى تقييماً' },
 ];
 
 function getSortParams(sortValue) {

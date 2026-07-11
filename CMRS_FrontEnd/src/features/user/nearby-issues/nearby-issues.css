@@ -777,22 +777,23 @@
 .nearby-issue-details__community {
   margin-top: 14px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
 .nearby-issue-details__community-btn {
-  min-height: 46px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1.5px solid rgba(2, 95, 72, 0.18);
+  min-height: 74px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1.5px solid rgba(2, 95, 72, 0.16);
   background: #fff;
   color: var(--color-primary);
-  font-size: 0.84rem;
-  font-weight: 900;
-  display: grid;
-  gap: 4px;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  text-align: right;
+  direction: rtl;
   transition:
     transform var(--transition-base),
     box-shadow var(--transition-base),
@@ -801,10 +802,47 @@
     opacity var(--transition-base);
 }
 
-.nearby-issue-details__community-btn span {
-  color: #a7952e;
-  font-size: 1rem;
+.nearby-issue-details__community-icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 95, 72, 0.08);
+  color: var(--color-primary);
+  font-size: 1.25rem;
+}
+
+.nearby-issue-details__community-content {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.nearby-issue-details__community-content strong {
+  color: var(--color-primary);
+  font-size: 0.88rem;
   font-weight: 900;
+  line-height: 1.4;
+}
+
+.nearby-issue-details__community-content small {
+  color: var(--color-subtitle);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.5;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nearby-issue-details__community-count {
+  color: #a7952e;
+  font-size: 1.04rem;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .nearby-issue-details__community-btn:hover:not(:disabled) {
@@ -817,6 +855,29 @@
 .nearby-issue-details__community-btn.is-active {
   border-color: var(--color-primary);
   background: rgba(2, 95, 72, 0.08);
+}
+
+.nearby-issue-details__community-btn.is-active .nearby-issue-details__community-icon {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.nearby-issue-details__community-btn--upvote.is-active {
+  border-color: rgba(31, 122, 58, 0.32);
+  background: rgba(52, 168, 83, 0.1);
+}
+
+.nearby-issue-details__community-btn--upvote.is-active .nearby-issue-details__community-icon {
+  background: #1f7a3a;
+}
+
+.nearby-issue-details__community-btn--downvote.is-active {
+  border-color: rgba(176, 42, 55, 0.3);
+  background: rgba(176, 42, 55, 0.08);
+}
+
+.nearby-issue-details__community-btn--downvote.is-active .nearby-issue-details__community-icon {
+  background: #b02a37;
 }
 
 .nearby-issue-details__community-btn:disabled {

@@ -12,9 +12,7 @@ import {
   NEARBY_REPORT_STATUS_API_VALUES,
   NEARBY_STATUS_FILTER_OPTIONS,
   NEARBY_STATUS_LEGEND_ITEMS,
-  rateReport,
   unfollowReport,
-  unrateReport,
   unverifyReport,
   verifyReport,
 } from '../api/nearbyIssuesApi';
@@ -25,16 +23,164 @@ import useNearbyIssueDistances from '../hooks/useNearbyIssueDistances';
 const NEARBY_RADIUS_KM = 5;
 const NEARBY_PAGE_NUMBER = 1;
 
-function isResolvedIssue(issue = {}) {
-  return (
-    issue.statusKey === 'Resolved' ||
-    issue.status === 'Resolved' ||
-    issue.tone === 'success'
-  );
-}
 
 function getIssueReportId(issue = {}) {
   return issue.reportId || issue.id;
+}
+
+function readResponseValue(source = {}, ...keys) {
+  return keys.reduce((currentValue, key) => {
+    if (currentValue !== undefined && currentValue !== null) {
+      return currentValue;
+    }
+
+    return source?.[key];
+  }, undefined);
+}
+
+function toSafeCount(value, fallback = 0) {
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue)) {
+    return fallback;
+  }
+
+  return Math.max(0, numberValue);
+}
+
+function toResponseBoolean(value, fallback = false) {
+  if (typeof value === 'boolean') return value;
+  if (value === 1 || value === '1') return true;
+  if (value === 0 || value === '0') return false;
+
+  if (typeof value === 'string') {
+    const normalizedValue = value.trim().toLowerCase();
+
+    if (['true', 'yes'].includes(normalizedValue)) return true;
+    if (['false', 'no'].includes(normalizedValue)) return false;
+  }
+
+  return fallback;
+}
+
+function normalizeVerifyVote(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'boolean') return value ? 1 : -1;
+
+  const numericValue = Number(value);
+
+  if (Number.isFinite(numericValue)) {
+    if (numericValue === -1) return -1;
+    if (numericValue === 1) return 1;
+    return null;
+  }
+
+  const normalizedValue = String(value).trim().toLowerCase();
+
+  if (
+    ['1', '+1', 'up', 'upvote', 'true', 'valid', 'correct', 'right'].includes(
+      normalizedValue
+    )
+  ) {
+    return 1;
+  }
+
+  if (
+    [
+      '-1',
+      'down',
+      'downvote',
+      'false',
+      'invalid',
+      'incorrect',
+      'wrong',
+    ].includes(normalizedValue)
+  ) {
+    return -1;
+  }
+
+  return null;
+}
+
+function getIssueCurrentVerifyVote(issue = {}) {
+  return (
+    normalizeVerifyVote(issue.currentUserVerifyVote) ??
+    normalizeVerifyVote(issue.verifyVote) ??
+    normalizeVerifyVote(issue.userVerifyVote) ??
+    (issue.isVerifiedByCurrentUser ? 1 : null)
+  );
+}
+
+function getVerifyResponseVote(data = {}, fallbackVote = null) {
+  return (
+    normalizeVerifyVote(
+      readResponseValue(
+        data,
+        'currentUserVerifyVote',
+        'CurrentUserVerifyVote',
+        'verifyVote',
+        'VerifyVote',
+        'userVerifyVote',
+        'UserVerifyVote',
+        'userVote',
+        'UserVote'
+      )
+    ) ?? fallbackVote
+  );
+}
+
+function calculateNextVerifyCounts({
+  currentIssue,
+  data,
+  normalizedVote,
+  shouldRemoveCurrentVote,
+}) {
+  const previousVote = getIssueCurrentVerifyVote(currentIssue);
+  const currentUpvoteCount = toSafeCount(currentIssue.upvoteCount);
+  const currentDownvoteCount = toSafeCount(currentIssue.downvoteCount);
+
+  const responseUpvoteCount = readResponseValue(
+    data,
+    'upvoteCount',
+    'UpvoteCount',
+    'validReportCount',
+    'ValidReportCount',
+    'correctReportCount',
+    'CorrectReportCount'
+  );
+  const responseDownvoteCount = readResponseValue(
+    data,
+    'downvoteCount',
+    'DownvoteCount',
+    'invalidReportCount',
+    'InvalidReportCount',
+    'wrongReportCount',
+    'WrongReportCount'
+  );
+
+  let nextUpvoteCount = toSafeCount(responseUpvoteCount, currentUpvoteCount);
+  let nextDownvoteCount = toSafeCount(responseDownvoteCount, currentDownvoteCount);
+
+  if (responseUpvoteCount == null && responseDownvoteCount == null) {
+    nextUpvoteCount = currentUpvoteCount;
+    nextDownvoteCount = currentDownvoteCount;
+
+    if (shouldRemoveCurrentVote) {
+      if (previousVote === 1) nextUpvoteCount = Math.max(0, nextUpvoteCount - 1);
+      if (previousVote === -1) nextDownvoteCount = Math.max(0, nextDownvoteCount - 1);
+    } else if (previousVote !== normalizedVote) {
+      if (previousVote === 1) nextUpvoteCount = Math.max(0, nextUpvoteCount - 1);
+      if (previousVote === -1) nextDownvoteCount = Math.max(0, nextDownvoteCount - 1);
+
+      if (normalizedVote === 1) nextUpvoteCount += 1;
+      if (normalizedVote === -1) nextDownvoteCount += 1;
+    }
+  }
+
+  return {
+    upvoteCount: nextUpvoteCount,
+    downvoteCount: nextDownvoteCount,
+  };
 }
 
 function getActiveFilterLabel(activeFilter) {
@@ -549,23 +695,64 @@ function NearbyIssuesPage() {
     setActiveAction(`follow:${reportId}`);
 
     try {
-      const data = issue.isFollowedByCurrentUser
+      const data = (issue.isFollowedByCurrentUser
         ? await unfollowReport(reportId)
-        : await followReport(reportId);
+        : await followReport(reportId)) || {};
 
-      updateIssue(reportId, (currentIssue) => ({
-        ...currentIssue,
-        followersCount: data.followersCount ?? currentIssue.followersCount,
-        isFollowedByCurrentUser:
-          data.isFollowedByCurrentUser ?? !currentIssue.isFollowedByCurrentUser,
-        canCurrentUserFollow:
-          data.canCurrentUserFollow ?? currentIssue.canCurrentUserFollow,
-      }));
+      const nextIsFollowedForMessage = toResponseBoolean(
+        readResponseValue(
+          data,
+          'isFollowedByCurrentUser',
+          'IsFollowedByCurrentUser'
+        ),
+        !issue.isFollowedByCurrentUser
+      );
+
+      updateIssue(reportId, (currentIssue) => {
+        const wasFollowed = Boolean(currentIssue.isFollowedByCurrentUser);
+        const nextIsFollowed = toResponseBoolean(
+          readResponseValue(
+            data,
+            'isFollowedByCurrentUser',
+            'IsFollowedByCurrentUser'
+          ),
+          !wasFollowed
+        );
+
+        const currentFollowersCount = toSafeCount(currentIssue.followersCount);
+        const responseFollowersCount = readResponseValue(
+          data,
+          'followersCount',
+          'FollowersCount'
+        );
+        const nextFollowersCount =
+          responseFollowersCount != null
+            ? toSafeCount(responseFollowersCount, currentFollowersCount)
+            : Math.max(
+                0,
+                currentFollowersCount +
+                  (nextIsFollowed === wasFollowed ? 0 : nextIsFollowed ? 1 : -1)
+              );
+
+        return {
+          ...currentIssue,
+          followersCount: nextFollowersCount,
+          isFollowedByCurrentUser: nextIsFollowed,
+          canCurrentUserFollow: toResponseBoolean(
+            readResponseValue(
+              data,
+              'canCurrentUserFollow',
+              'CanCurrentUserFollow'
+            ),
+            nextIsFollowed ? currentIssue.canCurrentUserFollow : true
+          ),
+        };
+      });
 
       setActionMessage(
-        data.isFollowedByCurrentUser === false
-          ? 'تم إلغاء متابعة البلاغ.'
-          : 'تم تحديث متابعة البلاغ بنجاح.'
+        nextIsFollowedForMessage
+          ? 'تمت متابعة البلاغ بنجاح.'
+          : 'تم إلغاء متابعة البلاغ.'
       );
     } catch (error) {
       setActionError(error?.message || 'تعذر تحديث متابعة البلاغ حاليًا.');
@@ -579,7 +766,7 @@ function NearbyIssuesPage() {
     if (!reportId) return;
 
     const normalizedVote = Number(vote) === -1 ? -1 : 1;
-    const currentVote = Number(issue.currentUserVerifyVote || 0);
+    const currentVote = getIssueCurrentVerifyVote(issue);
 
     const shouldRemoveCurrentVote =
       issue.isVerifiedByCurrentUser && currentVote === normalizedVote;
@@ -589,28 +776,54 @@ function NearbyIssuesPage() {
     setActiveAction(`verify:${reportId}:${normalizedVote}`);
 
     try {
-      const data = shouldRemoveCurrentVote
+      const data = (shouldRemoveCurrentVote
         ? await unverifyReport(reportId)
-        : await verifyReport(reportId, normalizedVote);
+        : await verifyReport(reportId, normalizedVote)) || {};
 
       updateIssue(reportId, (currentIssue) => {
-        const nextIsVerified =
-          data.isVerifiedByCurrentUser ?? !shouldRemoveCurrentVote;
+        const { upvoteCount, downvoteCount } = calculateNextVerifyCounts({
+          currentIssue,
+          data,
+          normalizedVote,
+          shouldRemoveCurrentVote,
+        });
+
+        const nextIsVerified = toResponseBoolean(
+          readResponseValue(
+            data,
+            'isVerifiedByCurrentUser',
+            'IsVerifiedByCurrentUser'
+          ),
+          !shouldRemoveCurrentVote
+        );
 
         const nextVote = nextIsVerified
-          ? data.currentUserVerifyVote ??
-            data.verifyVote ??
-            data.userVerifyVote ??
-            data.userVote ??
-            normalizedVote
+          ? getVerifyResponseVote(data, normalizedVote)
           : null;
+
+        const responseVerifyCount = readResponseValue(
+          data,
+          'verifyCount',
+          'VerifyCount'
+        );
 
         return {
           ...currentIssue,
-          verifyCount: data.verifyCount ?? currentIssue.verifyCount,
+          verifyCount:
+            responseVerifyCount != null
+              ? toSafeCount(responseVerifyCount, upvoteCount + downvoteCount)
+              : upvoteCount + downvoteCount,
+          upvoteCount,
+          downvoteCount,
           isVerifiedByCurrentUser: nextIsVerified,
-          canCurrentUserVerify:
-            data.canCurrentUserVerify ?? currentIssue.canCurrentUserVerify,
+          canCurrentUserVerify: toResponseBoolean(
+            readResponseValue(
+              data,
+              'canCurrentUserVerify',
+              'CanCurrentUserVerify'
+            ),
+            nextIsVerified ? currentIssue.canCurrentUserVerify : true
+          ),
           currentUserVerifyVote: nextVote,
         };
       });
@@ -618,51 +831,12 @@ function NearbyIssuesPage() {
       if (shouldRemoveCurrentVote) {
         setActionMessage('تم إلغاء تصويتك على البلاغ.');
       } else if (normalizedVote === 1) {
-        setActionMessage('تم تأكيد صحة البلاغ بنجاح.');
+        setActionMessage('تم تسجيل أن البلاغ صحيح.');
       } else {
         setActionMessage('تم تسجيل أن البلاغ غير صحيح.');
       }
     } catch (error) {
       setActionError(error?.message || 'تعذر تحديث تأكيد البلاغ حاليًا.');
-    } finally {
-      setActiveAction('');
-    }
-  }
-
-  async function handleToggleRating(issue) {
-    const reportId = getIssueReportId(issue);
-    if (!reportId) return;
-
-    if (!isResolvedIssue(issue)) {
-      setActionError('تقييم جودة الحل متاح فقط بعد أن تصبح حالة البلاغ: تم الحل.');
-      return;
-    }
-
-    setActionError('');
-    setActionMessage('');
-    setActiveAction(`rating:${reportId}`);
-
-    try {
-      const data = issue.isRatedByCurrentUser
-        ? await unrateReport(reportId)
-        : await rateReport(reportId);
-
-      updateIssue(reportId, (currentIssue) => ({
-        ...currentIssue,
-        ratingCount: data.ratingCount ?? currentIssue.ratingCount,
-        isRatedByCurrentUser:
-          data.isRatedByCurrentUser ?? !currentIssue.isRatedByCurrentUser,
-        canCurrentUserRate:
-          data.canCurrentUserRate ?? currentIssue.canCurrentUserRate,
-      }));
-
-      setActionMessage(
-        data.isRatedByCurrentUser === false
-          ? 'تم إلغاء تقييم جودة الحل.'
-          : 'تم تقييم جودة الحل بنجاح.'
-      );
-    } catch (error) {
-      setActionError(error?.message || 'تعذر تحديث تقييم البلاغ حاليًا.');
     } finally {
       setActiveAction('');
     }
@@ -785,7 +959,6 @@ function NearbyIssuesPage() {
             onClearSelection={handleClearSelection}
             onToggleFollow={handleToggleFollow}
             onToggleVerify={handleToggleVerify}
-            onToggleRating={handleToggleRating}
               activeAction={activeAction}
               highlightedIssueId={highlightedIssueId}
               emptyMessage={emptyMessage}

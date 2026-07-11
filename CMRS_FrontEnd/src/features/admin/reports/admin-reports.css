@@ -257,18 +257,6 @@
    Badges and pills
 ========================= */
 
-.admin-report-rating {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.admin-report-rating svg {
-  width: 17px;
-  height: 17px;
-  fill: #c6df00;
-  color: #c6df00;
-}
 
 .admin-report-status,
 .admin-report-priority,
@@ -546,43 +534,6 @@
   gap: 14px;
 }
 
-.admin-report-community-rating {
-  min-width: 220px;
-  padding: 12px 16px;
-  border: 1px solid rgba(2, 95, 72, 0.08);
-  border-radius: 14px;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  box-shadow: 0 6px 16px rgba(2, 95, 72, 0.05);
-}
-
-.admin-report-community-rating span {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: #ff9f0a;
-  font-weight: 950;
-}
-
-.admin-report-community-rating svg {
-  width: 16px;
-  height: 16px;
-  fill: currentColor;
-}
-
-.admin-report-community-rating small {
-  color: var(--color-subtitle);
-  font-weight: 800;
-}
-
-.admin-report-community-rating b {
-  margin-inline-start: auto;
-  color: var(--color-text);
-  font-size: 0.78rem;
-  font-weight: 900;
-}
 
 .admin-report-thumbnails {
   display: flex;
@@ -964,11 +915,6 @@
   .admin-report-images-footer {
     margin-inline: 14px;
     display: grid;
-  }
-
-  .admin-report-community-rating {
-    width: 100%;
-    min-width: 0;
   }
 
   .admin-report-map-card .reports-map {
@@ -4134,12 +4080,12 @@
 
 .admin-manage-reports-table th:nth-child(1),
 .admin-manage-reports-table td:nth-child(1) {
-  width: 14% !important;
+  width: 15% !important;
 }
 
 .admin-manage-reports-table th:nth-child(2),
 .admin-manage-reports-table td:nth-child(2) {
-  width: 8% !important;
+  width: 12% !important;
 }
 
 .admin-manage-reports-table th:nth-child(3),
@@ -4149,7 +4095,7 @@
 
 .admin-manage-reports-table th:nth-child(4),
 .admin-manage-reports-table td:nth-child(4) {
-  width: 10% !important;
+  width: 11% !important;
 }
 
 .admin-manage-reports-table th:nth-child(5),
@@ -4159,22 +4105,17 @@
 
 .admin-manage-reports-table th:nth-child(6),
 .admin-manage-reports-table td:nth-child(6) {
-  width: 9% !important;
+  width: 13% !important;
 }
 
 .admin-manage-reports-table th:nth-child(7),
 .admin-manage-reports-table td:nth-child(7) {
-  width: 11% !important;
+  width: 12% !important;
 }
 
 .admin-manage-reports-table th:nth-child(8),
 .admin-manage-reports-table td:nth-child(8) {
-  width: 10% !important;
-}
-
-.admin-manage-reports-table th:nth-child(9),
-.admin-manage-reports-table td:nth-child(9) {
-  width: 17% !important;
+  width: 16% !important;
   overflow: visible !important;
   text-overflow: clip !important;
 }
@@ -4312,7 +4253,7 @@
 
   .admin-manage-reports-table {
     width: max-content !important;
-    min-width: 1080px !important;
+    min-width: 980px !important;
     max-width: none !important;
     table-layout: auto !important;
   }
@@ -4354,6 +4295,19 @@
   }
 }
 
+
+
+@media (max-width: 768px) {
+  .admin-report-engagement-stats-grid {
+    grid-template-columns: 1fr;
+    padding-inline: 14px;
+  }
+
+  .admin-report-images-footer--thumbnails-only {
+    justify-content: flex-start;
+  }
+}
+
 /* =========================================================
    Selected report card scroll target + attention animation
    Keeps navigation from map/notifications focused on the selected card
@@ -4385,5 +4339,91 @@
 @media (max-width: 768px) {
   .admin-selected-report-scroll-target {
     scroll-margin-top: 14px;
+  }
+}
+
+
+.admin-report-images-footer--thumbnails-only {
+  justify-content: flex-end;
+}
+
+/* =========================
+   Engagement stats card
+========================= */
+
+.admin-report-engagement-stats-grid {
+  padding: 18px 20px 20px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-report-engagement-stat {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(2, 95, 72, 0.08);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(248, 252, 250, 0.96), #fff);
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 8px 20px rgba(2, 95, 72, 0.05);
+}
+
+.admin-report-engagement-stat__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: var(--color-primary);
+  background: rgba(2, 95, 72, 0.1);
+}
+
+.admin-report-engagement-stat__icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.admin-report-engagement-stat__content {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.admin-report-engagement-stat__content span,
+.admin-report-engagement-stat__content small {
+  color: var(--color-subtitle);
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1.4;
+}
+
+.admin-report-engagement-stat__content strong {
+  color: var(--color-text);
+  font-size: 1.12rem;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.admin-report-engagement-stat--upvotes .admin-report-engagement-stat__icon {
+  color: #218540;
+  background: rgba(52, 168, 83, 0.14);
+}
+
+.admin-report-engagement-stat--downvotes .admin-report-engagement-stat__icon {
+  color: #c24a4a;
+  background: rgba(239, 124, 124, 0.15);
+}
+
+@media (max-width: 768px) {
+  .admin-report-engagement-stats-grid {
+    grid-template-columns: 1fr;
+    padding-inline: 14px;
+  }
+
+  .admin-report-images-footer--thumbnails-only {
+    justify-content: flex-start;
   }
 }

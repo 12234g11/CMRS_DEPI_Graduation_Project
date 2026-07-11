@@ -17,6 +17,7 @@ import {
 import AdminCompanyAssignmentPanel from '../components/AdminCompanyAssignmentPanel';
 import AdminCompanyResponseReviewCard from '../components/AdminCompanyResponseReviewCard';
 import AdminReportImagesCard from '../components/AdminReportImagesCard';
+import AdminReportEngagementStatsCard from '../components/AdminReportEngagementStatsCard';
 import AdminReporterCard from '../components/AdminReporterCard';
 import AdminReportStatusForm from '../components/AdminReportStatusForm';
 import AdminReportSummaryCard from '../components/AdminReportSummaryCard';
@@ -261,6 +262,8 @@ async function handleReassign(adminNote) {
 
         <div className="admin-report-details-right">
           <AdminReportImagesCard report={report} />
+
+          <AdminReportEngagementStatsCard report={report} />
 
           <section className="admin-report-details-card admin-report-map-card">
             <header className="admin-report-card-header">

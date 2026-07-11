@@ -1,19 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
+  FiAlertTriangle,
+  FiCalendar,
   FiCheck,
   FiChevronDown,
+  FiClock,
+  FiFileText,
   FiFilter,
+  FiMapPin,
+  FiMessageSquare,
   FiRefreshCcw,
+  FiTool,
   FiX,
 } from 'react-icons/fi';
 import PageHeader from '../../../../shared/components/ui/PageHeader';
-import { ROUTES } from '../../../../shared/navigation';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import NotificationsList from '../components/NotificationsList';
 import {
   deleteUserNotification,
-  getUnreadUserNotificationsCount,
+  getNotificationReportDetails,
   getUserNotifications,
   markAllUserNotificationsAsRead,
   markUserNotificationAsRead,
@@ -66,6 +71,14 @@ const READ_FILTERS = {
 
 const PAGE_SIZE = 10;
 
+const EMPTY_REPORT_MODAL_STATE = {
+  isOpen: false,
+  notification: null,
+  report: null,
+  isLoading: false,
+  errorMessage: '',
+};
+
 function resolveUserId(user) {
   return user?.id || user?.userId || user?.UserId || user?.sub || '';
 }
@@ -103,55 +116,336 @@ function getTypeCount({
   return 0;
 }
 
+function parseDate(value) {
+  if (!value) return null;
 
-function normalizeRouteTarget(value = '') {
-  return String(value || '')
-    .trim()
-    .replace(/[\s_-]+/g, '')
-    .toLowerCase();
+  const rawDate = String(value).trim();
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(rawDate);
+  const normalizedDate = hasTimezone ? rawDate : `${rawDate}Z`;
+  const parsedDate = new Date(normalizedDate);
+
+  if (!Number.isNaN(parsedDate.getTime())) return parsedDate;
+
+  const fallbackDate = new Date(rawDate);
+
+  return Number.isNaN(fallbackDate.getTime()) ? null : fallbackDate;
 }
 
-function getNotificationReportTarget(notification = {}) {
-  if (notification.isNearbyReport) {
-    return 'nearby';
-  }
+function formatDateTime(value) {
+  const date = parseDate(value);
 
-  const rawTarget = normalizeRouteTarget(
-    notification.targetPage ||
-      notification.reportScope ||
-      notification.reportSource ||
-      notification.source
-  );
+  if (!date) return '—';
+
+  return date.toLocaleString('ar-EG', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function getImageUrl(image) {
+  return image?.imageUrl || image?.thumbnailUrl || '';
+}
+
+function getStatusTone(status = '') {
+  const normalizedStatus = String(status || '').toLowerCase();
 
   if (
-    rawTarget.includes('nearby') ||
-    rawTarget.includes('nearbyissues') ||
-    rawTarget.includes('nearbyreports') ||
-    rawTarget.includes('public') ||
-    rawTarget.includes('map') ||
-    rawTarget.includes('قريبة')
+    normalizedStatus.includes('resolved') ||
+    normalizedStatus.includes('completed') ||
+    normalizedStatus.includes('closed') ||
+    normalizedStatus.includes('solved') ||
+    normalizedStatus.includes('حل')
   ) {
-    return 'nearby';
+    return 'success';
   }
 
-  return 'mine';
+  if (
+    normalizedStatus.includes('rejected') ||
+    normalizedStatus.includes('رفض') ||
+    normalizedStatus.includes('cancel')
+  ) {
+    return 'danger';
+  }
+
+  if (
+    normalizedStatus.includes('progress') ||
+    normalizedStatus.includes('assigned') ||
+    normalizedStatus.includes('review') ||
+    normalizedStatus.includes('متابعة') ||
+    normalizedStatus.includes('تنفيذ') ||
+    normalizedStatus.includes('مراجعة')
+  ) {
+    return 'warning';
+  }
+
+  return 'primary';
 }
 
-function getMyReportsRoute() {
-  return ROUTES.MY_REPORTS || '/dashboard/my-reports';
-}
-
-function getNearbyIssuesRoute() {
+function ReportInfoCard({ icon, label, value }) {
   return (
-    ROUTES.NEARBY_ISSUES ||
-    ROUTES.NEARBY_REPORTS ||
-    ROUTES.NEARBY ||
-    '/dashboard/nearby-issues'
+    <div className="notification-report-modal__info-card">
+      <span className="notification-report-modal__info-icon">{icon}</span>
+      <span>{label}</span>
+      <strong>{value || '—'}</strong>
+    </div>
+  );
+}
+
+function ReportImageGrid({ title, subtitle, images = [], emptyMessage }) {
+  return (
+    <section className="notification-report-modal__section">
+      <div className="notification-report-modal__section-title">
+        <div>
+          <h4>{title}</h4>
+          {subtitle ? <p>{subtitle}</p> : null}
+        </div>
+
+        <span>{images.length}</span>
+      </div>
+
+      {images.length ? (
+        <div className="notification-report-modal__images-grid">
+          {images.map((image, index) => {
+            const imageUrl = getImageUrl(image);
+
+            return (
+              <a
+                key={image.id || `${imageUrl}-${index}`}
+                href={imageUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="notification-report-modal__image-link"
+              >
+                <img src={imageUrl} alt={`${title} ${index + 1}`} />
+              </a>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="notification-report-modal__empty-text">{emptyMessage}</p>
+      )}
+    </section>
+  );
+}
+
+function ReportTimeline({ timeline = [] }) {
+  return (
+    <section className="notification-report-modal__section">
+      <div className="notification-report-modal__section-title">
+        <div>
+          <h4>آخر التحديثات</h4>
+          <p>كل خطوة أو تحديث حصل على البلاغ</p>
+        </div>
+
+        <span>{timeline.length}</span>
+      </div>
+
+      {timeline.length ? (
+        <div className="notification-report-modal__timeline">
+          {timeline.map((item) => (
+            <article key={item.id} className="notification-report-modal__timeline-item">
+              <span className="notification-report-modal__timeline-icon">
+                <FiClock />
+              </span>
+
+              <div>
+                <strong>{item.title || 'تحديث على البلاغ'}</strong>
+                {item.description ? <p>{item.description}</p> : null}
+                <small>{formatDateTime(item.createdAt)}</small>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="notification-report-modal__empty-text">
+          لا توجد تحديثات تفصيلية متاحة لهذا البلاغ حاليًا.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function NotificationReportModal({ modalState, onClose }) {
+  const { isOpen, notification, report, isLoading, errorMessage } = modalState;
+
+  if (!isOpen) return null;
+
+  const reportStatusTone = getStatusTone(report?.status || report?.statusLabel);
+  const companyResponse = report?.companyResponse;
+  const updateNote =
+    companyResponse?.note ||
+    companyResponse?.reason ||
+    companyResponse?.adminNote ||
+    notification?.message ||
+    '';
+
+  return (
+    <div
+      className="notification-report-modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label="تفاصيل البلاغ المرتبط بالإشعار"
+    >
+      <button
+        type="button"
+        className="notification-report-modal-backdrop__click-area"
+        onClick={onClose}
+        aria-label="إغلاق تفاصيل البلاغ"
+      />
+
+      <article className="notification-report-modal">
+        <button
+          type="button"
+          className="notification-report-modal__close"
+          onClick={onClose}
+          aria-label="إغلاق"
+        >
+          <FiX />
+        </button>
+
+        <header className="notification-report-modal__header">
+          <span className="notification-report-modal__icon">
+            <FiFileText />
+          </span>
+
+          <div>
+            <span className="notification-report-modal__eyebrow">
+              البلاغ المرتبط بالإشعار
+            </span>
+            <h3>{report?.title || notification?.message || 'تفاصيل البلاغ'}</h3>
+            <p>يتم عرض البلاغ هنا مباشرة حتى لو كان البلاغ متابعًا وليس ضمن بلاغاتك أو البلاغات القريبة من موقعك الحالي.</p>
+          </div>
+        </header>
+
+        <div className="notification-report-modal__body">
+          {isLoading ? (
+            <div className="notification-report-modal__state">
+              <FiRefreshCcw />
+              <strong>جارٍ تحميل تفاصيل البلاغ...</strong>
+            </div>
+          ) : null}
+
+          {!isLoading && errorMessage ? (
+            <div className="notification-report-modal__state notification-report-modal__state--error">
+              <FiAlertTriangle />
+              <strong>{errorMessage}</strong>
+              <p>
+                تأكد أن الباك يوفر Endpoint لتفاصيل البلاغ للمستخدم أو للبلاغات المتابعة.
+              </p>
+            </div>
+          ) : null}
+
+          {!isLoading && report ? (
+            <>
+              <div className="notification-report-modal__status-row">
+                <span
+                  className={`notification-report-modal__status notification-report-modal__status--${reportStatusTone}`}
+                >
+                  {report.statusLabel || report.status || '—'}
+                </span>
+
+                <span className="notification-report-modal__report-id">
+                  رقم البلاغ: {report.id || notification?.reportId}
+                </span>
+              </div>
+
+              <div className="notification-report-modal__info-grid">
+                <ReportInfoCard
+                  icon={<FiTool />}
+                  label="نوع المشكلة"
+                  value={report.issueCategoryName || report.type}
+                />
+                <ReportInfoCard
+                  icon={<FiMapPin />}
+                  label="الموقع"
+                  value={[report.city, report.location].filter(Boolean).join(' - ')}
+                />
+                <ReportInfoCard
+                  icon={<FiCalendar />}
+                  label="تاريخ البلاغ"
+                  value={formatDateTime(report.createdAt)}
+                />
+                <ReportInfoCard
+                  icon={<FiMessageSquare />}
+                  label="الشركة المسؤولة"
+                  value={report.assignedCompanyName || report.concernedCompanyName}
+                />
+              </div>
+
+              <section className="notification-report-modal__section">
+                <div className="notification-report-modal__section-title">
+                  <div>
+                    <h4>وصف البلاغ</h4>
+                    <p>تفاصيل المشكلة الأصلية</p>
+                  </div>
+                </div>
+
+                <p className="notification-report-modal__description">
+                  {report.description || notification?.message || 'لا يوجد وصف متاح.'}
+                </p>
+              </section>
+
+              {report.rejectionReason ? (
+                <section className="notification-report-modal__section notification-report-modal__section--warning">
+                  <div className="notification-report-modal__section-title">
+                    <div>
+                      <h4>سبب الرفض</h4>
+                      <p>السبب الذي تم تسجيله على البلاغ</p>
+                    </div>
+                  </div>
+
+                  <p className="notification-report-modal__description">
+                    {report.rejectionReason}
+                  </p>
+                </section>
+              ) : null}
+
+              {updateNote ? (
+                <section className="notification-report-modal__section notification-report-modal__section--update">
+                  <div className="notification-report-modal__section-title">
+                    <div>
+                      <h4>آخر تحديث</h4>
+                      <p>ملاحظة الشركة أو النظام على البلاغ</p>
+                    </div>
+                  </div>
+
+                  <p className="notification-report-modal__description">{updateNote}</p>
+
+                  {companyResponse?.submittedAt ? (
+                    <small className="notification-report-modal__date-note">
+                      تاريخ التحديث: {formatDateTime(companyResponse.submittedAt)}
+                    </small>
+                  ) : null}
+                </section>
+              ) : null}
+
+              <ReportImageGrid
+                title="صور البلاغ قبل الحل"
+                subtitle="الصور الأصلية المرفوعة مع البلاغ"
+                images={report.images || []}
+                emptyMessage="لا توجد صور أصلية متاحة لهذا البلاغ."
+              />
+
+              <ReportImageGrid
+                title="صور البلاغ بعد الحل"
+                subtitle="صور الحل المرفوعة من الشركة إن وجدت"
+                images={companyResponse?.images || []}
+                emptyMessage="لم يتم رفع صور حل لهذا البلاغ حتى الآن."
+              />
+
+              <ReportTimeline timeline={report.timeline || []} />
+            </>
+          ) : null}
+        </div>
+      </article>
+    </div>
   );
 }
 
 function UserNotificationsPage() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const userId = resolveUserId(user);
 
@@ -178,6 +472,9 @@ function UserNotificationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [reportModalState, setReportModalState] = useState(
+    EMPTY_REPORT_MODAL_STATE
+  );
 
   const selectedTypeFilter = useMemo(
     () =>
@@ -187,17 +484,18 @@ function UserNotificationsPage() {
     [activeTypeFilter]
   );
 
-  const visibleNotifications = useMemo(() => {
-    if (activeReadFilter === READ_FILTERS.UNREAD) {
-      return notifications.filter((notification) => !notification.isRead);
-    }
+  const visibleNotifications = notifications;
 
-    return notifications;
-  }, [activeReadFilter, notifications]);
-
-  const currentPageUnreadCount = useMemo(
-    () => notifications.filter((notification) => !notification.isRead).length,
-    [notifications]
+  const readFilterAllCount = useMemo(
+    () =>
+      getTypeCount({
+        typeCounts,
+        type: activeTypeFilter,
+        activeTypeFilter,
+        totalCount: pagination.totalCount,
+        notificationsCount: notifications.length,
+      }),
+    [activeTypeFilter, notifications.length, pagination.totalCount, typeCounts]
   );
 
   const loadNotifications = useCallback(
@@ -226,20 +524,18 @@ function UserNotificationsPage() {
 
         setErrorMessage('');
 
-        const [notificationsResponse, nextUnreadCount] = await Promise.all([
-          getUserNotifications({
-            userId,
-            type: activeTypeFilter,
-            pageNumber,
-            pageSize: PAGE_SIZE,
-          }),
-          getUnreadUserNotificationsCount(userId),
-        ]);
+        const notificationsResponse = await getUserNotifications({
+          userId,
+          type: activeTypeFilter,
+          isRead: activeReadFilter === READ_FILTERS.UNREAD ? false : undefined,
+          pageNumber,
+          pageSize: PAGE_SIZE,
+          sortBy: 'createdAt',
+          sortDirection: 'desc',
+        });
 
         setNotifications(notificationsResponse.items || []);
-        setUnreadCount(
-          notificationsResponse.unreadCount || nextUnreadCount || 0
-        );
+        setUnreadCount(notificationsResponse.unreadCount || 0);
         setTypeCounts(notificationsResponse.typeCounts || []);
 
         setPagination({
@@ -259,7 +555,7 @@ function UserNotificationsPage() {
         }
       }
     },
-    [activeTypeFilter, pageNumber, userId]
+    [activeReadFilter, activeTypeFilter, pageNumber, userId]
   );
 
   useEffect(() => {
@@ -275,10 +571,24 @@ function UserNotificationsPage() {
 
   function handleReadFilterChange(nextFilter) {
     setActiveReadFilter(nextFilter);
+    setPageNumber(1);
+    setIsMobileFilterOpen(false);
   }
 
   async function refreshAfterAction() {
     await loadNotifications({ showLoading: false });
+  }
+
+  function markNotificationAsReadLocally(notificationId) {
+    setNotifications((currentNotifications) =>
+      currentNotifications.map((notification) =>
+        notification.id === notificationId
+          ? { ...notification, isRead: true }
+          : notification
+      )
+    );
+
+    setUnreadCount((currentCount) => Math.max(0, currentCount - 1));
   }
 
   const handleMarkAsRead = async (notificationId) => {
@@ -336,42 +646,49 @@ function UserNotificationsPage() {
       return;
     }
 
-    try {
-      if (!notification.isRead && notification.id) {
-        await markUserNotificationAsRead(notification.id);
-      }
-    } catch {
-      // لا نمنع المستخدم من فتح البلاغ لو تحديث حالة القراءة فشل.
-    }
-
-    const target = getNotificationReportTarget(notification);
-
-    if (target === 'nearby') {
-      navigate(getNearbyIssuesRoute(), {
-        state: {
-          fromNotification: true,
-          notificationId: notification.id,
-          notificationReportId: reportId,
-          selectedIssueId: reportId,
-          highlightIssueId: reportId,
-          forceEnableCurrentLocation: true,
-          successMessage:
-            'فعّل موقعك الحالي أولًا، وبعدها سيتم تحديد البلاغ القادم من الإشعار داخل قائمة البلاغات القريبة.',
-        },
-      });
-      return;
-    }
-
-    navigate(getMyReportsRoute(), {
-      state: {
-        fromNotification: true,
-        notificationId: notification.id,
-        notificationReportId: reportId,
-        selectedReportId: reportId,
-        highlightReportId: reportId,
-        successMessage: 'تم فتح البلاغ المرتبط بالإشعار داخل جدول بلاغاتي.',
-      },
+    setErrorMessage('');
+    setReportModalState({
+      isOpen: true,
+      notification,
+      report: null,
+      isLoading: true,
+      errorMessage: '',
     });
+
+    if (!notification.isRead && notification.id) {
+      try {
+        await markUserNotificationAsRead(notification.id);
+        markNotificationAsReadLocally(notification.id);
+      } catch {
+        // لا نمنع المستخدم من فتح تفاصيل البلاغ لو تحديث حالة القراءة فشل.
+      }
+    }
+
+    try {
+      const reportDetails = await getNotificationReportDetails(reportId);
+
+      setReportModalState({
+        isOpen: true,
+        notification,
+        report: reportDetails,
+        isLoading: false,
+        errorMessage: '',
+      });
+    } catch (error) {
+      setReportModalState({
+        isOpen: true,
+        notification,
+        report: null,
+        isLoading: false,
+        errorMessage:
+          error?.message ||
+          'تعذر تحميل تفاصيل البلاغ المرتبط بهذا الإشعار.',
+      });
+    }
+  }
+
+  function closeReportModal() {
+    setReportModalState(EMPTY_REPORT_MODAL_STATE);
   }
 
   function goToPreviousPage() {
@@ -392,7 +709,7 @@ function UserNotificationsPage() {
     <div className="dashboard-page user-notifications-page">
       <PageHeader
         title="الإشعارات"
-        subtitle="تابع تحديثات بلاغاتك أولًا بأول"
+        subtitle="تابع تحديثات بلاغاتك والبلاغات التي تتابعها أولًا بأول"
       />
 
       <section className="user-notifications-panel">
@@ -406,7 +723,7 @@ function UserNotificationsPage() {
               onClick={() => handleReadFilterChange(READ_FILTERS.ALL)}
             >
               <span>كل الإشعارات</span>
-              <strong>{notifications.length}</strong>
+              <strong>{readFilterAllCount}</strong>
             </button>
 
             <button
@@ -417,7 +734,7 @@ function UserNotificationsPage() {
               onClick={() => handleReadFilterChange(READ_FILTERS.UNREAD)}
             >
               <span>غير مقروءة</span>
-              <strong>{currentPageUnreadCount}</strong>
+              <strong>{unreadCount}</strong>
             </button>
           </div>
 
@@ -526,10 +843,10 @@ function UserNotificationsPage() {
               }
               emptyMessage={
                 activeReadFilter === READ_FILTERS.UNREAD
-                  ? 'كل الإشعارات الحالية مقروءة.'
+                  ? 'لا توجد إشعارات غير مقروءة حسب الفلتر الحالي.'
                   : activeTypeFilter !== USER_NOTIFICATION_TYPE.ALL
                     ? 'جرّب اختيار نوع إشعار آخر.'
-                    : 'عند حدوث أي تحديث على بلاغاتك سيظهر هنا مباشرة.'
+                    : 'عند حدوث أي تحديث على بلاغاتك أو البلاغات التي تتابعها سيظهر هنا مباشرة.'
               }
             />
 
@@ -604,7 +921,7 @@ function UserNotificationsPage() {
                   onClick={() => handleReadFilterChange(READ_FILTERS.ALL)}
                 >
                   <span>كل الإشعارات</span>
-                  <strong>{notifications.length}</strong>
+                  <strong>{readFilterAllCount}</strong>
                 </button>
 
                 <button
@@ -615,7 +932,7 @@ function UserNotificationsPage() {
                   onClick={() => handleReadFilterChange(READ_FILTERS.UNREAD)}
                 >
                   <span>غير مقروءة</span>
-                  <strong>{currentPageUnreadCount}</strong>
+                  <strong>{unreadCount}</strong>
                 </button>
               </div>
             </div>
@@ -659,6 +976,11 @@ function UserNotificationsPage() {
           </div>
         </div>
       ) : null}
+
+      <NotificationReportModal
+        modalState={reportModalState}
+        onClose={closeReportModal}
+      />
     </div>
   );
 }

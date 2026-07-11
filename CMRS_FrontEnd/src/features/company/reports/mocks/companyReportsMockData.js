@@ -1,38 +1,5 @@
 import problemExampleImage from '../../../landing/images/problem-example.webp';
 
-export const companyTechnicians = [
-  {
-    id: 'team-light-1',
-    name: 'فرقة صيانة الإنارة 1',
-    leadName: 'م. أحمد سامي',
-    phone: '+20 100 111 2020',
-    specialization: 'أعمدة إنارة وكشافات',
-    activeTasks: 2,
-    availability: 'available',
-    availabilityLabel: 'متاحة',
-  },
-  {
-    id: 'team-light-2',
-    name: 'فرقة صيانة الإنارة 2',
-    leadName: 'م. محمود طارق',
-    phone: '+20 100 333 9090',
-    specialization: 'كابلات ولوحات إنارة',
-    activeTasks: 4,
-    availability: 'busy',
-    availabilityLabel: 'مشغولة',
-  },
-  {
-    id: 'team-light-3',
-    name: 'فرقة الطوارئ الليلية',
-    leadName: 'م. كريم ناصر',
-    phone: '+20 100 555 8080',
-    specialization: 'أعطال عاجلة وطوارئ',
-    activeTasks: 1,
-    availability: 'available',
-    availabilityLabel: 'متاحة',
-  },
-];
-
 export const companyReportStatusOptions = [
   { value: 'all', label: 'كل الحالات' },
   { value: 'تم التعيين', label: 'تم التعيين' },
@@ -66,9 +33,6 @@ export const companyReports = [
     location: 'شارع عباس العقاد، مدينة نصر',
     assignedAt: '2026-04-03 - 11:20 AM',
     adminNote: 'برجاء المعاينة والبدء في التنفيذ في أقرب وقت.',
-    rating: 16,
-    votesCount: 21,
-    assignedTeam: null,
     images: [problemExampleImage, problemExampleImage],
     position: { lat: 30.0626, lng: 31.3303 },
     reporter: {
@@ -103,13 +67,6 @@ export const companyReports = [
     location: 'الهضبة الوسطى، المقطم',
     assignedAt: '2026-04-04 - 09:45 AM',
     adminNote: 'الأولوية عالية بسبب وجود منطقة سكنية وحركة مشاة.',
-    rating: 24,
-    votesCount: 32,
-    assignedTeam: {
-      id: 'team-light-3',
-      name: 'فرقة الطوارئ الليلية',
-      leadName: 'م. كريم ناصر',
-    },
     images: [problemExampleImage, problemExampleImage],
     position: { lat: 30.0223, lng: 31.3037 },
     reporter: {
@@ -132,14 +89,6 @@ export const companyReports = [
         title: 'تم إسناد البلاغ للشركة',
         description: 'تم إسناد البلاغ إلى شركة الإنارة الحديثة.',
         date: '2026-04-04 - 09:45 AM',
-      },
-      {
-        id: 'C-102-T2',
-        actorType: 'company',
-        actor: 'الشركة',
-        title: 'تم تعيين فرقة صيانة',
-        description: 'تم تعيين فرقة الطوارئ الليلية.',
-        date: '2026-04-04 - 10:15 AM',
       },
       {
         id: 'C-102-T3',
@@ -166,13 +115,6 @@ export const companyReports = [
     location: 'شارع 26 يوليو، الزمالك',
     assignedAt: '2026-04-05 - 10:10 AM',
     adminNote: 'يرجى رفع صورة واضحة بعد الانتهاء من الإصلاح.',
-    rating: 9,
-    votesCount: 12,
-    assignedTeam: {
-      id: 'team-light-1',
-      name: 'فرقة صيانة الإنارة 1',
-      leadName: 'م. أحمد سامي',
-    },
     images: [problemExampleImage],
     position: { lat: 30.0647, lng: 31.2196 },
     reporter: {
@@ -218,13 +160,6 @@ export const companyReports = [
     location: 'كورنيش المعادي',
     assignedAt: '2026-04-06 - 08:40 AM',
     adminNote: 'تم طلب استكمال بسبب عدم وضوح صورة ما بعد الإصلاح.',
-    rating: 13,
-    votesCount: 18,
-    assignedTeam: {
-      id: 'team-light-2',
-      name: 'فرقة صيانة الإنارة 2',
-      leadName: 'م. محمود طارق',
-    },
     images: [problemExampleImage],
     position: { lat: 29.9702, lng: 31.2469 },
     reporter: {
@@ -278,13 +213,6 @@ export const companyReports = [
     location: 'شارع النصر، المعادي',
     assignedAt: '2026-04-07 - 03:25 PM',
     adminNote: 'يرجى المعاينة وتوضيح سبب التعذر إن وجد.',
-    rating: 20,
-    votesCount: 29,
-    assignedTeam: {
-      id: 'team-light-3',
-      name: 'فرقة الطوارئ الليلية',
-      leadName: 'م. كريم ناصر',
-    },
     images: [problemExampleImage],
     position: { lat: 29.9562, lng: 31.2669 },
     reporter: {
@@ -331,13 +259,6 @@ export const companyReports = [
     location: 'شارع الثورة، مصر الجديدة',
     assignedAt: '2026-04-01 - 09:00 AM',
     adminNote: 'تم اعتماد الإصلاح بعد مراجعة الصور.',
-    rating: 11,
-    votesCount: 14,
-    assignedTeam: {
-      id: 'team-light-1',
-      name: 'فرقة صيانة الإنارة 1',
-      leadName: 'م. أحمد سامي',
-    },
     images: [problemExampleImage, problemExampleImage],
     position: { lat: 30.0902, lng: 31.3221 },
     reporter: {

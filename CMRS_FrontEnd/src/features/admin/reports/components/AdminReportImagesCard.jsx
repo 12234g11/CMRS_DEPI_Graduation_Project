@@ -4,7 +4,6 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiMaximize2,
-  FiStar,
   FiX,
 } from 'react-icons/fi';
 
@@ -65,16 +64,7 @@ function AdminReportImagesCard({ report }) {
             </span>
           </button>
 
-          <div className="admin-report-images-footer">
-            <div className="admin-report-community-rating">
-              <span>
-                <FiStar />
-                {report.rating}
-              </span>
-              <small>/ {report.votesCount}</small>
-              <b>التقييم المجتمعي</b>
-            </div>
-
+          <div className="admin-report-images-footer admin-report-images-footer--thumbnails-only">
             <div className="admin-report-thumbnails">
               {images.map((image, index) => (
                 <button
@@ -128,7 +118,7 @@ function AdminReportImagesCard({ report }) {
                 </button>
               ) : null}
 
-              <img src={activeImage} alt={`صورة البلاغ ${activeIndex + 1}`} />
+              <img src={activeImage} alt={report.title} />
 
               {hasMultipleImages ? (
                 <button
@@ -141,22 +131,6 @@ function AdminReportImagesCard({ report }) {
                 </button>
               ) : null}
             </div>
-
-            {hasMultipleImages ? (
-              <div className="admin-report-image-lightbox__thumbs">
-                {images.map((image, index) => (
-                  <button
-                    type="button"
-                    key={`preview-${image}-${index}`}
-                    className={index === activeIndex ? 'is-active' : ''}
-                    onClick={() => setActiveIndex(index)}
-                    aria-label={`فتح صورة رقم ${index + 1}`}
-                  >
-                    <img src={image} alt={`مصغرة ${index + 1}`} />
-                  </button>
-                ))}
-              </div>
-            ) : null}
           </div>
         </div>
       ) : null}

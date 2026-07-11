@@ -1,43 +1,59 @@
 import { Link } from 'react-router-dom';
 import {
   FiEye,
+  FiMapPin,
+  FiPlayCircle,
   FiSend,
-  FiStar,
-  FiTool,
   FiUploadCloud,
-  FiUsers,
 } from 'react-icons/fi';
 import { ROUTES } from '../../../../shared/navigation';
+import { formatEgyptDateTime } from '../utils/companyReportsFormatters';
 
 function getReportDetailsPath(reportId) {
   return `${ROUTES.COMPANY_REPORTS}/${reportId}`;
 }
 
+
+function normalizeComparableText(value) {
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+function shouldShowDistinctText(value, ...comparisons) {
+  const normalizedValue = normalizeComparableText(value);
+
+  if (!normalizedValue) return false;
+
+  return !comparisons.some(
+    (comparison) => normalizeComparableText(comparison) === normalizedValue,
+  );
+}
+
 function getAdminReviewLabel(report) {
-  if (!report.adminReview) return 'لا يوجد رد';
-  return report.adminReview.label;
+  if (!report.adminReview) return 'لا يوجد رد بعد';
+  return report.adminReview.label || 'يوجد رد من الأدمن';
 }
 
 function CompanyReportsTable({
   reports = [],
   highlightedReportId,
-  onAssignTechnician,
   onSubmitSolution,
   onStartWork,
+  processingReportId,
 }) {
   return (
     <div className="company-reports-table-wrap">
       <table className="company-reports-table">
         <thead>
           <tr>
-            <th>نوع المشكلة</th>
-            <th>التقييم</th>
+            <th>البلاغ</th>
             <th>الحالة</th>
             <th>رد الأدمن</th>
             <th>الأولوية</th>
-            <th>فرقة الصيانة</th>
             <th>تاريخ الإسناد</th>
-            <th>الإجراء</th>
+            <th>الإجراء التالي</th>
           </tr>
         </thead>
 
@@ -46,22 +62,42 @@ function CompanyReportsTable({
             <tr
               key={report.id}
               id={`company-report-row-${report.id}`}
+              tabIndex={-1}
               className={
                 String(highlightedReportId) === String(report.id)
                   ? 'is-highlighted'
                   : ''
               }
             >
-              <td data-label="نوع المشكلة">
-                <strong>{report.type}</strong>
-                <span>{report.location}</span>
-              </td>
-
-              <td data-label="التقييم">
-                <span className="company-report-rating">
-                  <FiStar />
-                  {report.rating}
-                </span>
+              <td data-label="البلاغ">
+                <div className="company-report-table-summary">
+                  <strong>{report.title || report.type}</strong>
+                  {shouldShowDistinctText(
+                    report.description,
+                    report.title,
+                    report.type,
+                  ) ? (
+                    <small className="company-report-table-summary__description">
+                      {report.description}
+                    </small>
+                  ) : null}
+                  {shouldShowDistinctText(report.type, report.title) ? (
+                    <span className="company-report-table-summary__type">
+                      {report.type}
+                    </span>
+                  ) : null}
+                  <span className="company-report-table-summary__location">
+                    <FiMapPin />
+                    {report.location || 'الموقع غير متوفر'}
+                  </span>
+                  <span
+                    className="company-report-table-summary__id company-copyable-report-id"
+                    title="يمكن تحديد رقم البلاغ ونسخه"
+                  >
+                    رقم البلاغ:{' '}
+                    <b className="company-report-id-value" dir="ltr">{report.id}</b>
+                  </span>
+                </div>
               </td>
 
               <td data-label="الحالة">
@@ -90,60 +126,44 @@ function CompanyReportsTable({
                 </span>
               </td>
 
-              <td data-label="فرقة الصيانة">
-                <span className={report.assignedTeam ? 'company-report-team-pill' : 'company-report-muted'}>
-                  {report.assignedTeam?.name || 'لم يتم التعيين'}
+              <td data-label="تاريخ الإسناد">
+                <span className="company-report-assigned-date">
+                  {formatEgyptDateTime(report.assignedAt)}
                 </span>
               </td>
 
-              <td data-label="تاريخ الإسناد">{report.assignedAt}</td>
-
-              <td data-label="الإجراء">
+              <td data-label="الإجراء التالي">
                 <div className="company-report-actions">
                   <Link
                     to={getReportDetailsPath(report.id)}
                     className="company-report-view-btn"
                   >
                     <FiEye />
-                    عرض
+                    التفاصيل
                   </Link>
 
-                  <button
-                    type="button"
-                    className="company-report-assign-btn"
-                    onClick={() => onAssignTechnician(report)}
-                    disabled={report.status === 'تم الحل'}
-                  >
-                    <FiUsers />
-                    تعيين فرقة
-                  </button>
-
-                  {report.status === 'تم التعيين' ? (
-                    <button
-                      type="button"
-                      className="company-report-start-btn"
-                      onClick={() => onStartWork(report)}
+                  {['تم التعيين', 'جاري التنفيذ', 'مطلوب استكمال'].includes(report.status) ? (
+                    <Link
+                      to={getReportDetailsPath(report.id)}
+                      className={
+                        report.status === 'تم التعيين'
+                          ? 'company-report-start-btn'
+                          : 'company-report-upload-btn'
+                      }
                     >
-                      <FiTool />
-                      بدء التنفيذ
-                    </button>
-                  ) : null}
-
-                  {['جاري التنفيذ', 'مطلوب استكمال'].includes(report.status) ? (
-                    <button
-                      type="button"
-                      className="company-report-upload-btn"
-                      onClick={() => onSubmitSolution(report)}
-                    >
-                      <FiUploadCloud />
-                      إرسال الحل
-                    </button>
+                      {report.status === 'تم التعيين' ? <FiPlayCircle /> : <FiUploadCloud />}
+                      {report.status === 'تم التعيين'
+                        ? 'إدارة وبدء التنفيذ'
+                        : report.status === 'مطلوب استكمال'
+                          ? 'مراجعة الاستكمال'
+                          : 'متابعة التنفيذ'}
+                    </Link>
                   ) : null}
 
                   {report.status === 'بانتظار مراجعة الأدمن' ? (
                     <span className="company-report-waiting-pill">
                       <FiSend />
-                      مرسل للأدمن
+                      بانتظار المراجعة
                     </span>
                   ) : null}
                 </div>

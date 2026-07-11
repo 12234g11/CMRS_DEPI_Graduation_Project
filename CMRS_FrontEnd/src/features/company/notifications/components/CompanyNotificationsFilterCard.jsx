@@ -1,92 +1,63 @@
-import { FiCheck, FiSearch, FiSliders, FiX } from 'react-icons/fi';
+import { FiCheck } from 'react-icons/fi';
 import CompanyNotificationsFilterSelect from './CompanyNotificationsFilterSelect';
 
 function CompanyNotificationsFilterCard({
-  searchTerm,
-  onSearchChange,
-  activeFilter,
-  onFilterChange,
+  activeReadFilter,
+  onReadFilterChange,
+  activeTypeFilter,
+  onTypeFilterChange,
   filterOptions,
-  filteredCount,
   totalCount,
-  activeFiltersCount,
-  onOpenFilters,
-  onResetFilters,
+  unreadCount,
   onMarkAllRead,
 }) {
   return (
-    <section className="company-notifications-filter-card">
-      <div className="company-notifications-filter-card__header">
-        <div>
-          <h2>فلترة الإشعارات</h2>
-          <p>
-            يتم عرض {filteredCount} إشعار من إجمالي {totalCount} إشعار.
-          </p>
-        </div>
+    <section className="company-notifications-toolbar-card">
+      <button
+        type="button"
+        className="company-notifications-mark-all-btn"
+        onClick={onMarkAllRead}
+        disabled={unreadCount === 0}
+      >
+        <FiCheck />
+        تحديد الكل كمقروء
+      </button>
 
-        <div className="company-notifications-filter-card__actions">
-          <button
-            type="button"
-            className="company-notifications-mark-all-btn"
-            onClick={onMarkAllRead}
-          >
-            <FiCheck />
-            تعليم الكل كمقروء
-          </button>
-
-          <button
-            type="button"
-            className="company-notifications-reset-btn"
-            onClick={onResetFilters}
-          >
-            <FiX />
-            مسح الفلاتر
-          </button>
-        </div>
+      <div className="company-notifications-type-filter">
+        <CompanyNotificationsFilterSelect
+          value={activeTypeFilter}
+          options={filterOptions}
+          onChange={onTypeFilterChange}
+          ariaLabel="فلترة إشعارات الشركة حسب النوع"
+        />
       </div>
 
-      <div className="company-notifications-filter-card__body">
-        <div className="company-notifications-toolbar company-notifications-toolbar--desktop">
-          <div className="company-notifications-search">
-            <FiSearch />
+      <div className="company-notifications-summary-tabs">
+        <button
+          type="button"
+          className={`company-notifications-summary-tab ${
+            activeReadFilter === 'all' ? 'is-active' : ''
+          }`}
+          onClick={() => onReadFilterChange('all')}
+        >
+          <span className="company-notifications-summary-tab__count">
+            {totalCount}
+          </span>
+          <span>كل الإشعارات</span>
+        </button>
 
-            <input
-              type="search"
-              value={searchTerm}
-              onChange={(event) => onSearchChange(event.target.value)}
-              placeholder="ابحث باسم البلاغ أو نوع الإشعار..."
-              aria-label="البحث في إشعارات الشركة"
-            />
-          </div>
-
-          <CompanyNotificationsFilterSelect
-            value={activeFilter}
-            options={filterOptions}
-            onChange={onFilterChange}
-            ariaLabel="فلترة الإشعارات"
-          />
-        </div>
-
-        <div className="company-notifications-filter-card__mobile-actions">
-          <button
-            type="button"
-            className="company-notifications-open-filters-btn"
-            onClick={onOpenFilters}
-          >
-            <FiSliders />
-            الفلاتر
-            {activeFiltersCount ? <span>{activeFiltersCount}</span> : null}
-          </button>
-
-          <button
-            type="button"
-            className="company-notifications-mark-all-btn"
-            onClick={onMarkAllRead}
-          >
-            <FiCheck />
-            تعليم الكل كمقروء
-          </button>
-        </div>
+        <button
+          type="button"
+          className={`company-notifications-summary-tab ${
+            activeReadFilter === 'unread' ? 'is-active' : ''
+          }`}
+          onClick={() => onReadFilterChange('unread')}
+        >
+          <span className="company-notifications-summary-tab__count">
+            {unreadCount}
+          </span>
+          <span>غير مقروءة</span>
+        </button>
       </div>
     </section>
   );

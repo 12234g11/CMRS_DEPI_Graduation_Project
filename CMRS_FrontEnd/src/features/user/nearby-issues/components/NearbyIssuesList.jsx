@@ -11,7 +11,6 @@ function NearbyIssuesList({
   onClearSelection,
   onToggleFollow,
   onToggleVerify,
-  onToggleRating,
   activeAction = '',
   emptyMessage = 'لا توجد بلاغات قريبة لعرضها حاليًا.',
 }) {
@@ -67,7 +66,6 @@ function NearbyIssuesList({
                 onClearSelection={onClearSelection}
                 onToggleFollow={onToggleFollow}
                 onToggleVerify={onToggleVerify}
-                onToggleRating={onToggleRating}
                 activeAction={activeAction}
                 inline
               />

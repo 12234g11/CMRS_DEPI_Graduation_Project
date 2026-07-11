@@ -444,3 +444,8 @@
 .reports-map__marker--danger {
   background: #ef4444;
 }
+
+/* Company reports can expose a danger tone for reports that cannot be executed. */
+.reports-map__marker--danger {
+  background: #ef7c7c;
+}

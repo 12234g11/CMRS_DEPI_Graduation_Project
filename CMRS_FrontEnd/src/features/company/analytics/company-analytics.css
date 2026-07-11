@@ -408,3 +408,8 @@
     gap: 12px;
   }
 }
+.company-analytics-error-message {
+  margin-top: 10px !important;
+  color: #b42318 !important;
+  font-weight: 900 !important;
+}

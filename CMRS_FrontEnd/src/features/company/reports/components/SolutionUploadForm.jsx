@@ -3,17 +3,23 @@ import {
   FiAlertCircle,
   FiCamera,
   FiCheckCircle,
+  FiEye,
   FiImage,
   FiPlus,
   FiTrash2,
   FiUploadCloud,
 } from 'react-icons/fi';
-
-const MAX_IMAGES = 5;
+import ImagePreviewModal from './ImagePreviewModal';
+import {
+  isDuplicateImage,
+  MAX_REPORT_IMAGES,
+  validateReportImageFile,
+  validateRequiredText,
+} from '../utils/companyReportsValidation';
 
 function createImagePreview(file) {
   return {
-    id: `${file.name}-${file.size}-${Date.now()}-${Math.random()}`,
+    id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
     file,
     name: file.name,
     previewUrl: URL.createObjectURL(file),
@@ -24,69 +30,76 @@ function SolutionUploadForm({ report, onSubmitSolution }) {
   const [note, setNote] = useState('');
   const [selectedImages, setSelectedImages] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
+  const [isConfirmed, setIsConfirmed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
 
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+  const selectedImagesRef = useRef([]);
+
+  useEffect(() => {
+    selectedImagesRef.current = selectedImages;
+  }, [selectedImages]);
 
   useEffect(() => {
     return () => {
-      selectedImages.forEach((image) => {
+      selectedImagesRef.current.forEach((image) => {
         URL.revokeObjectURL(image.previewUrl);
       });
     };
-  }, [selectedImages]);
+  }, []);
 
   if (!report) return null;
 
-  function showError(message) {
-    setError(message);
-  }
-
-  function clearError() {
-    if (error) setError('');
+  function clearFieldError(fieldName) {
+    setErrors((currentErrors) => {
+      if (!currentErrors[fieldName] && !currentErrors.submit) return currentErrors;
+      const nextErrors = { ...currentErrors };
+      delete nextErrors[fieldName];
+      delete nextErrors.submit;
+      return nextErrors;
+    });
   }
 
   function handleFiles(filesList) {
     const incomingFiles = Array.from(filesList || []);
-    const imageFiles = incomingFiles.filter((file) =>
-      file.type.startsWith('image/'),
-    );
 
-    if (!imageFiles.length) {
-      showError('من فضلك اختر ملفات صور فقط.');
-      return;
-    }
+    if (!incomingFiles.length) return;
 
-    setSelectedImages((currentImages) => {
-      const remainingSlots = MAX_IMAGES - currentImages.length;
+    const newErrors = [];
+    const nextImages = [...selectedImages];
 
-      if (remainingSlots <= 0) {
-        showError(`لا يمكن رفع أكثر من ${MAX_IMAGES} صور.`);
-        return currentImages;
+    incomingFiles.forEach((file) => {
+      if (nextImages.length >= MAX_REPORT_IMAGES) {
+        newErrors.push(`لا يمكن رفع أكثر من ${MAX_REPORT_IMAGES} صور.`);
+        return;
       }
 
-      const acceptedImages = imageFiles
-        .slice(0, remainingSlots)
-        .map(createImagePreview);
-
-      if (imageFiles.length > remainingSlots) {
-        showError(`تم إضافة ${remainingSlots} صور فقط. الحد الأقصى ${MAX_IMAGES} صور.`);
-      } else {
-        clearError();
+      const validationError = validateReportImageFile(file);
+      if (validationError) {
+        newErrors.push(validationError);
+        return;
       }
 
-      return [...currentImages, ...acceptedImages];
+      if (isDuplicateImage(file, nextImages)) {
+        newErrors.push(`الصورة "${file.name}" مضافة بالفعل.`);
+        return;
+      }
+
+      nextImages.push(createImagePreview(file));
     });
+
+    setSelectedImages(nextImages);
+    setErrors((currentErrors) => ({
+      ...currentErrors,
+      images: newErrors[0] || '',
+      submit: '',
+    }));
   }
 
   function handleFileInputChange(event) {
-    handleFiles(event.target.files);
-    event.target.value = '';
-  }
-
-  function handleCameraInputChange(event) {
     handleFiles(event.target.files);
     event.target.value = '';
   }
@@ -110,96 +123,122 @@ function SolutionUploadForm({ report, onSubmitSolution }) {
   function handleRemoveImage(imageId) {
     setSelectedImages((currentImages) => {
       const imageToRemove = currentImages.find((image) => image.id === imageId);
-
-      if (imageToRemove) {
-        URL.revokeObjectURL(imageToRemove.previewUrl);
-      }
-
+      if (imageToRemove) URL.revokeObjectURL(imageToRemove.previewUrl);
       return currentImages.filter((image) => image.id !== imageId);
     });
+
+    clearFieldError('images');
+  }
+
+  function validateForm() {
+    const nextErrors = {};
+    const noteError = validateRequiredText(note, {
+      label: 'ملاحظة التنفيذ',
+      minLength: 10,
+      maxLength: 1000,
+    });
+
+    if (noteError) nextErrors.note = noteError;
+
+    if (!selectedImages.length) {
+      nextErrors.images = 'يجب رفع صورة واحدة على الأقل بعد الإصلاح.';
+    }
+
+    if (!isConfirmed) {
+      nextErrors.confirmation = 'يجب تأكيد أن البيانات والصور توضح التنفيذ الفعلي.';
+    }
+
+    setErrors(nextErrors);
+    return !Object.keys(nextErrors).length;
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!note.trim()) {
-      showError('يجب كتابة ملاحظة توضّح ما تم تنفيذه قبل إرسال الحل للأدمن.');
-      return;
-    }
-
-    if (!selectedImages.length) {
-      showError('يجب رفع صورة واحدة على الأقل بعد الإصلاح قبل إرسال الحل للأدمن.');
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsSaving(true);
 
-    await onSubmitSolution?.({
-      note: note.trim(),
+    try {
+      await onSubmitSolution?.({
+        note: note.trim(),
+        files: selectedImages.map((image) => image.file),
+      });
 
-      /*
-        Mock:
-        بنبعت preview URLs عشان تظهر فورًا في الواجهة.
-
-        Real API لاحقًا:
-        استخدم selectedImages.map((image) => image.file)
-        وابعته FormData للباك إند.
-      */
-      images: selectedImages.map((image) => image.previewUrl),
-      files: selectedImages.map((image) => image.file),
-    });
-
-    setIsSaving(false);
-    setNote('');
-    setError('');
-
-    selectedImages.forEach((image) => {
-      URL.revokeObjectURL(image.previewUrl);
-    });
-
-    setSelectedImages([]);
+      selectedImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+      setNote('');
+      setSelectedImages([]);
+      setIsConfirmed(false);
+      setErrors({});
+    } catch (requestError) {
+      setErrors({
+        submit: requestError.message || 'تعذر إرسال الحل للأدمن. حاول مرة أخرى.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
-    <form className="company-solution-form" onSubmit={handleSubmit}>
+    <form className="company-solution-form" onSubmit={handleSubmit} noValidate>
       <header className="company-report-section-header">
         <div>
-          <h2>إرسال الحل للأدمن</h2>
-          <p>بعد الإصلاح، ارفع ملاحظة وصور ليقوم الأدمن بالمراجعة النهائية.</p>
+          <h2>{report.status === 'مطلوب استكمال' ? 'استكمال الحل وإعادة إرساله' : 'إرسال الحل للأدمن'}</h2>
+          <p>
+            اكتب ما تم تنفيذه وارفع صورًا واضحة؛ بعدها ينتقل البلاغ لمراجعة الأدمن.
+          </p>
         </div>
 
-        <button
-          type="button"
-          className="company-solution-header-upload-btn"
-          onClick={() => fileInputRef.current?.click()}
-          aria-label="إضافة صور بعد الإصلاح"
-          title="إضافة صور"
-        >
+        <span>
           <FiUploadCloud />
-        </button>
+        </span>
       </header>
 
+      {report.status === 'مطلوب استكمال' && report.adminReview?.note ? (
+        <div className="company-solution-required-note">
+          <FiAlertCircle />
+          <div>
+            <strong>ملاحظة الأدمن المطلوب تنفيذها</strong>
+            <p>{report.adminReview.note}</p>
+          </div>
+        </div>
+      ) : null}
+
       <label className="company-report-form-field">
-        ملاحظة التنفيذ
+        <span>
+          ملاحظة التنفيذ <b>*</b>
+        </span>
 
         <textarea
           value={note}
           onChange={(event) => {
-            setNote(event.target.value);
-            clearError();
+            setNote(event.target.value.slice(0, 1000));
+            clearFieldError('note');
           }}
-          rows={4}
-          placeholder="مثال: تم تغيير الكشاف وتشغيل الإنارة واختبارها بنجاح..."
+          onBlur={() => {
+            const validationError = validateRequiredText(note, {
+              label: 'ملاحظة التنفيذ',
+              minLength: 10,
+              maxLength: 1000,
+            });
+            setErrors((currentErrors) => ({ ...currentErrors, note: validationError }));
+          }}
+          rows={5}
+          placeholder="اكتب بالتفصيل ما تم إصلاحه، وما تم تغييره، وكيف تم التأكد من نجاح التنفيذ..."
+          aria-invalid={Boolean(errors.note)}
         />
+
+        <small className="company-report-field-counter">{note.length} / 1000</small>
+        {errors.note ? <small className="company-report-field-error">{errors.note}</small> : null}
       </label>
 
       <div className="company-report-form-field">
-        <span>صور بعد الإصلاح</span>
+        <span>
+          صور ما بعد الإصلاح <b>*</b>
+        </span>
 
         <div
-          className={`company-solution-upload-zone ${
-            isDragging ? 'is-dragging' : ''
-          }`}
+          className={`company-solution-upload-zone ${isDragging ? 'is-dragging' : ''}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -207,7 +246,7 @@ function SolutionUploadForm({ report, onSubmitSolution }) {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
             multiple
             className="company-solution-upload-input"
             onChange={handleFileInputChange}
@@ -216,10 +255,10 @@ function SolutionUploadForm({ report, onSubmitSolution }) {
           <input
             ref={cameraInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
             capture="environment"
             className="company-solution-upload-input"
-            onChange={handleCameraInputChange}
+            onChange={handleFileInputChange}
           />
 
           <button
@@ -232,22 +271,16 @@ function SolutionUploadForm({ report, onSubmitSolution }) {
           </button>
 
           <div className="company-solution-upload-content">
-            <strong>اضغط لإضافة صورة أو اسحب الصور هنا</strong>
-            <p>يمكنك رفع صور من الجهاز أو فتح الكاميرا للتصوير المباشر.</p>
+            <strong>اسحب الصور هنا أو اخترها من جهازك</strong>
+            <p>JPG أو JPEG أو PNG أو WEBP، وبحد أقصى 5 ميجابايت للصورة.</p>
 
             <div className="company-solution-upload-actions">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-              >
+              <button type="button" onClick={() => fileInputRef.current?.click()}>
                 <FiImage />
                 اختيار صور
               </button>
 
-              <button
-                type="button"
-                onClick={() => cameraInputRef.current?.click()}
-              >
+              <button type="button" onClick={() => cameraInputRef.current?.click()}>
                 <FiCamera />
                 فتح الكاميرا
               </button>
@@ -256,9 +289,9 @@ function SolutionUploadForm({ report, onSubmitSolution }) {
         </div>
 
         <small className="company-solution-upload-limit">
-          الحد الأقصى {MAX_IMAGES} صور. يفضل رفع صورة واضحة بعد الإصلاح، وصورة
-          إضافية من زاوية مختلفة عند الحاجة.
+          {selectedImages.length} من {MAX_REPORT_IMAGES} صور مضافة.
         </small>
+        {errors.images ? <small className="company-report-field-error">{errors.images}</small> : null}
       </div>
 
       {selectedImages.length ? (
@@ -267,45 +300,64 @@ function SolutionUploadForm({ report, onSubmitSolution }) {
             <article key={image.id} className="company-solution-image-preview">
               <img src={image.previewUrl} alt={image.name} />
 
-              <button
-                type="button"
-                onClick={() => handleRemoveImage(image.id)}
-                aria-label="حذف الصورة"
-              >
-                <FiTrash2 />
-              </button>
+              <div className="company-solution-image-preview__overlay">
+                <button
+                  type="button"
+                  onClick={() => setPreviewImage({ url: image.previewUrl, alt: image.name })}
+                  aria-label={`معاينة ${image.name}`}
+                >
+                  <FiEye />
+                  معاينة
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleRemoveImage(image.id)}
+                  aria-label={`حذف ${image.name}`}
+                >
+                  <FiTrash2 />
+                  حذف
+                </button>
+              </div>
             </article>
           ))}
         </div>
       ) : null}
 
-      {error ? (
-        <p className="company-report-form-error">
+      <label className="company-report-confirmation">
+        <input
+          type="checkbox"
+          checked={isConfirmed}
+          onChange={(event) => {
+            setIsConfirmed(event.target.checked);
+            clearFieldError('confirmation');
+          }}
+        />
+        <span>أؤكد أن الملاحظة والصور توضح التنفيذ الفعلي للبلاغ.</span>
+      </label>
+      {errors.confirmation ? <small className="company-report-field-error">{errors.confirmation}</small> : null}
+
+      {errors.submit ? (
+        <p className="company-report-form-error" role="alert">
           <FiAlertCircle />
-          {error}
+          {errors.submit}
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        className="company-submit-solution-btn"
-        disabled={isSaving}
-      >
+      <button type="submit" className="company-submit-solution-btn" disabled={isSaving}>
         <FiCheckCircle />
-        {isSaving ? 'جاري إرسال الحل...' : 'إرسال الحل للأدمن'}
+        {isSaving ? 'جاري إرسال الحل...' : 'إرسال الحل لمراجعة الأدمن'}
       </button>
 
       <p className="company-solution-form__hint">
-        بعد الإرسال ستتحول حالة البلاغ إلى: بانتظار مراجعة الأدمن.
+        لن يتحول البلاغ إلى «تم الحل» إلا بعد اعتماد الأدمن للصور والملاحظة.
       </p>
 
-      <div className="company-solution-form__images-hint">
-        <FiImage />
-        <span>
-          في النسخة الحقيقية سيتم رفع الصور للباك إند كملفات فعلية باستخدام
-          FormData.
-        </span>
-      </div>
+      <ImagePreviewModal
+        imageUrl={previewImage?.url}
+        alt={previewImage?.alt}
+        onClose={() => setPreviewImage(null)}
+      />
     </form>
   );
 }
