@@ -113,57 +113,62 @@
 
 /* Custom Stats Cards */
 
-.company-profile-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.company-profile-stat-card {
-  min-height: 132px;
-  padding: 18px;
-  border: 1px solid rgba(2, 95, 72, 0.08);
-  border-radius: 22px;
-  background: #fff;
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  overflow: hidden;
-}
-
-.company-profile-stat-card__content {
-  min-width: 0;
-  display: grid;
-  gap: 5px;
+.company-profile-alert {
+  padding: 14px 16px;
+  border: 1px solid rgba(176, 0, 32, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 235, 238, 0.78);
+  color: #9f1239;
+  font-size: 0.88rem;
+  font-weight: 900;
   text-align: right;
 }
 
-.company-profile-stat-card__content h3 {
-  margin: 0;
-  color: var(--color-text);
-  font-size: 0.95rem;
-  font-weight: 950;
-  line-height: 1.4;
+.company-profile-stats-grid {
+  direction: rtl;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
 }
 
-.company-profile-stat-card__content p {
-  margin: 0;
-  color: var(--color-subtitle);
-  font-size: 0.74rem;
-  font-weight: 850;
+.company-profile-stat-card {
+  direction: rtl;
+  min-height: 104px;
+  padding: 16px 18px;
+  border: 1px solid rgba(2, 95, 72, 0.07);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 252, 250, 0.96));
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.065);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "value content icon";
+  align-items: center;
+  gap: 13px;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
-.company-profile-stat-card__content strong {
-  margin-top: 12px;
-  color: var(--color-primary);
-  font-size: 1.75rem;
-  font-weight: 950;
-  line-height: 1;
+.company-profile-stat-card::before {
+  content: '';
+  position: absolute;
+  inset-block: 18px;
+  inset-inline-end: 0;
+  width: 4px;
+  border-radius: 999px 0 0 999px;
+  background: rgba(90, 107, 255, 0.75);
+  opacity: 0.85;
+}
+
+.company-profile-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.095);
+  border-color: rgba(2, 95, 72, 0.12);
 }
 
 .company-profile-stat-card__icon {
+  grid-area: icon;
   width: 46px;
   height: 46px;
   border-radius: 15px;
@@ -175,6 +180,65 @@
 .company-profile-stat-card__icon svg {
   width: 22px;
   height: 22px;
+  stroke-width: 2.45;
+}
+
+.company-profile-stat-card__content {
+  grid-area: content;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  align-content: center;
+  text-align: right;
+}
+
+.company-profile-stat-card__content h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.98rem;
+  font-weight: 950;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.company-profile-stat-card__content p {
+  margin: 0;
+  color: var(--color-subtitle);
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.company-profile-stat-card__value {
+  grid-area: value;
+  min-width: 42px;
+  color: var(--color-primary);
+  font-size: 1.62rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  justify-self: end;
+}
+
+.company-profile-stat-card--primary::before {
+  background: rgba(90, 107, 255, 0.75);
+}
+
+.company-profile-stat-card--info::before {
+  background: rgba(67, 82, 219, 0.75);
+}
+
+.company-profile-stat-card--warning::before {
+  background: rgba(177, 120, 0, 0.75);
+}
+
+.company-profile-stat-card--success::before {
+  background: rgba(33, 133, 64, 0.75);
 }
 
 .company-profile-stat-card--primary .company-profile-stat-card__icon {
@@ -197,19 +261,19 @@
   color: #218540;
 }
 
-.company-profile-stat-card--primary .company-profile-stat-card__content strong {
+.company-profile-stat-card--primary .company-profile-stat-card__value {
   color: #5a6bff;
 }
 
-.company-profile-stat-card--info .company-profile-stat-card__content strong {
+.company-profile-stat-card--info .company-profile-stat-card__value {
   color: #4352db;
 }
 
-.company-profile-stat-card--warning .company-profile-stat-card__content strong {
+.company-profile-stat-card--warning .company-profile-stat-card__value {
   color: #b17800;
 }
 
-.company-profile-stat-card--success .company-profile-stat-card__content strong {
+.company-profile-stat-card--success .company-profile-stat-card__value {
   color: #218540;
 }
 
@@ -399,35 +463,43 @@
   }
 
   .company-profile-stat-card {
-    min-height: 150px;
-    padding: 18px 16px;
-    display: grid;
-    grid-template-columns: 1fr;
-    justify-items: center;
-    align-items: center;
-    text-align: center;
-    gap: 12px;
+    min-height: 92px;
+    padding: 14px 15px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "value content icon";
+    gap: 11px;
+  }
+
+  .company-profile-stat-card::before {
+    inset-block: 16px;
   }
 
   .company-profile-stat-card__icon {
-    margin-inline: auto;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+  }
+
+  .company-profile-stat-card__icon svg {
+    width: 20px;
+    height: 20px;
   }
 
   .company-profile-stat-card__content {
-    width: 100%;
-    justify-items: center;
-    text-align: center;
+    width: auto;
+    justify-items: stretch;
+    text-align: right;
   }
 
   .company-profile-stat-card__content h3,
-  .company-profile-stat-card__content p,
-  .company-profile-stat-card__content strong {
+  .company-profile-stat-card__content p {
     width: 100%;
-    text-align: center;
+    text-align: right;
   }
 
-  .company-profile-stat-card__content strong {
-    margin-top: 8px;
+  .company-profile-stat-card__value {
+    min-width: 36px;
+    font-size: 1.46rem;
   }
 
   .company-profile-card {

@@ -15,6 +15,7 @@ import ForgotPasswordPage from '../features/auth/pages/ForgotPasswordPage';
 import CompanySetupPasswordPage from '../features/auth/pages/CompanySetupPasswordPage';
 import AddReportPage from '../features/user/add-report/pages/AddReportPage';
 import MyReportsPage from '../features/user/reports/pages/MyReportsPage';
+import FollowedReportsPage from '../features/user/followed-reports/pages/FollowedReportsPage';
 import NearbyIssuesPage from '../features/user/nearby-issues/pages/NearbyIssuesPage';
 import UserNotificationsPage from '../features/user/notifications/pages/UserNotificationsPage';
 import UserProfilePage from '../features/user/profile/pages/UserProfilePage';
@@ -66,6 +67,10 @@ function AppRouter() {
             />
             <Route path={ROUTES.ADD_REPORT} element={<AddReportPage />} />
             <Route path={ROUTES.MY_REPORTS} element={<MyReportsPage />} />
+            <Route
+              path={ROUTES.FOLLOWED_REPORTS}
+              element={<FollowedReportsPage />}
+            />
             <Route path={ROUTES.NEARBY_ISSUES} element={<NearbyIssuesPage />} />
             <Route path={ROUTES.NOTIFICATIONS} element={<UserNotificationsPage />} />
             <Route path={ROUTES.PROFILE} element={<UserProfilePage />} />

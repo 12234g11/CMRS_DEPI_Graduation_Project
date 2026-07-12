@@ -1,6 +1,5 @@
 import {
   FiBriefcase,
-  FiHash,
   FiMapPin,
   FiUser,
 } from 'react-icons/fi';
@@ -12,29 +11,17 @@ function CompanyProfileInfoCard({ profile }) {
     {
       icon: <FiBriefcase />,
       label: 'الاسم التجاري',
-      value: profile.commercialName,
-    },
-    {
-      icon: <FiHash />,
-      label: 'رقم السجل التجاري',
-      value: profile.registrationNumber,
-      isLtr: true,
-    },
-    {
-      icon: <FiHash />,
-      label: 'الرقم الضريبي',
-      value: profile.taxNumber,
-      isLtr: true,
+      value: profile.commercialName || 'غير متوفر',
     },
     {
       icon: <FiMapPin />,
       label: 'المحافظة',
-      value: profile.governorate,
+      value: profile.governorate || 'غير متوفر',
     },
     {
       icon: <FiUser />,
       label: 'مسؤول التشغيل',
-      value: profile.contactPerson.name,
+      value: profile.contactPerson?.name || 'غير متوفر',
     },
   ];
 

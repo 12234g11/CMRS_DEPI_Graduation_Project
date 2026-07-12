@@ -1757,3 +1757,10 @@
 .company-notifications-filter-sheet__backdrop {
   font-family: inherit;
 }
+
+.company-notification-item__action:disabled,
+.company-notification-item__delete:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  pointer-events: none;
+}

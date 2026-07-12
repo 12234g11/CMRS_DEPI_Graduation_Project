@@ -1,73 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getUserReports,
-  REPORT_STATUS_API_VALUES,
+  getUserReportStats,
 } from '../api/userReportsApi';
 
-function buildDashboardStats(reports = [], totalCount = reports.length) {
-  const pendingReports = reports.filter((report) => {
-    return [
-      REPORT_STATUS_API_VALUES.underReview,
-      REPORT_STATUS_API_VALUES.pendingAdminApproval,
-      REPORT_STATUS_API_VALUES.needsCompletion,
-    ].includes(report.statusKey);
-  }).length;
-
-  const inProgressReports = reports.filter((report) => {
-    return [
-      REPORT_STATUS_API_VALUES.accepted,
-      REPORT_STATUS_API_VALUES.assigned,
-      REPORT_STATUS_API_VALUES.inProgress,
-      REPORT_STATUS_API_VALUES.unableToExecute,
-    ].includes(report.statusKey);
-  }).length;
-
-  const solvedReports = reports.filter((report) => {
-    return report.statusKey === REPORT_STATUS_API_VALUES.resolved;
-  }).length;
-
-  return [
-    {
-      id: 'total',
-      title: 'البلاغات المقدمة',
-      subtitle: 'Total Reports',
-      value: totalCount,
-      tone: 'primary',
-    },
-    {
-      id: 'pending',
-      title: 'قيد المراجعة',
-      subtitle: 'Under Review / Needs Action',
-      value: pendingReports,
-      tone: 'warning',
-    },
-    {
-      id: 'in-progress',
-      title: 'جاري التنفيذ',
-      subtitle: 'Accepted / Assigned / In Progress',
-      value: inProgressReports,
-      tone: 'info',
-    },
-    {
-      id: 'solved',
-      title: 'تم الحل',
-      subtitle: 'Resolved',
-      value: solvedReports,
-      tone: 'success',
-    },
-  ];
-}
-
-function isRejectedReport(report = {}) {
-  return (
-    report.statusKey === REPORT_STATUS_API_VALUES.rejected ||
-    report.statusTone === 'danger'
-  );
-}
+const EMPTY_DASHBOARD_STATS = {
+  totalReports: 0,
+  statusCards: [],
+};
 
 function buildMapMarkers(reports = []) {
   return reports
-    .filter((report) => !isRejectedReport(report))
     .filter((report) => report.position?.lat && report.position?.lng)
     .map((report) => ({
       id: `mine-${report.reportId || report.id}`,
@@ -102,6 +45,7 @@ export function useUserReports(userId, pageNumberOrOptions = 1) {
   const { pageNumber = 1, pageSize = 10 } = options;
 
   const [reports, setReports] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState(EMPTY_DASHBOARD_STATS);
 
   const [pagination, setPagination] = useState({
     totalCount: 0,
@@ -111,7 +55,9 @@ export function useUserReports(userId, pageNumberOrOptions = 1) {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isStatsLoading, setIsStatsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [statsErrorMessage, setStatsErrorMessage] = useState('');
 
   const loadReports = useCallback(async () => {
     if (!userId) {
@@ -157,21 +103,48 @@ export function useUserReports(userId, pageNumberOrOptions = 1) {
     }
   }, [userId, pageNumber, pageSize]);
 
+  const loadStats = useCallback(async () => {
+    if (!userId) {
+      setDashboardStats(EMPTY_DASHBOARD_STATS);
+      setStatsErrorMessage('');
+      return;
+    }
+
+    try {
+      setIsStatsLoading(true);
+      setStatsErrorMessage('');
+
+      const stats = await getUserReportStats();
+      setDashboardStats(stats || EMPTY_DASHBOARD_STATS);
+    } catch (error) {
+      setDashboardStats(EMPTY_DASHBOARD_STATS);
+      setStatsErrorMessage(
+        error?.message || 'تعذر تحميل إحصائيات البلاغات حاليًا.'
+      );
+    } finally {
+      setIsStatsLoading(false);
+    }
+  }, [userId]);
+
   useEffect(() => {
     loadReports();
   }, [loadReports]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   const recentReports = useMemo(() => {
     return reports.slice(0, 3);
   }, [reports]);
 
-  const dashboardStats = useMemo(() => {
-    return buildDashboardStats(reports, pagination.totalCount);
-  }, [reports, pagination.totalCount]);
-
   const mapMarkers = useMemo(() => {
     return buildMapMarkers(reports);
   }, [reports]);
+
+  const refreshReports = useCallback(async () => {
+    await Promise.all([loadReports(), loadStats()]);
+  }, [loadReports, loadStats]);
 
   return {
     reports,
@@ -180,8 +153,11 @@ export function useUserReports(userId, pageNumberOrOptions = 1) {
     mapMarkers,
     pagination,
     isLoading,
+    isStatsLoading,
     errorMessage,
-    refreshReports: loadReports,
+    statsErrorMessage,
+    refreshReports,
+    refreshStats: loadStats,
   };
 }
 

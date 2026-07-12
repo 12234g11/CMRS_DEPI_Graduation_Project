@@ -9,9 +9,38 @@ export const userProfileFallback = {
   trustScore: 87,
   stats: {
     totalReports: 24,
-    solvedReports: 18,
-    pendingReports: 4,
-    rejectedReports: 2,
+    statusCards: [
+      {
+        statusKey: 'UnableToExecute',
+        displayName: 'متعذر التنفيذ',
+        count: 1,
+        color: 'secondary',
+      },
+      {
+        statusKey: 'Resolved',
+        displayName: 'تم الحل',
+        count: 18,
+        color: 'success',
+      },
+      {
+        statusKey: 'Rejected',
+        displayName: 'مرفوض',
+        count: 2,
+        color: 'danger',
+      },
+      {
+        statusKey: 'UnderReview',
+        displayName: 'قيد المراجعة',
+        count: 2,
+        color: 'warning',
+      },
+      {
+        statusKey: 'InProgress',
+        displayName: 'جاري التنفيذ',
+        count: 1,
+        color: 'primary',
+      },
+    ],
     helpfulVotes: 156,
     reportsAccuracy: 92,
     communityParticipation: 78,

@@ -72,7 +72,13 @@ function UpdateReportStatusForm({
 
   if (!report) return null;
 
-  const canStart = report.status === 'تم التعيين';
+  const isReturnedCannotFix =
+    report.status === 'مطلوب استكمال' &&
+    report.companyResponse?.status === 'cannot_fix' &&
+    ['cannot_fix_rejected', 'needs_completion', 'rejected'].includes(
+      report.adminReview?.status,
+    );
+  const canStart = report.status === 'تم التعيين' || isReturnedCannotFix;
   const canSendCannotFix = ['تم التعيين', 'جاري التنفيذ', 'مطلوب استكمال'].includes(
     report.status,
   );
@@ -145,7 +151,9 @@ function UpdateReportStatusForm({
     }
 
     const isConfirmed = window.confirm(
-      'هل أنت متأكد من بدء تنفيذ البلاغ؟ ستتغير الحالة إلى جاري التنفيذ، وستُرفع صور المعاينة المضافة كدليل بدء.',
+      isReturnedCannotFix
+        ? 'هل أنت متأكد من استئناف تنفيذ البلاغ بعد رفض طلب التعذر؟ ستتغير الحالة إلى جاري التنفيذ.'
+        : 'هل أنت متأكد من بدء تنفيذ البلاغ؟ ستتغير الحالة إلى جاري التنفيذ، وستُرفع صور المعاينة المضافة كدليل بدء.',
     );
 
     if (!isConfirmed) return;
@@ -260,9 +268,11 @@ function UpdateReportStatusForm({
         <div className="company-start-work-panel">
           <div className="company-start-work-panel__intro">
             <div>
-              <strong>بدء تنفيذ البلاغ</strong>
+              <strong>{isReturnedCannotFix ? 'استئناف تنفيذ البلاغ' : 'بدء تنفيذ البلاغ'}</strong>
               <p>
-                اختر فرقة الصيانة أولًا، ثم أضف ملاحظة وصور المعاينة قبل تغيير الحالة إلى جاري التنفيذ.
+                {isReturnedCannotFix
+                  ? 'راجع ملاحظات الأدمن ثم أضف تحديثًا وصورًا اختيارية لاستئناف التنفيذ.'
+                  : 'اختر فرقة الصيانة أولًا، ثم أضف ملاحظة وصور المعاينة قبل تغيير الحالة إلى جاري التنفيذ.'}
               </p>
             </div>
 
@@ -293,7 +303,7 @@ function UpdateReportStatusForm({
 
           <label className="company-report-form-field">
             <span>
-              ملاحظة بدء التنفيذ <small>(اختيارية)</small>
+              {isReturnedCannotFix ? 'ملاحظة استئناف التنفيذ' : 'ملاحظة بدء التنفيذ'} <small>(اختيارية)</small>
             </span>
             <textarea
               value={startNote}
@@ -302,7 +312,11 @@ function UpdateReportStatusForm({
                 clearFieldError('startNote');
               }}
               rows={3}
-              placeholder="مثال: تمت معاينة الموقع وبدأ تجهيز الأدوات المطلوبة..."
+              placeholder={
+                isReturnedCannotFix
+                  ? 'مثال: تم استلام ملاحظات الأدمن والتنسيق لاستكمال العمل...'
+                  : 'مثال: تمت معاينة الموقع وبدأ تجهيز الأدوات المطلوبة...'
+              }
             />
             <small className="company-report-field-counter">
               {startNote.length} / 500
@@ -408,8 +422,12 @@ function UpdateReportStatusForm({
           >
             <FiPlayCircle />
             {isSavingAction === 'start'
-              ? 'جاري بدء التنفيذ ورفع الدليل...'
-              : 'تأكيد بدء التنفيذ'}
+              ? isReturnedCannotFix
+                ? 'جاري استئناف التنفيذ...'
+                : 'جاري بدء التنفيذ ورفع الدليل...'
+              : isReturnedCannotFix
+                ? 'استئناف التنفيذ'
+                : 'تأكيد بدء التنفيذ'}
           </button>
         </div>
       ) : null}

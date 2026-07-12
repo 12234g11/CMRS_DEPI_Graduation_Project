@@ -425,16 +425,20 @@
 
 .user-profile-trust__summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   gap: 10px;
 }
 
-.user-profile-trust__summary article {
-  min-height: 86px;
+.user-profile-trust__summary-card {
+  --summary-color: var(--color-primary);
+  --summary-background: rgba(2, 95, 72, 0.055);
+  --summary-border: rgba(2, 95, 72, 0.12);
+
+  min-height: 106px;
   padding: 13px;
-  border: 1px solid rgba(2, 95, 72, 0.08);
+  border: 1px solid var(--summary-border);
   border-radius: 18px;
-  background: rgba(248, 252, 249, 0.84);
+  background: linear-gradient(145deg, #ffffff 0%, var(--summary-background) 100%);
   display: grid;
   place-items: center;
   align-content: center;
@@ -442,17 +446,63 @@
   text-align: center;
 }
 
-.user-profile-trust__summary strong {
-  color: var(--color-primary);
-  font-size: 1.55rem;
+.user-profile-trust__summary-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--summary-background);
+  color: var(--summary-color) !important;
+  display: grid;
+  place-items: center;
+}
+
+.user-profile-trust__summary-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.user-profile-trust__summary-card strong {
+  color: var(--summary-color);
+  font-size: 1.5rem;
   font-weight: 950;
   line-height: 1;
 }
 
-.user-profile-trust__summary span {
+.user-profile-trust__summary-card > span:last-child {
   color: var(--color-subtitle);
   font-size: 0.78rem;
   font-weight: 800;
+  line-height: 1.5;
+}
+
+.user-profile-trust__summary-card--secondary {
+  --summary-color: #64748b;
+  --summary-background: rgba(100, 116, 139, 0.09);
+  --summary-border: rgba(100, 116, 139, 0.18);
+}
+
+.user-profile-trust__summary-card--success {
+  --summary-color: #15803d;
+  --summary-background: rgba(34, 197, 94, 0.09);
+  --summary-border: rgba(34, 197, 94, 0.2);
+}
+
+.user-profile-trust__summary-card--danger {
+  --summary-color: #dc2626;
+  --summary-background: rgba(239, 68, 68, 0.08);
+  --summary-border: rgba(239, 68, 68, 0.18);
+}
+
+.user-profile-trust__summary-card--warning {
+  --summary-color: #d97706;
+  --summary-background: rgba(245, 158, 11, 0.1);
+  --summary-border: rgba(245, 158, 11, 0.2);
+}
+
+.user-profile-trust__summary-card--info {
+  --summary-color: #0284c7;
+  --summary-background: rgba(14, 165, 233, 0.09);
+  --summary-border: rgba(14, 165, 233, 0.18);
 }
 
 .user-profile-metrics-grid {

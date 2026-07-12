@@ -125,8 +125,8 @@ function CompanyReportDetailsPage() {
 
   const workflowStep = useMemo(() => getWorkflowStep(report), [report]);
   const adminReviewPresentation = useMemo(
-    () => getAdminReviewPresentation(report?.adminReview),
-    [report?.adminReview],
+    () => getAdminReviewPresentation(report?.adminReview, report?.companyResponse),
+    [report?.adminReview, report?.companyResponse],
   );
 
   async function handleStartWork(payload = {}) {
@@ -189,12 +189,19 @@ function CompanyReportDetailsPage() {
   const isCannotFixAccepted =
     report.status === 'متعذر التنفيذ' ||
     report.adminReview?.status === 'cannot_fix_accepted';
+  const isReassigned = report.adminReview?.status === 'reassigned';
+  const isCannotFixRejected =
+    ['cannot_fix_rejected', 'needs_completion'].includes(report.adminReview?.status) &&
+    report.companyResponse?.status === 'cannot_fix';
   const isResolved =
     report.status === 'تم الحل' ||
     report.adminReview?.status === 'accepted' ||
-    isCannotFixAccepted;
+    isCannotFixAccepted ||
+    isReassigned;
   const canSubmitSolution =
-    !isResolved && ['جاري التنفيذ', 'مطلوب استكمال'].includes(report.status);
+    !isResolved &&
+    !isCannotFixRejected &&
+    ['جاري التنفيذ', 'مطلوب استكمال'].includes(report.status);
   const isWaitingForAdmin =
     !isResolved && report.status === 'بانتظار مراجعة الأدمن';
   const canManageExecution =
@@ -317,7 +324,9 @@ function CompanyReportDetailsPage() {
         {report.status === 'مطلوب استكمال' ? (
           <div className="company-report-workflow-returned">
             <FiAlertCircle />
-            أعاد الأدمن البلاغ للاستكمال. راجع سبب الإعادة وملاحظاته والرد السابق قبل الإرسال مرة أخرى.
+            {isCannotFixRejected
+              ? 'رفض الأدمن طلب تعذر التنفيذ. راجع ملاحظاته ثم استأنف العمل على البلاغ.'
+              : 'أعاد الأدمن البلاغ للاستكمال. راجع سبب الإعادة وملاحظاته والرد السابق قبل الإرسال مرة أخرى.'}
           </div>
         ) : null}
       </section>
@@ -357,6 +366,12 @@ function CompanyReportDetailsPage() {
               <div className="company-admin-decision-card__content">
                 <strong>{adminReviewPresentation.title}</strong>
                 <p>{adminReviewPresentation.description}</p>
+                {report.adminReview.userMessage ? (
+                  <div className="company-admin-decision-card__public-message">
+                    <strong>الرسالة العامة للمستخدم</strong>
+                    <p>{report.adminReview.userMessage}</p>
+                  </div>
+                ) : null}
                 {report.adminReview.reviewedAt ? (
                   <small>
                     <FiClock />
@@ -411,6 +426,34 @@ function CompanyReportDetailsPage() {
                   altPrefix="صورة الرد السابق"
                   emptyText="لم يتم إرفاق صور مع هذا الرد."
                 />
+              </div>
+            </section>
+          ) : null}
+
+          {report.companySubmissions?.length > 1 ? (
+            <section className="company-report-details-card company-submission-history-card">
+              <header className="company-report-section-header">
+                <div>
+                  <h2>سجل ردود الشركة</h2>
+                  <p>كل الردود السابقة محفوظة بالترتيب ولا يتم استبدالها.</p>
+                </div>
+                <span>
+                  <FiFileText />
+                </span>
+              </header>
+
+              <div className="company-submission-history-list">
+                {report.companySubmissions.map((submission, index) => (
+                  <article key={submission.id || `${submission.submittedAt}-${index}`}>
+                    <div>
+                      <strong>{submission.statusLabel || 'رد الشركة'}</strong>
+                      <small>{formatEgyptDateTime(submission.submittedAt)}</small>
+                    </div>
+                    {submission.reason ? <p><b>السبب:</b> {submission.reason}</p> : null}
+                    {submission.note ? <p>{submission.note}</p> : null}
+                    {submission.reviewLabel ? <span>{submission.reviewLabel}</span> : null}
+                  </article>
+                ))}
               </div>
             </section>
           ) : null}
@@ -477,8 +520,16 @@ function CompanyReportDetailsPage() {
             <section className="company-report-details-card company-report-waiting-card">
               <FiClock />
               <div>
-                <h2>تم إرسال الرد للأدمن</h2>
-                <p>لا يلزم اتخاذ إجراء الآن. سيظهر هنا قرار الأدمن سواء بقبول الحل أو طلب استكماله.</p>
+                <h2>
+                  {report.companyResponse?.status === 'cannot_fix'
+                    ? 'تم إرسال طلب تعذر التنفيذ للأدمن'
+                    : 'تم إرسال الرد للأدمن'}
+                </h2>
+                <p>
+                  {report.companyResponse?.status === 'cannot_fix'
+                    ? 'لا يلزم اتخاذ إجراء الآن. سيقرر الأدمن قبول الاعتذار أو إعادة الإسناد أو رفض الطلب وطلب الاستكمال.'
+                    : 'لا يلزم اتخاذ إجراء الآن. سيظهر هنا قرار الأدمن سواء بقبول الحل أو طلب استكماله.'}
+                </p>
               </div>
             </section>
           ) : null}
@@ -487,11 +538,19 @@ function CompanyReportDetailsPage() {
             <section className="company-report-details-card company-report-resolved-card">
               <FiCheckCircle />
               <div>
-                <h2>{isCannotFixAccepted ? 'تم اعتماد تعذر التنفيذ' : 'تم اعتماد الحل وإغلاق البلاغ'}</h2>
+                <h2>
+                  {isReassigned
+                    ? 'تم تحويل البلاغ إلى شركة أخرى'
+                    : isCannotFixAccepted
+                      ? 'تم اعتماد تعذر التنفيذ'
+                      : 'تم اعتماد الحل وإغلاق البلاغ'}
+                </h2>
                 <p>
-                  {isCannotFixAccepted
-                    ? 'راجع الأدمن سبب التعذر واعتمده، ولا يلزم اتخاذ إجراء إضافي.'
-                    : 'راجع الأدمن التنفيذ وقبل الحل النهائي بنجاح.'}
+                  {isReassigned
+                    ? 'قبل الأدمن طلب التعذر وأنهى إسناد البلاغ لهذه الشركة، وسيتم استكماله عن طريق جهة تنفيذ بديلة.'
+                    : isCannotFixAccepted
+                      ? 'راجع الأدمن سبب التعذر واعتمده، ولا يلزم اتخاذ إجراء إضافي.'
+                      : 'راجع الأدمن التنفيذ وقبل الحل النهائي بنجاح.'}
                 </p>
               </div>
             </section>

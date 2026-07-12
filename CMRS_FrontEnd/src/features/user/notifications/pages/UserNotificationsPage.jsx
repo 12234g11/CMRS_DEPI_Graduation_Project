@@ -1,16 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import {
-  FiAlertTriangle,
-  FiCalendar,
   FiCheck,
   FiChevronDown,
-  FiClock,
-  FiFileText,
   FiFilter,
-  FiMapPin,
-  FiMessageSquare,
   FiRefreshCcw,
-  FiTool,
   FiX,
 } from 'react-icons/fi';
 import PageHeader from '../../../../shared/components/ui/PageHeader';
@@ -18,7 +13,6 @@ import { useAuth } from '../../../auth/hooks/useAuth';
 import NotificationsList from '../components/NotificationsList';
 import {
   deleteUserNotification,
-  getNotificationReportDetails,
   getUserNotifications,
   markAllUserNotificationsAsRead,
   markUserNotificationAsRead,
@@ -71,14 +65,6 @@ const READ_FILTERS = {
 
 const PAGE_SIZE = 10;
 
-const EMPTY_REPORT_MODAL_STATE = {
-  isOpen: false,
-  notification: null,
-  report: null,
-  isLoading: false,
-  errorMessage: '',
-};
-
 function resolveUserId(user) {
   return user?.id || user?.userId || user?.UserId || user?.sub || '';
 }
@@ -116,336 +102,8 @@ function getTypeCount({
   return 0;
 }
 
-function parseDate(value) {
-  if (!value) return null;
-
-  const rawDate = String(value).trim();
-  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(rawDate);
-  const normalizedDate = hasTimezone ? rawDate : `${rawDate}Z`;
-  const parsedDate = new Date(normalizedDate);
-
-  if (!Number.isNaN(parsedDate.getTime())) return parsedDate;
-
-  const fallbackDate = new Date(rawDate);
-
-  return Number.isNaN(fallbackDate.getTime()) ? null : fallbackDate;
-}
-
-function formatDateTime(value) {
-  const date = parseDate(value);
-
-  if (!date) return '—';
-
-  return date.toLocaleString('ar-EG', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function getImageUrl(image) {
-  return image?.imageUrl || image?.thumbnailUrl || '';
-}
-
-function getStatusTone(status = '') {
-  const normalizedStatus = String(status || '').toLowerCase();
-
-  if (
-    normalizedStatus.includes('resolved') ||
-    normalizedStatus.includes('completed') ||
-    normalizedStatus.includes('closed') ||
-    normalizedStatus.includes('solved') ||
-    normalizedStatus.includes('حل')
-  ) {
-    return 'success';
-  }
-
-  if (
-    normalizedStatus.includes('rejected') ||
-    normalizedStatus.includes('رفض') ||
-    normalizedStatus.includes('cancel')
-  ) {
-    return 'danger';
-  }
-
-  if (
-    normalizedStatus.includes('progress') ||
-    normalizedStatus.includes('assigned') ||
-    normalizedStatus.includes('review') ||
-    normalizedStatus.includes('متابعة') ||
-    normalizedStatus.includes('تنفيذ') ||
-    normalizedStatus.includes('مراجعة')
-  ) {
-    return 'warning';
-  }
-
-  return 'primary';
-}
-
-function ReportInfoCard({ icon, label, value }) {
-  return (
-    <div className="notification-report-modal__info-card">
-      <span className="notification-report-modal__info-icon">{icon}</span>
-      <span>{label}</span>
-      <strong>{value || '—'}</strong>
-    </div>
-  );
-}
-
-function ReportImageGrid({ title, subtitle, images = [], emptyMessage }) {
-  return (
-    <section className="notification-report-modal__section">
-      <div className="notification-report-modal__section-title">
-        <div>
-          <h4>{title}</h4>
-          {subtitle ? <p>{subtitle}</p> : null}
-        </div>
-
-        <span>{images.length}</span>
-      </div>
-
-      {images.length ? (
-        <div className="notification-report-modal__images-grid">
-          {images.map((image, index) => {
-            const imageUrl = getImageUrl(image);
-
-            return (
-              <a
-                key={image.id || `${imageUrl}-${index}`}
-                href={imageUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="notification-report-modal__image-link"
-              >
-                <img src={imageUrl} alt={`${title} ${index + 1}`} />
-              </a>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="notification-report-modal__empty-text">{emptyMessage}</p>
-      )}
-    </section>
-  );
-}
-
-function ReportTimeline({ timeline = [] }) {
-  return (
-    <section className="notification-report-modal__section">
-      <div className="notification-report-modal__section-title">
-        <div>
-          <h4>آخر التحديثات</h4>
-          <p>كل خطوة أو تحديث حصل على البلاغ</p>
-        </div>
-
-        <span>{timeline.length}</span>
-      </div>
-
-      {timeline.length ? (
-        <div className="notification-report-modal__timeline">
-          {timeline.map((item) => (
-            <article key={item.id} className="notification-report-modal__timeline-item">
-              <span className="notification-report-modal__timeline-icon">
-                <FiClock />
-              </span>
-
-              <div>
-                <strong>{item.title || 'تحديث على البلاغ'}</strong>
-                {item.description ? <p>{item.description}</p> : null}
-                <small>{formatDateTime(item.createdAt)}</small>
-              </div>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <p className="notification-report-modal__empty-text">
-          لا توجد تحديثات تفصيلية متاحة لهذا البلاغ حاليًا.
-        </p>
-      )}
-    </section>
-  );
-}
-
-function NotificationReportModal({ modalState, onClose }) {
-  const { isOpen, notification, report, isLoading, errorMessage } = modalState;
-
-  if (!isOpen) return null;
-
-  const reportStatusTone = getStatusTone(report?.status || report?.statusLabel);
-  const companyResponse = report?.companyResponse;
-  const updateNote =
-    companyResponse?.note ||
-    companyResponse?.reason ||
-    companyResponse?.adminNote ||
-    notification?.message ||
-    '';
-
-  return (
-    <div
-      className="notification-report-modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-label="تفاصيل البلاغ المرتبط بالإشعار"
-    >
-      <button
-        type="button"
-        className="notification-report-modal-backdrop__click-area"
-        onClick={onClose}
-        aria-label="إغلاق تفاصيل البلاغ"
-      />
-
-      <article className="notification-report-modal">
-        <button
-          type="button"
-          className="notification-report-modal__close"
-          onClick={onClose}
-          aria-label="إغلاق"
-        >
-          <FiX />
-        </button>
-
-        <header className="notification-report-modal__header">
-          <span className="notification-report-modal__icon">
-            <FiFileText />
-          </span>
-
-          <div>
-            <span className="notification-report-modal__eyebrow">
-              البلاغ المرتبط بالإشعار
-            </span>
-            <h3>{report?.title || notification?.message || 'تفاصيل البلاغ'}</h3>
-            <p>يتم عرض البلاغ هنا مباشرة حتى لو كان البلاغ متابعًا وليس ضمن بلاغاتك أو البلاغات القريبة من موقعك الحالي.</p>
-          </div>
-        </header>
-
-        <div className="notification-report-modal__body">
-          {isLoading ? (
-            <div className="notification-report-modal__state">
-              <FiRefreshCcw />
-              <strong>جارٍ تحميل تفاصيل البلاغ...</strong>
-            </div>
-          ) : null}
-
-          {!isLoading && errorMessage ? (
-            <div className="notification-report-modal__state notification-report-modal__state--error">
-              <FiAlertTriangle />
-              <strong>{errorMessage}</strong>
-              <p>
-                تأكد أن الباك يوفر Endpoint لتفاصيل البلاغ للمستخدم أو للبلاغات المتابعة.
-              </p>
-            </div>
-          ) : null}
-
-          {!isLoading && report ? (
-            <>
-              <div className="notification-report-modal__status-row">
-                <span
-                  className={`notification-report-modal__status notification-report-modal__status--${reportStatusTone}`}
-                >
-                  {report.statusLabel || report.status || '—'}
-                </span>
-
-                <span className="notification-report-modal__report-id">
-                  رقم البلاغ: {report.id || notification?.reportId}
-                </span>
-              </div>
-
-              <div className="notification-report-modal__info-grid">
-                <ReportInfoCard
-                  icon={<FiTool />}
-                  label="نوع المشكلة"
-                  value={report.issueCategoryName || report.type}
-                />
-                <ReportInfoCard
-                  icon={<FiMapPin />}
-                  label="الموقع"
-                  value={[report.city, report.location].filter(Boolean).join(' - ')}
-                />
-                <ReportInfoCard
-                  icon={<FiCalendar />}
-                  label="تاريخ البلاغ"
-                  value={formatDateTime(report.createdAt)}
-                />
-                <ReportInfoCard
-                  icon={<FiMessageSquare />}
-                  label="الشركة المسؤولة"
-                  value={report.assignedCompanyName || report.concernedCompanyName}
-                />
-              </div>
-
-              <section className="notification-report-modal__section">
-                <div className="notification-report-modal__section-title">
-                  <div>
-                    <h4>وصف البلاغ</h4>
-                    <p>تفاصيل المشكلة الأصلية</p>
-                  </div>
-                </div>
-
-                <p className="notification-report-modal__description">
-                  {report.description || notification?.message || 'لا يوجد وصف متاح.'}
-                </p>
-              </section>
-
-              {report.rejectionReason ? (
-                <section className="notification-report-modal__section notification-report-modal__section--warning">
-                  <div className="notification-report-modal__section-title">
-                    <div>
-                      <h4>سبب الرفض</h4>
-                      <p>السبب الذي تم تسجيله على البلاغ</p>
-                    </div>
-                  </div>
-
-                  <p className="notification-report-modal__description">
-                    {report.rejectionReason}
-                  </p>
-                </section>
-              ) : null}
-
-              {updateNote ? (
-                <section className="notification-report-modal__section notification-report-modal__section--update">
-                  <div className="notification-report-modal__section-title">
-                    <div>
-                      <h4>آخر تحديث</h4>
-                      <p>ملاحظة الشركة أو النظام على البلاغ</p>
-                    </div>
-                  </div>
-
-                  <p className="notification-report-modal__description">{updateNote}</p>
-
-                  {companyResponse?.submittedAt ? (
-                    <small className="notification-report-modal__date-note">
-                      تاريخ التحديث: {formatDateTime(companyResponse.submittedAt)}
-                    </small>
-                  ) : null}
-                </section>
-              ) : null}
-
-              <ReportImageGrid
-                title="صور البلاغ قبل الحل"
-                subtitle="الصور الأصلية المرفوعة مع البلاغ"
-                images={report.images || []}
-                emptyMessage="لا توجد صور أصلية متاحة لهذا البلاغ."
-              />
-
-              <ReportImageGrid
-                title="صور البلاغ بعد الحل"
-                subtitle="صور الحل المرفوعة من الشركة إن وجدت"
-                images={companyResponse?.images || []}
-                emptyMessage="لم يتم رفع صور حل لهذا البلاغ حتى الآن."
-              />
-
-              <ReportTimeline timeline={report.timeline || []} />
-            </>
-          ) : null}
-        </div>
-      </article>
-    </div>
-  );
-}
-
 function UserNotificationsPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const userId = resolveUserId(user);
 
@@ -468,13 +126,14 @@ function UserNotificationsPage() {
   const [typeCounts, setTypeCounts] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
+  const [desktopFilterMenuStyle, setDesktopFilterMenuStyle] = useState(null);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+  const desktopFilterButtonRef = useRef(null);
+  const desktopFilterMenuRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [reportModalState, setReportModalState] = useState(
-    EMPTY_REPORT_MODAL_STATE
-  );
 
   const selectedTypeFilter = useMemo(
     () =>
@@ -562,6 +221,81 @@ function UserNotificationsPage() {
     loadNotifications();
   }, [loadNotifications]);
 
+  const updateDesktopFilterMenuPosition = useCallback(() => {
+    const trigger = desktopFilterButtonRef.current;
+
+    if (!trigger || typeof window === 'undefined') return;
+
+    const rect = trigger.getBoundingClientRect();
+    const viewportPadding = 12;
+    const menuGap = 10;
+    const preferredMaxHeight = 430;
+    const minimumUsefulHeight = 190;
+    const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - menuGap - viewportPadding);
+    const spaceAbove = Math.max(0, rect.top - menuGap - viewportPadding);
+    const shouldOpenUpward =
+      spaceBelow < minimumUsefulHeight && spaceAbove > spaceBelow;
+    const availableSpace = shouldOpenUpward ? spaceAbove : spaceBelow;
+    const menuHeight = Math.max(
+      120,
+      Math.min(preferredMaxHeight, availableSpace)
+    );
+    const left = Math.min(
+      Math.max(viewportPadding, rect.left),
+      Math.max(viewportPadding, window.innerWidth - rect.width - viewportPadding)
+    );
+    const top = shouldOpenUpward
+      ? Math.max(viewportPadding, rect.top - menuGap - menuHeight)
+      : rect.bottom + menuGap;
+
+    setDesktopFilterMenuStyle({
+      top: `${Math.round(top)}px`,
+      left: `${Math.round(left)}px`,
+      width: `${Math.round(rect.width)}px`,
+      maxHeight: `${Math.round(menuHeight)}px`,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isDesktopFilterOpen) {
+      setDesktopFilterMenuStyle(null);
+      return undefined;
+    }
+
+    updateDesktopFilterMenuPosition();
+
+    const handleOutsideClick = (event) => {
+      const target = event.target;
+
+      if (
+        desktopFilterButtonRef.current?.contains(target) ||
+        desktopFilterMenuRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      setIsDesktopFilterOpen(false);
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setIsDesktopFilterOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', updateDesktopFilterMenuPosition);
+    window.addEventListener('scroll', updateDesktopFilterMenuPosition, true);
+    document.addEventListener('pointerdown', handleOutsideClick);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      window.removeEventListener('resize', updateDesktopFilterMenuPosition);
+      window.removeEventListener('scroll', updateDesktopFilterMenuPosition, true);
+      document.removeEventListener('pointerdown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isDesktopFilterOpen, updateDesktopFilterMenuPosition]);
+
   function handleTypeFilterChange(nextFilter) {
     setActiveTypeFilter(nextFilter);
     setPageNumber(1);
@@ -639,7 +373,7 @@ function UserNotificationsPage() {
   };
 
   async function handleViewNotificationReport(notification) {
-    const reportId = notification?.reportId;
+    const reportId = String(notification?.reportId || '').trim();
 
     if (!reportId) {
       setErrorMessage('هذا الإشعار غير مرتبط برقم بلاغ صالح.');
@@ -647,48 +381,31 @@ function UserNotificationsPage() {
     }
 
     setErrorMessage('');
-    setReportModalState({
-      isOpen: true,
-      notification,
-      report: null,
-      isLoading: true,
-      errorMessage: '',
-    });
 
     if (!notification.isRead && notification.id) {
-      try {
-        await markUserNotificationAsRead(notification.id);
-        markNotificationAsReadLocally(notification.id);
-      } catch {
-        // لا نمنع المستخدم من فتح تفاصيل البلاغ لو تحديث حالة القراءة فشل.
-      }
-    }
-
-    try {
-      const reportDetails = await getNotificationReportDetails(reportId);
-
-      setReportModalState({
-        isOpen: true,
-        notification,
-        report: reportDetails,
-        isLoading: false,
-        errorMessage: '',
-      });
-    } catch (error) {
-      setReportModalState({
-        isOpen: true,
-        notification,
-        report: null,
-        isLoading: false,
-        errorMessage:
-          error?.message ||
-          'تعذر تحميل تفاصيل البلاغ المرتبط بهذا الإشعار.',
+      markNotificationAsReadLocally(notification.id);
+      markUserNotificationAsRead(notification.id).catch(() => {
+        // الانتقال إلى البلاغ لا يتوقف على نجاح تحديث حالة قراءة الإشعار.
       });
     }
-  }
 
-  function closeReportModal() {
-    setReportModalState(EMPTY_REPORT_MODAL_STATE);
+    const searchParams = new URLSearchParams({
+      reportId,
+      source: 'notification',
+      highlight: 'true',
+    });
+
+    navigate(`/my-reports?${searchParams.toString()}#reports-table`, {
+      state: {
+        reportId,
+        selectedReportId: reportId,
+        highlightReportId: reportId,
+        source: 'notification',
+        fromNotifications: true,
+        scrollToReport: true,
+        scrollTarget: 'reports-table',
+      },
+    });
   }
 
   function goToPreviousPage() {
@@ -740,6 +457,7 @@ function UserNotificationsPage() {
 
           <div className="user-notifications-filter-dropdown">
             <button
+              ref={desktopFilterButtonRef}
               type="button"
               className="user-notifications-filter-dropdown__button"
               onClick={() => setIsDesktopFilterOpen((current) => !current)}
@@ -758,40 +476,53 @@ function UserNotificationsPage() {
               <FiChevronDown className="user-notifications-filter-dropdown__arrow" />
             </button>
 
-            {isDesktopFilterOpen ? (
-              <div className="user-notifications-filter-dropdown__menu">
-                {USER_NOTIFICATION_TYPE_FILTERS.map((filter) => {
-                  const isActive = activeTypeFilter === filter.value;
-                  const count = getTypeCount({
-                    typeCounts,
-                    type: filter.value,
-                    activeTypeFilter,
-                    totalCount: pagination.totalCount,
-                    notificationsCount: notifications.length,
-                  });
+            {isDesktopFilterOpen &&
+            desktopFilterMenuStyle &&
+            typeof document !== 'undefined'
+              ? createPortal(
+                  <div
+                    ref={desktopFilterMenuRef}
+                    className="user-notifications-filter-dropdown__menu"
+                    style={desktopFilterMenuStyle}
+                    role="menu"
+                    aria-label="أنواع الإشعارات"
+                  >
+                    {USER_NOTIFICATION_TYPE_FILTERS.map((filter) => {
+                      const isActive = activeTypeFilter === filter.value;
+                      const count = getTypeCount({
+                        typeCounts,
+                        type: filter.value,
+                        activeTypeFilter,
+                        totalCount: pagination.totalCount,
+                        notificationsCount: notifications.length,
+                      });
 
-                  return (
-                    <button
-                      key={filter.value}
-                      type="button"
-                      className={`user-notifications-filter-dropdown__item ${
-                        isActive ? 'is-active' : ''
-                      }`}
-                      onClick={() => handleTypeFilterChange(filter.value)}
-                    >
-                      <span>
-                        <strong>{filter.label}</strong>
-                        <small>{filter.description}</small>
-                      </span>
+                      return (
+                        <button
+                          key={filter.value}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={isActive}
+                          className={`user-notifications-filter-dropdown__item ${
+                            isActive ? 'is-active' : ''
+                          }`}
+                          onClick={() => handleTypeFilterChange(filter.value)}
+                        >
+                          <span>
+                            <strong>{filter.label}</strong>
+                            <small>{filter.description}</small>
+                          </span>
 
-                      <em>{count}</em>
+                          <em>{count}</em>
 
-                      {isActive ? <FiCheck /> : null}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
+                          {isActive ? <FiCheck /> : null}
+                        </button>
+                      );
+                    })}
+                  </div>,
+                  document.body
+                )
+              : null}
           </div>
 
           <button
@@ -976,11 +707,6 @@ function UserNotificationsPage() {
           </div>
         </div>
       ) : null}
-
-      <NotificationReportModal
-        modalState={reportModalState}
-        onClose={closeReportModal}
-      />
     </div>
   );
 }

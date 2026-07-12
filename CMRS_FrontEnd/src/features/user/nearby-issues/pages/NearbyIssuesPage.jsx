@@ -192,23 +192,11 @@ function getActiveFilterLabel(activeFilter) {
 }
 
 function getFilterDotClass(statusValue) {
-  if (statusValue === NEARBY_REPORT_STATUS_API_VALUES.accepted) {
-    return 'accepted';
-  }
+  const option = NEARBY_STATUS_FILTER_OPTIONS.find(
+    (item) => item.value === statusValue
+  );
 
-  if (statusValue === NEARBY_REPORT_STATUS_API_VALUES.assigned) {
-    return 'assigned';
-  }
-
-  if (statusValue === NEARBY_REPORT_STATUS_API_VALUES.inProgress) {
-    return 'in-progress';
-  }
-
-  if (statusValue === NEARBY_REPORT_STATUS_API_VALUES.resolved) {
-    return 'resolved';
-  }
-
-  return 'all';
+  return option?.dotClassName || 'all';
 }
 
 function NearbyStatusLegend() {
@@ -226,7 +214,10 @@ function NearbyStatusLegend() {
 
       <div className="nearby-status-panel__grid">
         {NEARBY_STATUS_LEGEND_ITEMS.map((item) => (
-          <div key={item.id} className="nearby-status-panel__card">
+          <div
+            key={item.id}
+            className={`nearby-status-panel__card nearby-status-panel__card--${item.dotClassName}`}
+          >
             <div className="nearby-status-panel__title-row">
               <span
                 className={`nearby-status-panel__dot nearby-status-panel__dot--${item.dotClassName}`}

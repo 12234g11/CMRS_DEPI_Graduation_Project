@@ -70,8 +70,12 @@ export function formatEgyptDate(value, fallback = 'غير متوفر') {
     : String(value);
 }
 
-export function getAdminReviewPresentation(adminReview) {
+export function getAdminReviewPresentation(adminReview, companyResponse = null) {
   const status = adminReview?.status;
+  const responseType =
+    companyResponse?.responseType ||
+    companyResponse?.status ||
+    '';
 
   if (status === 'accepted') {
     return {
@@ -85,28 +89,59 @@ export function getAdminReviewPresentation(adminReview) {
   if (status === 'cannot_fix_accepted') {
     return {
       tone: 'accepted',
-      title: adminReview.label || 'تم قبول تعذر التنفيذ',
+      title: adminReview.label || 'تم قبول طلب تعذر التنفيذ',
       description:
-        adminReview.note || 'راجع الأدمن سبب التعذر واعتمده.',
+        adminReview.note ||
+        'راجع الأدمن سبب التعذر ووافق على إنهاء إسناد البلاغ لهذه الشركة.',
+    };
+  }
+
+  if (status === 'reassigned') {
+    return {
+      tone: 'reassigned',
+      title: adminReview.label || 'تم تحويل البلاغ إلى شركة أخرى',
+      description:
+        adminReview.note ||
+        'قبل الأدمن طلب التعذر وقرر إعادة إسناد البلاغ إلى جهة تنفيذ بديلة.',
+    };
+  }
+
+  if (status === 'cannot_fix_rejected') {
+    return {
+      tone: 'needs-completion',
+      title: adminReview.label || 'تم رفض طلب تعذر التنفيذ',
+      description:
+        adminReview.note ||
+        'طلب الأدمن من الشركة استكمال التنفيذ بدلًا من الاعتذار عن البلاغ.',
     };
   }
 
   if (status === 'needs_completion') {
+    const isCannotFixReview =
+      responseType === 'cannot_fix' ||
+      responseType === 'cannot-fix';
+
     return {
       tone: 'needs-completion',
-      title: adminReview.label || 'الأدمن طلب استكمال الحل',
+      title:
+        adminReview.label ||
+        (isCannotFixReview
+          ? 'تم رفض طلب التعذر ومطلوب استكمال التنفيذ'
+          : 'الأدمن طلب استكمال الحل'),
       description:
         adminReview.note ||
-        'راجع ملاحظات الأدمن، ثم استكمل التنفيذ وأرسل صورًا أوضح.',
+        (isCannotFixReview
+          ? 'راجع ملاحظات الأدمن ثم استأنف تنفيذ البلاغ.'
+          : 'راجع ملاحظات الأدمن، ثم استكمل التنفيذ وأرسل صورًا أوضح.'),
     };
   }
 
   if (status === 'rejected') {
     return {
       tone: 'rejected',
-      title: adminReview.label || 'لم يعتمد الأدمن الحل',
+      title: adminReview.label || 'لم يعتمد الأدمن الرد',
       description:
-        adminReview.note || 'راجع سبب الرفض وأرسل الحل مرة أخرى بعد الاستكمال.',
+        adminReview.note || 'راجع سبب الرفض وأرسل ردًا جديدًا بعد الاستكمال.',
     };
   }
 
@@ -123,7 +158,9 @@ export function getWorkflowStep(report) {
 
   if (
     ['تم الحل', 'متعذر التنفيذ'].includes(report.status) ||
-    ['accepted', 'cannot_fix_accepted'].includes(report.adminReview?.status)
+    ['accepted', 'cannot_fix_accepted', 'reassigned'].includes(
+      report.adminReview?.status,
+    )
   ) {
     return 4;
   }

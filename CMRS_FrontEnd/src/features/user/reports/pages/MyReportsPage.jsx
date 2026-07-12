@@ -6,6 +6,7 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiEye,
+  FiEyeOff,
   FiMapPin,
   FiPlus,
 } from 'react-icons/fi';
@@ -14,34 +15,24 @@ import DashboardSectionCard from '../../../../shared/components/dashboard/Dashbo
 import PageHeader from '../../../../shared/components/ui/PageHeader';
 import { ROUTES } from '../../../../shared/navigation';
 import { useAuth } from '../../../auth/hooks/useAuth';
-import MapLegend from '../../../map/components/MapLegend';
 import ReportsMap from '../../../map/components/ReportsMap';
-import UserDashboardStats from '../../dashboard/components/UserDashboardStats';
 import UserDashboardReportDetailsModal from '../../dashboard/components/UserDashboardReportDetailsModal';
 import UserMapSelectedReportCard from '../../dashboard/components/UserMapSelectedReportCard';
 import RecentReportsTable from '../components/RecentReportsTable';
 import UserReportsFilters from '../components/UserReportsFilters';
+import UserReportsMapLegend from '../components/UserReportsMapLegend';
+import UserReportsStats from '../components/UserReportsStats';
 import useUserReports from '../hooks/useUserReports';
 import {
   getReportById,
+  getReportStatusKey,
   getReportsByStatus,
+  getStatusTone,
   REPORT_STATUS_API_VALUES,
   REPORT_STATUS_FILTER_OPTIONS,
   searchReports,
 } from '../api/userReportsApi';
 import '../user-reports.css';
-
-const reportMapLegend = [
-  { id: 'under-review', label: 'قيد المراجعة', tone: 'warning' },
-  { id: 'accepted', label: 'مقبول', tone: 'info' },
-  { id: 'assigned', label: 'تم التعيين', tone: 'info' },
-  { id: 'in-progress', label: 'جاري التنفيذ', tone: 'info' },
-  { id: 'resolved', label: 'تم الحل', tone: 'success' },
-];
-
-function normalizeText(value) {
-  return String(value || '').toLowerCase().trim();
-}
 
 function getCurrentUserId(user = {}) {
   return user?.id || user?.userId || user?.UserId || user?.sub || '';
@@ -115,19 +106,6 @@ function getPriorityLabel(report = {}) {
   return report.priority || 'متوسطة';
 }
 
-function isRejectedReport(report = {}) {
-  const status = normalizeText(report.status || report.statusKey);
-  const statusLabel = normalizeText(report.statusLabel);
-  const statusTone = normalizeText(report.statusTone || report.tone);
-
-  return (
-    status === 'rejected' ||
-    status.includes('rejected') ||
-    statusLabel.includes('مرفوض') ||
-    statusTone === 'danger'
-  );
-}
-
 function getOwnerId(report = {}) {
   return (
     report.ownerUserId ||
@@ -182,9 +160,52 @@ function getClientPagination(items = [], pageNumber = 1, pageSize = 10) {
   };
 }
 
+const OPTIONAL_MAP_STATUS_KEYS = new Set([
+  REPORT_STATUS_API_VALUES.resolved,
+  REPORT_STATUS_API_VALUES.rejected,
+  REPORT_STATUS_API_VALUES.unableToExecute,
+]);
+
+function getGroupedMapStatusKey(report = {}) {
+  const statusValue =
+    report.status ||
+    report.statusKey ||
+    report.Status ||
+    report.StatusKey ||
+    report.statusLabel ||
+    '';
+
+  if (statusValue) {
+    return getReportStatusKey(statusValue);
+  }
+
+  const fallbackTone = String(report.statusTone || report.tone || '')
+    .trim()
+    .toLowerCase();
+
+  if (fallbackTone === 'danger') return REPORT_STATUS_API_VALUES.rejected;
+  if (fallbackTone === 'secondary') {
+    return REPORT_STATUS_API_VALUES.unableToExecute;
+  }
+  if (fallbackTone === 'success') return REPORT_STATUS_API_VALUES.resolved;
+  if (fallbackTone === 'info' || fallbackTone === 'primary') {
+    return REPORT_STATUS_API_VALUES.inProgress;
+  }
+
+  return REPORT_STATUS_API_VALUES.underReview;
+}
+
+function canToggleMapReportVisibility(report = {}) {
+  return OPTIONAL_MAP_STATUS_KEYS.has(
+    report.statusKey || getGroupedMapStatusKey(report.rawReport || report)
+  );
+}
+
 function toMapReport(report = {}) {
   const reportId = getReportId(report);
   const position = getReportPosition(report);
+  const groupedStatusKey = getGroupedMapStatusKey(report);
+  const groupedStatusTone = getStatusTone(groupedStatusKey);
 
   return {
     id: `mine-${reportId}`,
@@ -207,8 +228,9 @@ function toMapReport(report = {}) {
       report.categoryName ||
       'أخرى',
 
+    statusKey: groupedStatusKey,
     statusLabel: report.statusLabel || 'قيد المراجعة',
-    statusTone: report.statusTone || report.tone || 'warning',
+    statusTone: groupedStatusTone,
 
     priority: getPriorityLabel(report),
     description: report.description || 'لا يوجد وصف متاح لهذا البلاغ.',
@@ -233,6 +255,7 @@ function toMapMarker(report) {
     title: report.title,
     subtitle: report.typeLabel,
     area: report.area,
+    statusKey: report.statusKey,
     statusLabel: report.statusLabel,
     tone: report.statusTone,
     address: report.address,
@@ -245,6 +268,8 @@ function focusStateToMapReport(focusMapReport = {}) {
     focusMapReport.originalId ||
     focusMapReport.reportId ||
     focusMapReport.markerId;
+  const groupedStatusKey = getGroupedMapStatusKey(focusMapReport);
+  const groupedStatusTone = getStatusTone(groupedStatusKey);
 
   return {
     id: focusMapReport.markerId || `mine-${reportId}`,
@@ -257,7 +282,7 @@ function focusStateToMapReport(focusMapReport = {}) {
       title: focusMapReport.title,
       description: focusMapReport.description,
       statusLabel: focusMapReport.statusLabel,
-      statusTone: focusMapReport.statusTone || focusMapReport.tone,
+      statusTone: groupedStatusTone,
       categoryLabel: focusMapReport.typeLabel,
       issueCategoryName: focusMapReport.typeLabel,
       locationText: focusMapReport.address,
@@ -269,8 +294,9 @@ function focusStateToMapReport(focusMapReport = {}) {
 
     title: focusMapReport.title || 'بلاغ المستخدم',
     typeLabel: focusMapReport.typeLabel || focusMapReport.subtitle || 'أخرى',
+    statusKey: groupedStatusKey,
     statusLabel: focusMapReport.statusLabel || 'قيد المراجعة',
-    statusTone: focusMapReport.statusTone || focusMapReport.tone || 'warning',
+    statusTone: groupedStatusTone,
     priority: focusMapReport.priority || 'متوسطة',
     description: focusMapReport.description || 'لا يوجد وصف متاح لهذا البلاغ.',
     area: focusMapReport.area || '',
@@ -356,7 +382,9 @@ function MyReportsPage() {
     pagination,
     dashboardStats,
     isLoading,
+    isStatsLoading,
     errorMessage,
+    statsErrorMessage,
   } = useUserReports(userId, {
     pageNumber,
     pageSize: 10,
@@ -367,6 +395,7 @@ function MyReportsPage() {
   const [detailsMapReport, setDetailsMapReport] = useState(null);
   const [routeReportId, setRouteReportId] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
+  const [hiddenMapReportIds, setHiddenMapReportIds] = useState(() => new Set());
 
   const [highlightedReportId, setHighlightedReportId] = useState(
     location.state?.createdReportId ||
@@ -648,9 +677,8 @@ function MyReportsPage() {
       ? clientPagination
       : pagination;
 
-  const mapReports = useMemo(() => {
+  const allMapReports = useMemo(() => {
     const reportsForMap = displayedReports
-      .filter((report) => !isRejectedReport(report))
       .map(toMapReport)
       .filter((report) => report.position?.lat && report.position?.lng);
 
@@ -658,7 +686,6 @@ function MyReportsPage() {
       focusMapReport?.markerId &&
       focusMapReport?.position?.lat &&
       focusMapReport?.position?.lng &&
-      !isRejectedReport(focusMapReport) &&
       !reportsForMap.some((report) => report.id === focusMapReport.markerId)
     ) {
       reportsForMap.unshift(focusStateToMapReport(focusMapReport));
@@ -667,6 +694,18 @@ function MyReportsPage() {
     return reportsForMap;
   }, [displayedReports, focusMapReport]);
 
+  const mapReports = useMemo(() => {
+    return allMapReports.filter(
+      (report) => !hiddenMapReportIds.has(String(report.id))
+    );
+  }, [allMapReports, hiddenMapReportIds]);
+
+  const hiddenMapReports = useMemo(() => {
+    return allMapReports.filter((report) =>
+      hiddenMapReportIds.has(String(report.id))
+    );
+  }, [allMapReports, hiddenMapReportIds]);
+
   const mapMarkers = useMemo(() => {
     return mapReports.map(toMapMarker);
   }, [mapReports]);
@@ -674,6 +713,20 @@ function MyReportsPage() {
   const routeDestination = useMemo(() => {
     return mapReports.find((report) => report.id === routeReportId) || null;
   }, [mapReports, routeReportId]);
+
+  useEffect(() => {
+    const markerId = focusMapReport?.markerId;
+
+    if (!markerId) return;
+
+    setHiddenMapReportIds((currentIds) => {
+      if (!currentIds.has(String(markerId))) return currentIds;
+
+      const nextIds = new Set(currentIds);
+      nextIds.delete(String(markerId));
+      return nextIds;
+    });
+  }, [focusMapReport]);
 
   useEffect(() => {
     if (!focusMapReport?.markerId) return undefined;
@@ -774,6 +827,7 @@ function MyReportsPage() {
     setStatusErrorMessage('');
     setClientPageNumber(1);
     setPageNumber(1);
+    setHiddenMapReportIds(new Set());
     clearMapSelection();
   }
 
@@ -787,6 +841,58 @@ function MyReportsPage() {
     }
 
     setPageNumber(nextPageNumber);
+  }
+
+  function hideMapReport(report) {
+    if (!report?.id || !canToggleMapReportVisibility(report)) return;
+
+    const reportId = String(report.id);
+
+    setHiddenMapReportIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+      nextIds.add(reportId);
+      return nextIds;
+    });
+
+    if (String(activeMarkerId) === reportId) {
+      setActiveMarkerId(null);
+    }
+
+    if (String(routeReportId) === reportId) {
+      setRouteReportId(null);
+    }
+
+    if (String(selectedMapReport?.id) === reportId) {
+      setSelectedMapReport(null);
+    }
+
+    if (String(detailsMapReport?.id) === reportId) {
+      setDetailsMapReport(null);
+    }
+  }
+
+  function showMapReport(report) {
+    if (!report?.id) return;
+
+    const reportId = String(report.id);
+
+    setHiddenMapReportIds((currentIds) => {
+      if (!currentIds.has(reportId)) return currentIds;
+
+      const nextIds = new Set(currentIds);
+      nextIds.delete(reportId);
+      return nextIds;
+    });
+
+    window.setTimeout(() => {
+      setRouteReportId(null);
+      setActiveMarkerId(report.id);
+      setSelectedMapReport(report);
+    }, 0);
+  }
+
+  function showAllHiddenMapReports() {
+    setHiddenMapReportIds(new Set());
   }
 
   function handleMarkerSelect(marker) {
@@ -846,7 +952,14 @@ function MyReportsPage() {
       <div className="user-dashboard-map-popup">
         <strong>{report.title}</strong>
 
-        <span>{report.typeLabel}</span>
+        <div className="user-dashboard-map-popup__meta">
+          <span>{report.typeLabel}</span>
+          <span
+            className={`user-dashboard-map-popup__status user-dashboard-map-popup__status--${report.statusTone}`}
+          >
+            {report.statusLabel}
+          </span>
+        </div>
 
         <small>
           <FiMapPin />
@@ -869,6 +982,17 @@ function MyReportsPage() {
             صفحة البلاغ
             <FiArrowLeft />
           </button>
+
+          {canToggleMapReportVisibility(report) ? (
+            <button
+              type="button"
+              className="user-dashboard-map-popup__visibility-btn"
+              onClick={() => hideMapReport(report)}
+            >
+              <FiEyeOff />
+              إخفاء من الخريطة
+            </button>
+          ) : null}
         </div>
       </div>
     );
@@ -906,6 +1030,12 @@ function MyReportsPage() {
         </div>
       ) : null}
 
+      {statsErrorMessage ? (
+        <div className="user-reports__success-banner user-reports__success-banner--error">
+          {statsErrorMessage}
+        </div>
+      ) : null}
+
       {searchErrorMessage ? (
         <div className="user-reports__success-banner user-reports__success-banner--error">
           {searchErrorMessage}
@@ -924,7 +1054,7 @@ function MyReportsPage() {
         </div>
       ) : null}
 
-      <UserDashboardStats stats={dashboardStats} />
+      <UserReportsStats stats={dashboardStats} isLoading={isStatsLoading} />
 
       <UserReportsFilters
         totalReports={tablePagination.totalCount}
@@ -943,17 +1073,53 @@ function MyReportsPage() {
           <div>
             <h2>خريطة بلاغاتي</h2>
             <p>
-              الخريطة تعرض البلاغات الخاصة بك فقط حسب البحث أو الفلترة، مع استبعاد البلاغات المرفوضة.
+              الخريطة تعرض بلاغاتك حسب البحث أو الفلترة، وكل مجموعة حالات لها لون واضح وثابت.
             </p>
           </div>
 
           <div className="user-dashboard-map-card__actions">
             <span className="dashboard-chip">
-              {mapMarkers.length} بلاغ على الخريطة
+              {mapMarkers.length} من {allMapReports.length} بلاغ على الخريطة
             </span>
-            <MapLegend items={reportMapLegend} compact />
+            <UserReportsMapLegend />
           </div>
         </header>
+
+        {hiddenMapReports.length ? (
+          <div className="user-reports-map-hidden-panel" dir="rtl">
+            <div className="user-reports-map-hidden-panel__header">
+              <div>
+                <strong>
+                  <FiEyeOff />
+                  بلاغات مخفية مؤقتًا ({hiddenMapReports.length})
+                </strong>
+                <span>
+                  يمكنك إظهار أي بلاغ مرة أخرى بدون تغيير حالة البلاغ أو بياناته.
+                </span>
+              </div>
+
+              <button type="button" onClick={showAllHiddenMapReports}>
+                <FiEye />
+                إظهار الكل
+              </button>
+            </div>
+
+            <div className="user-reports-map-hidden-panel__list">
+              {hiddenMapReports.map((report) => (
+                <button
+                  key={report.id}
+                  type="button"
+                  onClick={() => showMapReport(report)}
+                  title={`إظهار ${report.title} على الخريطة`}
+                >
+                  <FiEye />
+                  <span>{report.title}</span>
+                  <small>{report.statusLabel}</small>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div className="user-dashboard-map-wrapper">
           <ReportsMap
@@ -969,9 +1135,15 @@ function MyReportsPage() {
 
           {!mapMarkers.length ? (
             <div className="user-reports-map-empty" dir="rtl">
-              <strong>لا توجد بلاغات متاحة على الخريطة</strong>
+              <strong>
+                {hiddenMapReports.length
+                  ? 'كل البلاغات المتاحة مخفية مؤقتًا'
+                  : 'لا توجد بلاغات متاحة على الخريطة'}
+              </strong>
               <span>
-                قد تكون كل النتائج بدون إحداثيات أو مرفوضة، أو لا توجد نتائج مطابقة.
+                {hiddenMapReports.length
+                  ? 'استخدم قائمة البلاغات المخفية أعلى الخريطة لإظهارها مرة أخرى.'
+                  : 'قد تكون النتائج بدون إحداثيات، أو لا توجد بلاغات مطابقة للبحث أو الفلترة.'}
               </span>
             </div>
           ) : null}
@@ -991,6 +1163,27 @@ function MyReportsPage() {
               onGoToReport={handleGoToReport}
               onRequestDirections={handleRequestDirections}
             />
+
+            {selectedMapReport && canToggleMapReportVisibility(selectedMapReport) ? (
+              <div className="user-reports-map-visibility-control" dir="rtl">
+                <div>
+                  <strong>ظهور البلاغ على الخريطة</strong>
+                  <span>
+                    يمكن إخفاء البلاغات التي تم حلها أو رفضها أو تعذر تنفيذها لتقليل الزحام.
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked="true"
+                  onClick={() => hideMapReport(selectedMapReport)}
+                >
+                  <span aria-hidden="true" />
+                  ظاهر الآن
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
 

@@ -1,20 +1,12 @@
 import { useEffect, useState } from 'react';
-import { FiCheckCircle, FiUsers, FiX } from 'react-icons/fi';
-import CompanyTeamsFilterSelect from './CompanyTeamsFilterSelect';
-import {
-  COMPANY_TEAM_AVAILABILITY,
-  COMPANY_TEAM_STATUSES,
-  companyTeamAvailabilityOptions,
-} from '../mocks/companyTeamsMockData';
+import { FiCheckCircle, FiInfo, FiUsers, FiX } from 'react-icons/fi';
+import { COMPANY_TEAM_STATUSES } from '../mocks/companyTeamsMockData';
 
 const initialValues = {
   name: '',
   leadName: '',
   phone: '',
   membersCount: 3,
-  activeTasks: 0,
-  completedTasks: 0,
-  availability: COMPANY_TEAM_AVAILABILITY.AVAILABLE,
   status: COMPANY_TEAM_STATUSES.ACTIVE,
   notes: '',
 };
@@ -41,9 +33,6 @@ function CompanyTeamFormModal({
         leadName: team.leadName || '',
         phone: team.phone || '',
         membersCount: team.membersCount || 3,
-        activeTasks: team.activeTasks || 0,
-        completedTasks: team.completedTasks || 0,
-        availability: team.availability || COMPANY_TEAM_AVAILABILITY.AVAILABLE,
         status: team.status || COMPANY_TEAM_STATUSES.ACTIVE,
         notes: team.notes || '',
       });
@@ -52,6 +41,7 @@ function CompanyTeamFormModal({
     }
 
     setError('');
+    setIsSaving(false);
   }, [isEditMode, isOpen, team]);
 
   if (!isOpen) return null;
@@ -98,15 +88,20 @@ function CompanyTeamFormModal({
 
     setIsSaving(true);
 
-    await onSave?.({
-      ...formData,
-      name: formData.name.trim(),
-      leadName: formData.leadName.trim(),
-      phone: formData.phone.trim(),
-      notes: formData.notes.trim(),
-    });
-
-    setIsSaving(false);
+    try {
+      await onSave?.({
+        name: formData.name.trim(),
+        leadName: formData.leadName.trim(),
+        phone: formData.phone.trim(),
+        membersCount: Number(formData.membersCount),
+        status: formData.status,
+        notes: formData.notes.trim(),
+      });
+    } catch (saveError) {
+      setError(saveError.message || 'تعذر حفظ بيانات فرقة الصيانة. حاول مرة أخرى.');
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -130,11 +125,19 @@ function CompanyTeamFormModal({
             <h2>{isEditMode ? 'تعديل فرقة صيانة' : 'إضافة فرقة صيانة'}</h2>
             <p>
               {isEditMode
-                ? 'تحديث بيانات فرقة الصيانة الحالية.'
-                : 'أضف فرقة صيانة جديدة للشركة.'}
+                ? 'تحديث البيانات الأساسية فقط، أما المهام والتوفر فيتم حسابهم تلقائيًا.'
+                : 'أضف البيانات الأساسية للفرقة، وسيحسب النظام المهام والتوفر تلقائيًا.'}
             </p>
           </div>
         </header>
+
+        <div className="company-team-system-note" role="note">
+          <FiInfo />
+          <p>
+            المهام النشطة وحالة التوفر لا يتم إدخالهم من هنا. الباك يحسبهم من البلاغات الفعلية:
+            تصبح الفرقة مشغولة عند 5 بلاغات نشطة أو أكثر، وغير متاحة عند إيقافها.
+          </p>
+        </div>
 
         <div className="company-team-form-grid">
           <label className="company-team-form-field">
@@ -180,49 +183,9 @@ function CompanyTeamFormModal({
               onChange={handleNumberChange}
             />
           </label>
-
-          <label className="company-team-form-field">
-            المهام النشطة
-            <input
-              name="activeTasks"
-              type="number"
-              min="0"
-              value={formData.activeTasks}
-              onChange={handleNumberChange}
-            />
-          </label>
-
-          <label className="company-team-form-field">
-            المهام المكتملة
-            <input
-              name="completedTasks"
-              type="number"
-              min="0"
-              value={formData.completedTasks}
-              onChange={handleNumberChange}
-            />
-          </label>
-
-          <div className="company-team-form-field">
-            <span>حالة التوفر</span>
-
-            <CompanyTeamsFilterSelect
-              value={formData.availability}
-              options={companyTeamAvailabilityOptions.filter(
-                (option) => option.value !== 'all',
-              )}
-              onChange={(value) =>
-                setFormData((currentData) => ({
-                  ...currentData,
-                  availability: value,
-                }))
-              }
-              ariaLabel="اختيار حالة توفر الفرقة"
-            />
-          </div>
         </div>
 
-        <label className="company-team-form-field">
+        <label className="company-team-form-field company-team-form-field--full">
           ملاحظات
           <textarea
             name="notes"
@@ -240,6 +203,7 @@ function CompanyTeamFormModal({
             type="button"
             className="company-team-cancel-btn"
             onClick={onClose}
+            disabled={isSaving}
           >
             إلغاء
           </button>

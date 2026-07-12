@@ -1,5 +1,4 @@
 import {
-  FiClock,
   FiMail,
   FiPhone,
   FiShield,
@@ -13,36 +12,24 @@ function CompanyProfileAccountCard({ profile }) {
     {
       icon: <FiUser />,
       label: 'مسؤول الحساب',
-      value: profile.contactPerson.name,
+      value: profile.contactPerson?.name || 'غير متوفر',
     },
     {
       icon: <FiMail />,
       label: 'بريد مسؤول التشغيل',
-      value: profile.contactPerson.email,
+      value: profile.contactPerson?.email || 'غير متوفر',
       isLtr: true,
     },
     {
       icon: <FiPhone />,
       label: 'رقم مسؤول التشغيل',
-      value: profile.contactPerson.phone,
-      isLtr: true,
-    },
-    {
-      icon: <FiPhone />,
-      label: 'رقم الطوارئ',
-      value: profile.officialContact.emergencyPhone,
+      value: profile.contactPerson?.phone || 'غير متوفر',
       isLtr: true,
     },
     {
       icon: <FiShield />,
       label: 'حالة حساب الدخول',
-      value: profile.accountStatusLabel,
-    },
-    {
-      icon: <FiClock />,
-      label: 'آخر تسجيل دخول',
-      value: profile.lastLogin,
-      isLtr: true,
+      value: profile.accountStatusLabel || 'غير متوفر',
     },
   ];
 

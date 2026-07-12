@@ -5,6 +5,7 @@ function CompanyNotificationsList({
   notifications = [],
   onMarkAsRead,
   onDelete,
+  isActionLoading = false,
   emptyTitle = 'لا توجد إشعارات',
   emptyMessage = 'عند حدوث أي تحديث على البلاغات المسندة للشركة سيظهر هنا مباشرة.',
 }) {
@@ -29,6 +30,7 @@ function CompanyNotificationsList({
           notification={notification}
           onMarkAsRead={onMarkAsRead}
           onDelete={onDelete}
+          isActionLoading={isActionLoading}
         />
       ))}
     </div>

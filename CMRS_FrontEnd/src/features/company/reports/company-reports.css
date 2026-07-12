@@ -5139,3 +5139,1003 @@
     padding: 14px;
   }
 }
+
+/* ========================================================================== */
+/* Final mobile responsive layer                                               */
+/* Keeps desktop/tablet layout unchanged and turns the reports table into      */
+/* readable stacked report cards on phones.                                    */
+/* ========================================================================== */
+
+@media (max-width: 768px) {
+  .company-reports-page,
+  .company-report-details-page {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+    gap: 14px;
+  }
+
+  .company-reports-page > *,
+  .company-report-details-page > *,
+  .company-reports-card,
+  .company-reports-card .dashboard-section-card__body,
+  .company-report-details-card,
+  .company-reports-filter-card,
+  .company-reports-map-card,
+  .company-report-top-grid,
+  .company-report-details-grid,
+  .company-report-details-main,
+  .company-report-details-side {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  /* Top messages and filters */
+  .company-reports-inbox-summary {
+    width: 100%;
+    padding: 16px;
+    border-radius: 20px;
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+    text-align: center;
+  }
+
+  .company-reports-inbox-summary > div {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .company-reports-inbox-summary h2,
+  .company-reports-inbox-summary p {
+    width: 100%;
+    text-align: center;
+  }
+
+  .company-reports-inbox-summary button {
+    width: min(100%, 280px);
+    min-height: 44px;
+    justify-content: center;
+    white-space: normal;
+  }
+
+  .company-reports-filter-card {
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .company-reports-filter-card__header {
+    display: grid;
+    justify-items: center;
+    gap: 9px;
+    text-align: center;
+  }
+
+  .company-reports-filter-card__header > div,
+  .company-reports-filter-card__header h2,
+  .company-reports-filter-card__header p {
+    width: 100%;
+    min-width: 0;
+    text-align: center;
+  }
+
+  .company-reports-filter-card__header h2 {
+    font-size: 1.04rem;
+    line-height: 1.45;
+  }
+
+  .company-reports-filter-card__header p {
+    font-size: 0.78rem;
+    line-height: 1.75;
+  }
+
+  .company-reports-filter-card__mobile-actions {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .company-reports-open-filters-btn,
+  .company-reports-filter-card__mobile-actions .company-reports-filter-card__reset-btn {
+    width: 100% !important;
+    min-width: 0;
+    min-height: 44px;
+    padding-inline: 10px;
+    justify-content: center;
+    white-space: normal;
+  }
+
+  /* Map */
+  .company-reports-map-card {
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .company-reports-map-card__header {
+    min-height: 0;
+    padding: 16px;
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .company-reports-map-card__header > div,
+  .company-reports-map-card__header h2,
+  .company-reports-map-card__header p {
+    width: 100%;
+    min-width: 0;
+    text-align: center;
+  }
+
+  .company-reports-map-page-badge {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .company-reports-map-wrapper {
+    width: 100%;
+    min-height: 390px;
+    padding: 9px;
+    overflow: hidden;
+  }
+
+  .company-reports-map-wrapper .leaflet-container,
+  .company-reports-map-empty {
+    width: 100%;
+    min-height: 390px;
+    border-radius: 16px;
+  }
+
+  .company-reports-map-selection-card {
+    top: auto;
+    right: 14px;
+    bottom: 14px;
+    left: 14px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100% - 28px);
+    padding: 14px;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+
+  .company-reports-map-selection-card > strong,
+  .company-reports-map-selection-card__id,
+  .company-reports-map-selection-card > p {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .company-reports-map-selection-card__view {
+    width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+
+  /* Reports card header */
+  .company-reports-card {
+    border-radius: 20px;
+    overflow: visible !important;
+  }
+
+  .company-reports-card .dashboard-section-card__header {
+    padding: 16px !important;
+    display: grid !important;
+    justify-items: center !important;
+    gap: 8px !important;
+    text-align: center !important;
+  }
+
+  .company-reports-card .dashboard-section-card__header > div,
+  .company-reports-card .dashboard-section-card__header h2,
+  .company-reports-card .dashboard-section-card__header p {
+    width: 100%;
+    min-width: 0;
+    text-align: center !important;
+  }
+
+  .company-reports-card .dashboard-section-card__body {
+    padding: 12px !important;
+    overflow: visible !important;
+  }
+
+  .company-reports-flow-note {
+    margin: 0 0 12px;
+    padding: 12px;
+    border-radius: 14px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  /* Mobile report cards - final override over old horizontal-table rules */
+  .company-reports-table-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .company-reports-table {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: auto !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+  }
+
+  .company-reports-table thead {
+    display: none !important;
+  }
+
+  .company-reports-table tbody {
+    display: grid !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 12px;
+  }
+
+  .company-reports-table tr {
+    position: relative;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 14px !important;
+    border: 1px solid rgba(2, 95, 72, 0.1) !important;
+    border-radius: 18px !important;
+    background: #fff !important;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07) !important;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .company-reports-table tr.is-highlighted {
+    border-color: rgba(2, 95, 72, 0.55) !important;
+    background: rgba(2, 95, 72, 0.045) !important;
+    box-shadow: 0 12px 32px rgba(2, 95, 72, 0.14) !important;
+  }
+
+  .company-reports-table tr.is-highlighted td,
+  .company-reports-table tr.is-highlighted td:first-child {
+    background: transparent !important;
+  }
+
+  .company-reports-table th,
+  .company-reports-table td {
+    white-space: normal !important;
+  }
+
+  .company-reports-table td {
+    display: grid !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    grid-template-columns: 92px minmax(0, 1fr) !important;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgba(2, 95, 72, 0.07) !important;
+    text-align: right !important;
+    box-sizing: border-box;
+    overflow: visible;
+  }
+
+  .company-reports-table td:last-child {
+    padding-bottom: 0 !important;
+    border-bottom: 0 !important;
+  }
+
+  .company-reports-table td::before {
+    content: attr(data-label) !important;
+    display: block !important;
+    min-width: 0;
+    color: var(--color-subtitle);
+    font-size: 0.72rem;
+    font-weight: 950;
+    line-height: 1.5;
+    text-align: right;
+  }
+
+  .company-reports-table td > * {
+    min-width: 0;
+    max-width: 100%;
+    justify-self: start;
+  }
+
+  .company-reports-table td:first-child {
+    display: block !important;
+    width: 100% !important;
+    padding: 0 0 13px !important;
+    margin-bottom: 1px;
+    border-bottom: 1px solid rgba(2, 95, 72, 0.09) !important;
+  }
+
+  .company-reports-table td:first-child::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  .company-report-table-summary {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    justify-items: center;
+    gap: 7px;
+    text-align: center;
+  }
+
+  .company-reports-table td:first-child strong,
+  .company-report-table-summary strong {
+    width: 100%;
+    min-width: 0 !important;
+    color: var(--color-primary);
+    font-size: 1rem;
+    font-weight: 950;
+    line-height: 1.55;
+    text-align: center !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+
+  .company-reports-table td:first-child span,
+  .company-report-table-summary small,
+  .company-report-table-summary__description,
+  .company-report-table-summary__type,
+  .company-report-table-summary__location,
+  .company-report-table-summary__id {
+    width: 100%;
+    min-width: 0 !important;
+    max-width: 100%;
+    margin: 0;
+    text-align: center !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .company-report-table-summary__description {
+    display: block;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+  }
+
+  .company-report-table-summary__location {
+    display: flex !important;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .company-report-table-summary__id,
+  .company-report-id-value {
+    direction: ltr;
+    unicode-bidi: isolate;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+  }
+
+  .company-report-status,
+  .company-report-priority,
+  .company-report-admin-review,
+  .company-report-waiting-pill,
+  .company-report-assigned-date {
+    width: fit-content !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    justify-self: start !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    text-align: center;
+  }
+
+  .company-reports-table td[data-label='الإجراء التالي'] {
+    display: block !important;
+    padding-top: 13px !important;
+  }
+
+  .company-reports-table td[data-label='الإجراء التالي']::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  .company-report-actions {
+    width: 100%;
+    min-width: 0;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .company-report-view-btn,
+  .company-report-start-btn,
+  .company-report-upload-btn,
+  .company-report-waiting-pill {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 42px;
+    padding: 9px 12px;
+    border-radius: 13px;
+    justify-content: center;
+    white-space: normal !important;
+    text-align: center;
+    box-sizing: border-box;
+  }
+
+  /* Pagination */
+  .company-reports-pagination {
+    width: 100%;
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .company-reports-pagination span {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    text-align: center;
+  }
+
+  .company-reports-pagination button {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    justify-content: center;
+  }
+
+  /* Filters dialog */
+  .company-reports-filters-backdrop {
+    padding: 12px;
+    align-items: center;
+  }
+
+  .company-reports-filters-panel {
+    width: 100%;
+    max-width: 440px;
+    max-height: calc(100dvh - 24px);
+    padding: 16px;
+    border-radius: 22px;
+    overflow-y: auto;
+  }
+
+  .company-reports-filters-panel__header {
+    padding: 8px 42px 6px;
+  }
+
+  .company-reports-filters-panel__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  /* Details page */
+  .company-report-top-grid,
+  .company-report-details-grid,
+  .company-report-details-main,
+  .company-report-details-side,
+  .company-report-workflow,
+  .company-community-metrics,
+  .company-company-response-card__details,
+  .company-report-info-list,
+  .company-report-images-grid,
+  .company-solution-images-preview,
+  .company-cannot-fix-images {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .company-report-details-card {
+    padding: 16px;
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .company-report-hero {
+    padding: 18px 15px;
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .company-report-hero__content,
+  .company-report-hero__content > *,
+  .company-report-page-subtitle,
+  .company-copyable-report-id,
+  .company-report-id-value {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .company-report-hero__badges,
+  .company-report-hero__meta {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+
+  .company-report-hero__badges > *,
+  .company-report-hero__meta > * {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .company-report-section-header,
+  .company-execution-workspace__header {
+    width: 100%;
+    display: grid !important;
+    justify-items: center !important;
+    gap: 9px;
+    text-align: center !important;
+  }
+
+  .company-report-section-header > div,
+  .company-report-section-header h2,
+  .company-report-section-header p {
+    width: 100%;
+    min-width: 0;
+    text-align: center !important;
+  }
+
+  .company-assigned-team-panel {
+    grid-template-columns: minmax(0, 1fr) !important;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .company-assigned-team-panel__content,
+  .company-assigned-team-panel__content p,
+  .company-assigned-team-panel__content span {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .company-report-info-list > div,
+  .company-company-response-card__details > div,
+  .company-reporter-box,
+  .company-report-timeline article,
+  .company-assignment-note-card > p,
+  .company-company-response-card__reason,
+  .company-company-response-card__note {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .company-report-image-card,
+  .company-solution-image-preview,
+  .company-cannot-fix-images article {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .company-report-image-card img,
+  .company-report-top-images-card .company-report-image-card img {
+    width: 100%;
+    height: auto;
+    min-height: 220px;
+    max-height: 360px;
+    object-fit: cover;
+  }
+
+  .company-execution-workspace button,
+  .company-execution-workspace a,
+  .company-report-details-page form button[type='submit'] {
+    max-width: 100%;
+  }
+
+  .company-report-waiting-card,
+  .company-report-resolved-card {
+    display: grid;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .company-report-waiting-card p,
+  .company-report-resolved-card p {
+    text-align: center;
+  }
+}
+
+@media (max-width: 430px) {
+  .company-reports-filter-card__mobile-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .company-reports-map-wrapper,
+  .company-reports-map-wrapper .leaflet-container,
+  .company-reports-map-empty {
+    min-height: 350px;
+  }
+
+  .company-reports-card .dashboard-section-card__body {
+    padding: 10px !important;
+  }
+
+  .company-reports-table tr {
+    padding: 12px !important;
+    border-radius: 16px !important;
+  }
+
+  .company-reports-table td {
+    grid-template-columns: 82px minmax(0, 1fr) !important;
+    gap: 8px;
+  }
+
+  .company-reports-table td::before {
+    font-size: 0.68rem;
+  }
+
+  .company-report-table-summary strong {
+    font-size: 0.95rem;
+  }
+
+  .company-report-details-card {
+    padding: 14px 12px;
+    border-radius: 18px;
+  }
+
+  .company-report-image-card img,
+  .company-report-top-images-card .company-report-image-card img {
+    min-height: 200px;
+  }
+}
+
+/* =========================================================
+   Reports mobile table: keep the desktop table structure and
+   allow horizontal scrolling, matching the maintenance teams table.
+   This final override intentionally replaces the mobile card layout.
+   ========================================================= */
+@media (max-width: 768px) {
+  .company-reports-card,
+  .company-reports-card .dashboard-section-card__body {
+    min-width: 0;
+  }
+
+  .company-reports-card .dashboard-section-card__body {
+    overflow: hidden !important;
+  }
+
+  .company-reports-table-wrap {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 0 12px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(2, 95, 72, 0.5) rgba(2, 95, 72, 0.08);
+  }
+
+  .company-reports-table-wrap::-webkit-scrollbar {
+    display: block;
+    height: 9px;
+  }
+
+  .company-reports-table-wrap::-webkit-scrollbar-track {
+    background: rgba(2, 95, 72, 0.08);
+    border-radius: 999px;
+  }
+
+  .company-reports-table-wrap::-webkit-scrollbar-thumb {
+    background: rgba(2, 95, 72, 0.5);
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    border-radius: 999px;
+  }
+
+  .company-reports-table {
+    display: table !important;
+    width: max-content !important;
+    min-width: 1080px !important;
+    max-width: none !important;
+    table-layout: auto !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+  }
+
+  .company-reports-table thead {
+    display: table-header-group !important;
+  }
+
+  .company-reports-table tbody {
+    display: table-row-group !important;
+    width: auto !important;
+  }
+
+  .company-reports-table tr,
+  .company-reports-table tr.is-highlighted {
+    display: table-row !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  .company-reports-table th,
+  .company-reports-table td,
+  .company-reports-table td:first-child,
+  .company-reports-table td:last-child,
+  .company-reports-table td[data-label='الإجراء التالي'] {
+    display: table-cell !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 14px 13px !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgba(2, 95, 72, 0.07) !important;
+    border-radius: 0 !important;
+    vertical-align: middle !important;
+    text-align: right !important;
+    white-space: nowrap !important;
+    background: transparent;
+    box-sizing: border-box;
+    overflow: visible !important;
+  }
+
+  .company-reports-table th {
+    background: #f3f4f4 !important;
+    color: var(--color-subtitle);
+    font-size: 0.78rem;
+    font-weight: 950;
+  }
+
+  .company-reports-table td::before,
+  .company-reports-table td:first-child::before,
+  .company-reports-table td[data-label='الإجراء التالي']::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  .company-reports-table tr.is-highlighted td,
+  .company-reports-table tr.is-highlighted td:first-child {
+    background: rgba(2, 95, 72, 0.07) !important;
+  }
+
+  .company-reports-table th:first-child,
+  .company-reports-table td:first-child {
+    min-width: 330px !important;
+    white-space: normal !important;
+  }
+
+  .company-report-table-summary {
+    width: 100% !important;
+    min-width: 300px !important;
+    max-width: 360px !important;
+    display: grid !important;
+    justify-items: start !important;
+    gap: 5px !important;
+    text-align: right !important;
+  }
+
+  .company-reports-table td:first-child strong,
+  .company-report-table-summary strong,
+  .company-reports-table td:first-child span,
+  .company-report-table-summary small,
+  .company-report-table-summary__description,
+  .company-report-table-summary__type,
+  .company-report-table-summary__location,
+  .company-report-table-summary__id {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    text-align: right !important;
+    white-space: normal !important;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .company-report-table-summary__location {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+  }
+
+  .company-report-table-summary__id,
+  .company-report-id-value {
+    direction: rtl;
+    unicode-bidi: normal;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+  }
+
+  .company-report-id-value {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  .company-report-status,
+  .company-report-priority,
+  .company-report-admin-review,
+  .company-report-waiting-pill,
+  .company-report-assigned-date {
+    width: max-content !important;
+    max-width: none !important;
+    min-width: max-content !important;
+    justify-self: auto !important;
+    white-space: nowrap !important;
+    overflow-wrap: normal !important;
+  }
+
+  .company-report-actions {
+    width: max-content !important;
+    min-width: max-content !important;
+    display: flex !important;
+    grid-template-columns: none !important;
+    flex-wrap: nowrap !important;
+    align-items: center;
+    gap: 8px !important;
+  }
+
+  .company-report-view-btn,
+  .company-report-start-btn,
+  .company-report-upload-btn,
+  .company-report-waiting-pill {
+    width: auto !important;
+    max-width: none !important;
+    min-width: max-content !important;
+    min-height: 38px;
+    padding: 8px 11px;
+    white-space: nowrap !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .company-reports-table {
+    min-width: 1040px !important;
+  }
+
+  .company-reports-table th,
+  .company-reports-table td,
+  .company-reports-table td:first-child,
+  .company-reports-table td:last-child,
+  .company-reports-table td[data-label='الإجراء التالي'] {
+    padding: 12px 11px !important;
+  }
+}
+
+/* =========================================================
+   Reports filter dropdown — branded scrollbar
+   ========================================================= */
+.company-reports-filter-select__menu {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(2, 95, 72, 0.62) rgba(2, 95, 72, 0.07);
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.company-reports-filter-select__menu::-webkit-scrollbar {
+  width: 8px;
+}
+
+.company-reports-filter-select__menu::-webkit-scrollbar-track {
+  margin-block: 10px;
+  border-radius: 999px;
+  background: rgba(2, 95, 72, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(2, 95, 72, 0.04);
+}
+
+.company-reports-filter-select__menu::-webkit-scrollbar-thumb {
+  min-height: 44px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(5, 139, 102, 0.92), rgba(2, 95, 72, 0.92))
+    padding-box;
+  box-shadow: 0 3px 10px rgba(2, 95, 72, 0.2);
+}
+
+.company-reports-filter-select__menu::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(180deg, rgba(4, 160, 116, 1), rgba(2, 95, 72, 1))
+    padding-box;
+}
+
+.company-reports-filter-select__menu::-webkit-scrollbar-thumb:active {
+  background: rgba(1, 76, 57, 1);
+}
+
+/* Remove the native top/bottom scrollbar arrow buttons on Chromium/Edge. */
+.company-reports-filter-select__menu::-webkit-scrollbar-button,
+.company-reports-filter-select__menu::-webkit-scrollbar-button:single-button {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .company-reports-filter-select__menu::-webkit-scrollbar {
+    width: 7px;
+  }
+}
+
+
+/* ===== Cannot-fix review flow readiness ===== */
+.company-admin-decision-card__public-message {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(2, 95, 72, 0.14);
+  border-radius: 14px;
+  background: rgba(240, 253, 250, 0.72);
+}
+
+.company-admin-decision-card__public-message strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #075e49;
+}
+
+.company-submission-history-card {
+  overflow: hidden;
+}
+
+.company-submission-history-list {
+  display: grid;
+  gap: 12px;
+}
+
+.company-submission-history-list article {
+  padding: 14px;
+  border: 1px solid rgba(15, 118, 110, 0.13);
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.82);
+}
+
+.company-submission-history-list article > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.company-submission-history-list article strong {
+  color: #075e49;
+}
+
+.company-submission-history-list article small,
+.company-submission-history-list article span {
+  color: #64748b;
+}
+
+.company-submission-history-list article p {
+  margin: 6px 0 0;
+  line-height: 1.75;
+}
+
+.company-admin-decision-card.is-reassigned {
+  border-color: rgba(37, 99, 235, 0.22);
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.94), rgba(255, 255, 255, 0.96));
+}
+
+@media (max-width: 640px) {
+  .company-submission-history-list article > div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

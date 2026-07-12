@@ -14,6 +14,7 @@ function CompanyTeamsToolbar({
   onAvailabilityChange,
   onReset,
   onAddTeam,
+  isDisabled = false,
 }) {
   return (
     <div className="company-teams-toolbar company-teams-toolbar--desktop">
@@ -64,6 +65,7 @@ function CompanyTeamsToolbar({
         type="button"
         className="company-teams-toolbar__add-btn"
         onClick={onAddTeam}
+        disabled={isDisabled}
       >
         <FiPlus />
         إضافة فرقة

@@ -30,7 +30,7 @@ function CompanyTeamDetailsModal({ team, onClose, onEditTeam }) {
 
           <div>
             <h2>{team.name}</h2>
-            <p>فريق تشغيل وصيانة تابع للشركة</p>
+            <p>فريق تشغيل وصيانة تابع للشركة - التوفر محسوب من النظام</p>
           </div>
         </header>
 
@@ -65,7 +65,7 @@ function CompanyTeamDetailsModal({ team, onClose, onEditTeam }) {
 
           <div>
             <FiTool />
-            <span>المهام النشطة</span>
+            <span>المهام النشطة المحسوبة</span>
             <strong>{team.activeTasks}</strong>
           </div>
 

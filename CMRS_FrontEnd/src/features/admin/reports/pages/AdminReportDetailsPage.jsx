@@ -135,23 +135,23 @@ function AdminReportDetailsPage() {
     }));
   }
 
-  async function handleAcceptFix(adminNote) {
-    const updatedReport = await acceptCompanyFix(report.id, { adminNote });
+  async function handleAcceptFix(payload = {}) {
+    const updatedReport = await acceptCompanyFix(report.id, payload);
     setReport(updatedReport);
   }
 
-  async function handleRequestCompletion(adminNote) {
-    const updatedReport = await requestCompanyCompletion(report.id, { adminNote });
+  async function handleRequestCompletion(payload = {}) {
+    const updatedReport = await requestCompanyCompletion(report.id, payload);
     setReport(updatedReport);
   }
 
-  async function handleAcceptCannotFix(adminNote) {
-    const updatedReport = await acceptCompanyCannotFix(report.id, { adminNote });
+  async function handleAcceptCannotFix(payload = {}) {
+    const updatedReport = await acceptCompanyCannotFix(report.id, payload);
     setReport(updatedReport);
   }
 
-async function handleReassign(adminNote) {
-  const updatedReport = await prepareReportReassignment(report.id, { adminNote });
+async function handleReassign(payload = {}) {
+  const updatedReport = await prepareReportReassignment(report.id, payload);
 
   setReport(updatedReport);
 
@@ -213,7 +213,9 @@ async function handleReassign(adminNote) {
     reportStatusText.includes('resolved') ||
     reportStatusText.includes('rejected') ||
     reportStatusText.includes('closed') ||
+    reportStatusText.includes('unabletoexecute') ||
     reportStatusText.includes('تم الحل') ||
+    reportStatusText.includes('متعذر التنفيذ') ||
     reportStatusText.includes('مرفوض') ||
     reportStatusText.includes('مغلق');
   const canShowCompanyAssignmentPanel = !isCitizenReviewStage && !isTerminalReport;

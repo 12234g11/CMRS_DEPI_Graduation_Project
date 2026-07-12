@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { FiAlertCircle, FiCheckCircle, FiSearch, FiX } from 'react-icons/fi';
 import {
   assignCompanyToReport,
+  getAdminCompanyForAssignment,
   getAssignmentCompaniesForReport,
 } from '../api/adminReportsApi';
 import AdminCompanyRecommendationCard from './AdminCompanyRecommendationCard';
@@ -18,6 +19,10 @@ const ISSUE_CATEGORY_LABELS = {
   9: 'الشبكات',
   10: 'صيانة عامة',
 };
+
+function normalizeText(value) {
+  return String(value || '').trim().toLowerCase();
+}
 
 function getReportCategoryId(report = {}) {
   const directCategoryId = report.issueCategoryId || report.categoryId;
@@ -66,6 +71,107 @@ function doesCompanyMatchReportCategory(company = {}, categoryId = '', categoryL
   return companyValues.some((value) => acceptedValues.has(value));
 }
 
+function getAssignedCompanyName(report = {}) {
+  const assignedName =
+    report.assignedCompanyName ||
+    report.assignedCompany ||
+    report.concernedCompanyName ||
+    report.concernedCompany ||
+    '';
+
+  return assignedName && assignedName !== 'غير معين' ? assignedName : '';
+}
+
+function hasExistingAssignment(report = {}) {
+  return Boolean(report.assignedCompanyId || getAssignedCompanyName(report));
+}
+
+function canReassignAfterCompanyResponse(report = {}) {
+  if (report.excludedCompanyIds?.length || report.excludedCompanyNames?.length) {
+    return true;
+  }
+
+  const companyResponse = report.companyResponse || {};
+  const responseText = normalizeText([
+    companyResponse.status,
+    companyResponse.statusLabel,
+    companyResponse.reviewStatus,
+    companyResponse.reviewLabel,
+    companyResponse.reason,
+    companyResponse.note,
+    report.statusValue,
+    report.statusLabel,
+    report.status,
+  ].filter(Boolean).join(' '));
+
+  return (
+    responseText.includes('unable') ||
+    responseText.includes('cannot') ||
+    responseText.includes('failed') ||
+    responseText.includes('executionfailed') ||
+    responseText.includes('unabletoexecute') ||
+    responseText.includes('تعذر') ||
+    responseText.includes('متعذر') ||
+    responseText.includes('اعتذر') ||
+    responseText.includes('رفض التنفيذ') ||
+    responseText.includes('غير قادر')
+  );
+}
+
+function isActiveStatus(value) {
+  const normalized = normalizeText(value);
+
+  if (!normalized) return true;
+
+  return normalized === 'active' || normalized === 'نشطة' || normalized === 'مفعل' || normalized === 'مفعلة';
+}
+
+function isActiveAccountStatus(value) {
+  const normalized = normalizeText(value);
+
+  if (!normalized) return true;
+
+  return normalized === 'active' || normalized === 'مفعل' || normalized === 'مفعلة';
+}
+
+function getCompanyAvailability(company = {}) {
+  const accountStatus = company.accountStatus ?? company.accountState ?? company.activationStatus ?? '';
+  const operationStatus = company.status ?? company.companyStatus ?? '';
+  const activeTasks = Number(company.activeTasks ?? company.currentTasks ?? 0);
+  const maxCapacity = Number(company.maxCapacity ?? 0);
+
+  if (!isActiveAccountStatus(accountStatus)) {
+    const accountStatusText = normalizeText(accountStatus);
+
+    return {
+      canAssign: false,
+      reason:
+        accountStatusText === 'expired'
+          ? 'لا يمكن تعيين البلاغ لهذه الشركة لأن دعوة التفعيل منتهية. يجب إعادة إرسال الدعوة وتفعيل الحساب أولًا.'
+          : 'لا يمكن تعيين البلاغ لهذه الشركة قبل تفعيل حسابها وقبول دعوة التفعيل.',
+    };
+  }
+
+  if (!isActiveStatus(operationStatus)) {
+    return {
+      canAssign: false,
+      reason: 'لا يمكن تعيين البلاغ لشركة غير نشطة أو معطلة.',
+    };
+  }
+
+  if (maxCapacity > 0 && activeTasks >= maxCapacity) {
+    return {
+      canAssign: false,
+      reason: `لا يمكن تعيين البلاغ لهذه الشركة لأن الحد الأقصى للمهام مكتمل (${activeTasks}/${maxCapacity}).`,
+    };
+  }
+
+  return {
+    canAssign: true,
+    reason: '',
+  };
+}
+
 function AdminCompanyAssignmentPanel({ report, onAssigned }) {
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState(null);
@@ -73,14 +179,21 @@ function AdminCompanyAssignmentPanel({ report, onAssigned }) {
   const [adminNote, setAdminNote] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isCheckingCompany, setIsCheckingCompany] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [validationMessage, setValidationMessage] = useState('');
 
   const reportCategoryId = useMemo(() => getReportCategoryId(report), [report]);
   const reportCategoryLabel = useMemo(
     () => getReportCategoryLabel(report, reportCategoryId),
     [report, reportCategoryId],
   );
+
+  const assignedCompanyName = getAssignedCompanyName(report);
+  const reportHasExistingAssignment = hasExistingAssignment(report);
+  const canReassign = canReassignAfterCompanyResponse(report);
+  const isAssignmentLocked = reportHasExistingAssignment && !canReassign;
 
   const excludedCompanyIds = useMemo(
     () => report.excludedCompanyIds || [],
@@ -106,6 +219,19 @@ function AdminCompanyAssignmentPanel({ report, onAssigned }) {
 
   useEffect(() => {
     let isMounted = true;
+
+    setValidationMessage('');
+
+    if (isAssignmentLocked) {
+      setCompanies([]);
+      setSelectedCompany(null);
+      setErrorMessage('');
+      setIsLoading(false);
+
+      return () => {
+        isMounted = false;
+      };
+    }
 
     setIsLoading(true);
     setErrorMessage('');
@@ -139,7 +265,7 @@ function AdminCompanyAssignmentPanel({ report, onAssigned }) {
             return currentCompany;
           }
 
-          return availableCompanies[0] || null;
+          return null;
         });
       })
       .catch(() => {
@@ -158,17 +284,68 @@ function AdminCompanyAssignmentPanel({ report, onAssigned }) {
     return () => {
       isMounted = false;
     };
-  }, [report.id, reportCategoryId, searchTerm, excludedCompanyKey]);
+  }, [report.id, reportCategoryId, searchTerm, excludedCompanyKey, isAssignmentLocked]);
 
-  const currentCompanyLabel =
-    report.assignedCompany === 'غير معين'
-      ? 'لم يتم التعيين بعد'
-      : report.assignedCompany;
+  const currentCompanyLabel = assignedCompanyName || 'لم يتم التعيين بعد';
+
+  function handleSelectCompany(company) {
+    setValidationMessage('');
+    setSelectedCompany(company);
+  }
+
+  async function validateSelectedCompanyBeforeAssignment() {
+    if (!selectedCompany) {
+      return {
+        canAssign: false,
+        reason: 'برجاء اختيار شركة أولًا قبل تأكيد التعيين.',
+      };
+    }
+
+    const localAvailability = getCompanyAvailability(selectedCompany);
+
+    if (!localAvailability.canAssign) {
+      return localAvailability;
+    }
+
+    try {
+      const latestCompanyData = await getAdminCompanyForAssignment(selectedCompany.id);
+      const latestAvailability = getCompanyAvailability(latestCompanyData);
+
+      setCompanies((currentCompanies) => currentCompanies.map((company) => (
+        company.id === latestCompanyData.id ? { ...company, ...latestCompanyData } : company
+      )));
+      setSelectedCompany((currentCompany) => (
+        currentCompany ? { ...currentCompany, ...latestCompanyData } : latestCompanyData
+      ));
+
+      return latestAvailability;
+    } catch {
+      return localAvailability;
+    }
+  }
 
   function handleCloseConfirmModal() {
     if (isAssigning) return;
 
     setIsConfirmOpen(false);
+  }
+
+  async function handleOpenConfirmModal() {
+    if (isCheckingCompany) return;
+
+    setIsCheckingCompany(true);
+    setValidationMessage('');
+
+    const availability = await validateSelectedCompanyBeforeAssignment();
+
+    setIsCheckingCompany(false);
+
+    if (!availability.canAssign) {
+      setValidationMessage(availability.reason);
+      return;
+    }
+
+    setIsConfirmOpen(true);
   }
 
   async function handleConfirmAssign(event) {
@@ -177,17 +354,36 @@ function AdminCompanyAssignmentPanel({ report, onAssigned }) {
     if (!selectedCompany) return;
 
     setIsAssigning(true);
+    setValidationMessage('');
 
-    const result = await assignCompanyToReport(report.id, {
-      companyId: selectedCompany.id,
-      adminNote,
-      assignmentSource: 'manual',
-    });
+    const availability = await validateSelectedCompanyBeforeAssignment();
 
-    onAssigned?.(result);
+    if (!availability.canAssign) {
+      setValidationMessage(availability.reason);
+      setIsAssigning(false);
+      setIsConfirmOpen(false);
+      return;
+    }
 
-    setIsConfirmOpen(false);
-    setIsAssigning(false);
+    try {
+      const result = await assignCompanyToReport(report.id, {
+        companyId: selectedCompany.id,
+        adminNote,
+        assignmentSource: 'manual',
+      });
+
+      onAssigned?.(result);
+      setIsConfirmOpen(false);
+    } catch (error) {
+      const apiMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        'تعذر تعيين الشركة. برجاء مراجعة حالة الشركة والمحاولة مرة أخرى.';
+
+      setValidationMessage(apiMessage);
+    } finally {
+      setIsAssigning(false);
+    }
   }
 
   return (
@@ -207,7 +403,19 @@ function AdminCompanyAssignmentPanel({ report, onAssigned }) {
         <strong>{currentCompanyLabel}</strong>
       </div>
 
-      {excludedCompanyNames.length ? (
+      {isAssignmentLocked ? (
+        <div className="admin-company-assignment-locked">
+          <FiCheckCircle />
+          <div>
+            <strong>تم تعيين شركة بالفعل لهذا البلاغ.</strong>
+            <p>
+              الشركة المعينة حاليًا: {currentCompanyLabel}. لا يمكن تعيين شركة أخرى إلا إذا أرسلت الشركة الحالية اعتذارًا أو تعذر تنفيذ للبلاغ.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {!isAssignmentLocked && excludedCompanyNames.length ? (
         <div className="admin-company-excluded-warning">
           <FiAlertCircle />
           <span>
@@ -217,77 +425,94 @@ function AdminCompanyAssignmentPanel({ report, onAssigned }) {
         </div>
       ) : null}
 
-      <div className="admin-company-assignment-toolbar admin-company-assignment-toolbar--search-only">
-        <div className="admin-company-assignment-search">
-          <FiSearch />
-          <input
-            type="search"
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="ابحث باسم الشركة..."
-            aria-label="البحث في الشركات"
-          />
-        </div>
-      </div>
-
-      <div className="admin-company-assignment-hint">
-        <FiAlertCircle />
-        <span>
-          القائمة تعرض فقط الشركات التي أرجعها الباك لهذا البلاغ حسب نوع المشكلة ({reportCategoryLabel}). استخدم البحث للوصول لشركة محددة بسرعة.
-        </span>
-      </div>
-
-      <div className="admin-company-recommendations">
-        <div className="admin-company-recommendations__title">
-          <h3>الشركات المتاحة لهذا البلاغ</h3>
-          <span>{companies.length} شركة</span>
-        </div>
-
-        {errorMessage ? (
-          <p className="admin-company-empty-state">{errorMessage}</p>
-        ) : null}
-
-        {isLoading ? (
-          <p className="admin-company-empty-state">جاري تحميل الشركات...</p>
-        ) : companies.length ? (
-          <div className="admin-company-recommendations__grid">
-            {companies.map((company) => (
-              <AdminCompanyRecommendationCard
-                key={company.id}
-                company={company}
-                isSelected={selectedCompany?.id === company.id}
-                onSelect={setSelectedCompany}
+      {!isAssignmentLocked ? (
+        <>
+          <div className="admin-company-assignment-toolbar admin-company-assignment-toolbar--search-only">
+            <div className="admin-company-assignment-search">
+              <FiSearch />
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="ابحث باسم الشركة..."
+                aria-label="البحث في الشركات"
               />
-            ))}
-          </div>
-        ) : !errorMessage ? (
-          <p className="admin-company-empty-state">
-            {searchTerm.trim()
-              ? `لا توجد شركات باسم "${searchTerm.trim()}" ضمن الشركات المؤهلة لتصنيف ${reportCategoryLabel}.`
-              : `لا توجد شركات متاحة يمكنها حل مشكلة من نوع ${reportCategoryLabel}. برجاء التعاقد مع شركة لهذا التصنيف وإضافتها للنظام.`}
-          </p>
-        ) : null}
-      </div>
-
-      {selectedCompany ? (
-        <div className="admin-selected-company-summary">
-          <div>
-            <span>الشركة المختارة</span>
-            <strong>{selectedCompany.name}</strong>
-            <p>{selectedCompany.specialization}</p>
+            </div>
           </div>
 
-          <button
-            type="button"
-            className="admin-company-confirm-btn"
-            onClick={() => setIsConfirmOpen(true)}
-          >
-            تأكيد التعيين
-          </button>
-        </div>
+          <div className="admin-company-assignment-hint">
+            <FiAlertCircle />
+            <span>
+              القائمة تعرض فقط الشركات المناسبة لهذا البلاغ حسب نوع المشكلة ({reportCategoryLabel}). استخدم البحث للوصول إلى شركة محددة بسرعة.
+            </span>
+          </div>
+
+          <div className="admin-company-recommendations">
+            <div className="admin-company-recommendations__title">
+              <h3>الشركات المتاحة لهذا البلاغ</h3>
+              <span>{companies.length} شركة</span>
+            </div>
+
+            {errorMessage ? (
+              <p className="admin-company-empty-state">{errorMessage}</p>
+            ) : null}
+
+            {isLoading ? (
+              <p className="admin-company-empty-state">جاري تحميل الشركات...</p>
+            ) : companies.length ? (
+              <div className="admin-company-recommendations__grid">
+                {companies.map((company) => {
+                  const availability = getCompanyAvailability(company);
+
+                  return (
+                    <AdminCompanyRecommendationCard
+                      key={company.id}
+                      company={company}
+                      availability={availability}
+                      isSelected={selectedCompany?.id === company.id}
+                      onSelect={handleSelectCompany}
+                    />
+                  );
+                })}
+              </div>
+            ) : !errorMessage ? (
+              <p className="admin-company-empty-state">
+                {searchTerm.trim()
+                  ? `لا توجد شركات باسم "${searchTerm.trim()}" ضمن الشركات المؤهلة لتصنيف ${reportCategoryLabel}.`
+                  : `لا توجد شركات متاحة يمكنها حل مشكلة من نوع ${reportCategoryLabel}. برجاء التعاقد مع شركة لهذا التصنيف وإضافتها للنظام.`}
+              </p>
+            ) : null}
+          </div>
+
+          {validationMessage ? (
+            <div className="admin-assignment-validation-message">
+              <FiAlertCircle />
+              <span>{validationMessage}</span>
+            </div>
+          ) : null}
+
+          {selectedCompany ? (
+            <div className="admin-selected-company-summary">
+              <div>
+                <span>الشركة المختارة</span>
+                <strong>{selectedCompany.name}</strong>
+                <p>{selectedCompany.specialization}</p>
+              </div>
+
+              <button
+                type="button"
+                className="admin-company-confirm-btn"
+                onClick={handleOpenConfirmModal}
+                disabled={isCheckingCompany}
+              >
+                {isCheckingCompany ? 'جاري التحقق...' : 'تأكيد التعيين'}
+              </button>
+            </div>
+          ) : null}
+        </>
       ) : null}
 
-      {isConfirmOpen ? (
+      {isConfirmOpen && selectedCompany ? (
         <div className="admin-assignment-modal-backdrop" role="presentation">
           <form
             className="admin-assignment-modal"

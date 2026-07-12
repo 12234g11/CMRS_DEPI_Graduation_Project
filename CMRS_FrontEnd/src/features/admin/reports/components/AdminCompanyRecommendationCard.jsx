@@ -1,16 +1,20 @@
 import {
+  FiAlertCircle,
   FiBriefcase,
   FiCheck,
   FiClock,
   FiMapPin,
 } from 'react-icons/fi';
 
-function AdminCompanyRecommendationCard({ company, isSelected, onSelect }) {
+function AdminCompanyRecommendationCard({ company, availability, isSelected, onSelect }) {
+  const canAssign = availability?.canAssign !== false;
+  const unavailableReason = availability?.reason || '';
+
   return (
     <article
       className={`admin-company-recommendation-card ${
         isSelected ? 'is-selected' : ''
-      }`}
+      } ${!canAssign ? 'is-disabled' : ''}`}
     >
       <div className="admin-company-recommendation-card__header">
         <div>
@@ -25,6 +29,13 @@ function AdminCompanyRecommendationCard({ company, isSelected, onSelect }) {
       <p className="admin-company-description">
         {company.description || 'لا يوجد وصف متاح لهذه الشركة.'}
       </p>
+
+      {!canAssign ? (
+        <div className="admin-company-unavailable-reason">
+          <FiAlertCircle />
+          <span>{unavailableReason}</span>
+        </div>
+      ) : null}
 
       <div className="admin-company-metrics">
         <span>
@@ -78,8 +89,9 @@ function AdminCompanyRecommendationCard({ company, isSelected, onSelect }) {
         type="button"
         className="admin-company-select-btn"
         onClick={() => onSelect(company)}
+        disabled={!canAssign}
       >
-        {isSelected ? 'تم اختيار الشركة' : 'اختيار الشركة'}
+        {!canAssign ? 'غير متاحة للتعيين' : isSelected ? 'تم اختيار الشركة' : 'اختيار الشركة'}
       </button>
     </article>
   );

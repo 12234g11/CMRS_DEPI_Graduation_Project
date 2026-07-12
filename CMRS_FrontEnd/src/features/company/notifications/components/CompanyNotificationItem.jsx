@@ -11,7 +11,7 @@ import {
   FiTrash2,
 } from 'react-icons/fi';
 import { ROUTES } from '../../../../shared/navigation';
-import { COMPANY_NOTIFICATION_TYPES } from '../mocks/companyNotificationsMockData';
+import { COMPANY_NOTIFICATION_TYPES } from '../constants/companyNotifications';
 
 function normalizeType(type) {
   return String(type || '').trim().toLowerCase();
@@ -134,10 +134,15 @@ function formatRelativeTime(createdAt) {
   });
 }
 
-function CompanyNotificationItem({ notification, onMarkAsRead, onDelete }) {
+function CompanyNotificationItem({
+  notification,
+  onMarkAsRead,
+  onDelete,
+  isActionLoading = false,
+}) {
   const isUnread = !notification.isRead;
   const tone = getNotificationTone(notification);
-  const reportNumber = notification.reportNumber || notification.reportId;
+  const reportNumber = notification.reportNumber;
 
   return (
     <article
@@ -202,6 +207,7 @@ function CompanyNotificationItem({ notification, onMarkAsRead, onDelete }) {
             type="button"
             className="company-notification-item__action company-notification-item__action--read"
             onClick={() => onMarkAsRead?.(notification.id)}
+            disabled={isActionLoading}
           >
             تحديد كمقروء
           </button>
@@ -216,6 +222,7 @@ function CompanyNotificationItem({ notification, onMarkAsRead, onDelete }) {
           type="button"
           className="company-notification-item__delete"
           onClick={() => onDelete?.(notification.id)}
+          disabled={isActionLoading}
           aria-label="حذف الإشعار"
           title="حذف الإشعار"
         >

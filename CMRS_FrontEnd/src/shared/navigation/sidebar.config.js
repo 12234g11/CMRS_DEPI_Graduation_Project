@@ -12,6 +12,12 @@ export const DASHBOARD_LAYOUT_CONFIG = {
         end: true,
       },
       {
+        key: 'followed-reports',
+        label: 'البلاغات المتابَعة',
+        path: ROUTES.FOLLOWED_REPORTS,
+        icon: 'bookmark',
+      },
+      {
         key: 'add-report',
         label: 'إضافة بلاغ',
         path: ROUTES.ADD_REPORT,

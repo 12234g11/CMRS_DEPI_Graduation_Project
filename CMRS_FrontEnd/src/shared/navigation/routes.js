@@ -10,6 +10,7 @@ export const ROUTES = {
   ADD_REPORT: '/reports/new',
   REPORTS: '/reports',
   MY_REPORTS: '/my-reports',
+  FOLLOWED_REPORTS: '/followed-reports',
   NEARBY_ISSUES: '/nearby-issues',
   NOTIFICATIONS: '/notifications',
   PROFILE: '/profile',

@@ -5,6 +5,7 @@ function CompanyTeamStatusModal({
   team,
   onClose,
   onConfirm,
+  isUpdating = false,
 }) {
   if (!team) return null;
 
@@ -39,7 +40,7 @@ function CompanyTeamStatusModal({
           <p>
             {isActive
               ? 'عند إيقاف الفرقة لن يتم استخدامها في تعيينات جديدة حتى يتم تفعيلها مرة أخرى.'
-              : 'عند تفعيل الفرقة ستصبح متاحة للاستخدام في تعيين البلاغات الجديدة.'}
+              : 'عند تفعيل الفرقة سيعيد النظام حساب حالة التوفر تلقائيًا حسب عدد البلاغات النشطة.'}
           </p>
         </div>
 
@@ -48,6 +49,7 @@ function CompanyTeamStatusModal({
             type="button"
             className="company-team-cancel-btn"
             onClick={onClose}
+            disabled={isUpdating}
           >
             إلغاء
           </button>
@@ -63,8 +65,13 @@ function CompanyTeamStatusModal({
                   : COMPANY_TEAM_STATUSES.ACTIVE,
               )
             }
+            disabled={isUpdating}
           >
-            {isActive ? 'تأكيد الإيقاف' : 'تأكيد التفعيل'}
+            {isUpdating
+              ? 'جاري التحديث...'
+              : isActive
+                ? 'تأكيد الإيقاف'
+                : 'تأكيد التفعيل'}
           </button>
         </div>
       </section>

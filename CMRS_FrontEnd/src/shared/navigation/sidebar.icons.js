@@ -10,6 +10,7 @@ import {
   FiBarChart2,
   FiSettings,
   FiTool,
+  FiBookmark,
 } from 'react-icons/fi';
 
 export const SIDEBAR_ICONS = {
@@ -24,4 +25,5 @@ export const SIDEBAR_ICONS = {
   'bar-chart': FiBarChart2,
   settings: FiSettings,
   tool: FiTool,
+  bookmark: FiBookmark,
 };

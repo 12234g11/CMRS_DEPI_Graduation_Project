@@ -16,15 +16,42 @@ function CompanyProfilePage() {
     profile: companyProfileMockData,
     stats: getCompanyProfileStats(companyProfileMockData),
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     let isMounted = true;
 
-    getCompanyProfileData().then((data) => {
-      if (!isMounted) return;
+    async function loadCompanyProfile() {
+      try {
+        setIsLoading(true);
+        setErrorMessage('');
 
-      setProfileData(data);
-    });
+        const data = await getCompanyProfileData();
+
+        if (!isMounted) return;
+
+        setProfileData({
+          profile: data?.profile ?? companyProfileMockData,
+          stats: Array.isArray(data?.stats)
+            ? data.stats
+            : getCompanyProfileStats(data?.profile ?? companyProfileMockData),
+        });
+      } catch (error) {
+        if (!isMounted) return;
+
+        setErrorMessage(
+          error?.response?.data?.message ||
+            'تعذر تحميل بيانات الملف الشخصي للشركة في الوقت الحالي.'
+        );
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadCompanyProfile();
 
     return () => {
       isMounted = false;
@@ -40,14 +67,20 @@ function CompanyProfilePage() {
         subtitle="Company Profile - بيانات الشركة وحساب التشغيل"
       />
 
-      <CompanyProfileHeader profile={profile} />
+      {errorMessage ? (
+        <div className="company-profile-alert" role="alert">
+          {errorMessage}
+        </div>
+      ) : null}
 
-      <CompanyProfileStatsCards stats={stats} />
+      <CompanyProfileHeader profile={profile} isLoading={isLoading} />
+
+      <CompanyProfileStatsCards stats={stats} isLoading={isLoading} />
 
       <div className="company-profile-grid company-profile-grid--simple">
-        <CompanyProfileInfoCard profile={profile} />
+        <CompanyProfileInfoCard profile={profile} isLoading={isLoading} />
 
-        <CompanyProfileAccountCard profile={profile} />
+        <CompanyProfileAccountCard profile={profile} isLoading={isLoading} />
       </div>
     </div>
   );

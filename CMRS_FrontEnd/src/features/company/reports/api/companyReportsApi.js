@@ -185,7 +185,15 @@ function normalizeImageUrl(imageUrl) {
 }
 
 function normalizeImages(images) {
-  if (Array.isArray(images)) return images.filter(Boolean).map(normalizeImageUrl);
+  if (Array.isArray(images)) {
+    return images
+      .map((image) => {
+        if (typeof image === 'string') return image;
+        return image?.imageUrl || image?.thumbnailUrl || image?.url || image?.fullImageUrl || '';
+      })
+      .filter(Boolean)
+      .map(normalizeImageUrl);
+  }
 
   if (typeof images === 'string' && images.trim()) {
     return images
@@ -196,6 +204,56 @@ function normalizeImages(images) {
   }
 
   return [];
+}
+
+function cleanApiText(value) {
+  const text = String(value ?? '').trim();
+  if (!text || ['null', 'undefined', 'string'].includes(text.toLowerCase())) return '';
+  return text;
+}
+
+function inferCompanyResponseType(companyResponse = {}, report = {}) {
+  const explicitType = cleanApiText(
+    companyResponse.type ||
+      companyResponse.responseType ||
+      companyResponse.companyResponseType ||
+      companyResponse.submissionType ||
+      report.pendingReviewType ||
+      report.companyResponseType,
+  );
+
+  const searchableValue = compactKey(
+    `${explicitType} ${companyResponse.status || ''} ${companyResponse.statusLabel || ''}`,
+  );
+
+  if (
+    cleanApiText(companyResponse.reason) ||
+    searchableValue.includes('cannotfix') ||
+    searchableValue.includes('unabletoexecute') ||
+    searchableValue.includes('تعذر') ||
+    searchableValue.includes('اعتذار')
+  ) {
+    return 'cannot_fix';
+  }
+
+  if (
+    searchableValue.includes('fixed') ||
+    searchableValue.includes('solution') ||
+    searchableValue.includes('resolved') ||
+    searchableValue.includes('تمالإصلاح')
+  ) {
+    return 'fixed';
+  }
+
+  if (
+    searchableValue.includes('started') ||
+    searchableValue.includes('inprogress') ||
+    searchableValue.includes('بدءالتنفيذ')
+  ) {
+    return 'started';
+  }
+
+  return explicitType || '';
 }
 
 function readProgressProofsMap() {
@@ -298,32 +356,67 @@ function normalizePriority(report) {
   };
 }
 
-function normalizeAdminReview(adminReview) {
-  if (!adminReview) return null;
+function normalizeAdminReview(adminReview, companyResponse = null) {
+  const reviewSource =
+    adminReview ||
+    (companyResponse
+      ? {
+          status: companyResponse.reviewStatus,
+          label: companyResponse.reviewLabel,
+          note: companyResponse.adminNote || companyResponse.reviewNote,
+          reviewedAt: companyResponse.reviewedAt,
+          userMessage: companyResponse.userMessage || companyResponse.publicMessage,
+          decision: companyResponse.decision,
+        }
+      : null);
 
-  const normalizedStatus = compactKey(adminReview.status);
+  if (!reviewSource) return null;
+
+  const normalizedStatus = compactKey(
+    reviewSource.status || reviewSource.reviewStatus || reviewSource.decision,
+  );
+
   const statusAliases = {
     accepted: 'accepted',
     approved: 'accepted',
+    acceptfix: 'accepted',
+    solutionaccepted: 'accepted',
     cannotfixaccepted: 'cannot_fix_accepted',
     cannotfixapproved: 'cannot_fix_accepted',
-    needscompletion: 'needs_completion',
+    acceptedcannotfix: 'cannot_fix_accepted',
+    acceptcannotfix: 'cannot_fix_accepted',
+    accept_cannot_fix: 'cannot_fix_accepted',
     needcompletion: 'needs_completion',
+    needscompletion: 'needs_completion',
+    rejectandcontinue: 'cannot_fix_rejected',
+    rejectcannotfix: 'cannot_fix_rejected',
+    cannotfixrejected: 'cannot_fix_rejected',
+    rejectedcannotfix: 'cannot_fix_rejected',
     rejected: 'rejected',
+    reassigned: 'reassigned',
+    reassign: 'reassigned',
+    reassignmentrequested: 'reassigned',
     pending: 'pending',
     pendingreview: 'pending',
   };
 
   return {
-    ...adminReview,
-    status: statusAliases[normalizedStatus] || adminReview.status || 'pending',
+    ...reviewSource,
+    status: statusAliases[normalizedStatus] || reviewSource.status || 'pending',
+    label: cleanApiText(reviewSource.label || reviewSource.reviewLabel),
+    note: cleanApiText(reviewSource.note || reviewSource.adminNote || reviewSource.reviewNote),
+    userMessage: cleanApiText(
+      reviewSource.userMessage || reviewSource.publicMessage || reviewSource.messageToUser,
+    ),
+    reviewedAt: reviewSource.reviewedAt || reviewSource.decidedAt || null,
   };
 }
 
-function normalizeCompanyResponse(companyResponse) {
+function normalizeCompanyResponse(companyResponse, report = {}) {
   if (!companyResponse) return null;
 
-  const normalizedStatus = compactKey(companyResponse.status);
+  const responseType = inferCompanyResponseType(companyResponse, report);
+  const normalizedStatus = compactKey(responseType || companyResponse.status);
   const statusAliases = {
     started: 'started',
     fixed: 'fixed',
@@ -334,10 +427,45 @@ function normalizeCompanyResponse(companyResponse) {
 
   return {
     ...companyResponse,
-    status: statusAliases[normalizedStatus] || companyResponse.status,
-    images: normalizeImages(companyResponse.images),
+    id: companyResponse.id || companyResponse.submissionId || companyResponse.responseId,
+    responseType,
+    status: statusAliases[normalizedStatus] || responseType || companyResponse.status,
+    statusLabel:
+      cleanApiText(companyResponse.typeLabel || companyResponse.responseTypeLabel) ||
+      (responseType === 'cannot_fix'
+        ? 'طلب تعذر تنفيذ'
+        : responseType === 'fixed'
+          ? 'حل وإثبات تنفيذ'
+          : responseType === 'started'
+            ? 'بدء التنفيذ'
+            : cleanApiText(companyResponse.statusLabel)),
+    reason: cleanApiText(
+      companyResponse.reason ||
+        companyResponse.cannotFixReason ||
+        companyResponse.failureReason,
+    ),
+    note: cleanApiText(
+      companyResponse.note ||
+        companyResponse.companyNote ||
+        companyResponse.details ||
+        companyResponse.description,
+    ),
+    adminNote: cleanApiText(companyResponse.adminNote || companyResponse.reviewNote),
+    userMessage: cleanApiText(
+      companyResponse.userMessage ||
+        companyResponse.publicMessage ||
+        companyResponse.messageToUser,
+    ),
+    reviewStatus: cleanApiText(companyResponse.reviewStatus),
+    reviewLabel: cleanApiText(companyResponse.reviewLabel),
+    images: normalizeImages(
+      companyResponse.images ||
+        companyResponse.attachments ||
+        companyResponse.proofImages,
+    ),
   };
 }
+
 
 function normalizeTeam(team) {
   if (!team) return null;
@@ -385,6 +513,20 @@ function normalizeReport(report) {
       report.lon,
   };
 
+  const companyResponse = normalizeCompanyResponse(
+    report.companyResponse ||
+      report.latestCompanyResponse ||
+      (Array.isArray(report.companySubmissions) ? report.companySubmissions.at(-1) : null) ||
+      (Array.isArray(report.companyResponseHistory) ? report.companyResponseHistory.at(-1) : null),
+    report,
+  );
+
+  const companySubmissionsSource =
+    report.companySubmissions ||
+    report.companyResponseHistory ||
+    report.companyResponses ||
+    [];
+
   return {
     ...reportData,
     id: reportId,
@@ -395,8 +537,26 @@ function normalizeReport(report) {
     priorityTone: priority.tone,
     reporter: report.reporter || null,
     assignedTeam: normalizeTeam(report.assignedTeam || report.team),
-    companyResponse: normalizeCompanyResponse(report.companyResponse),
-    adminReview: normalizeAdminReview(report.adminReview),
+    companyResponse,
+    companySubmissions: Array.isArray(companySubmissionsSource)
+      ? companySubmissionsSource.map((submission) =>
+          normalizeCompanyResponse(submission, report),
+        )
+      : [],
+    adminReview: normalizeAdminReview(report.adminReview, companyResponse),
+    pendingReviewType:
+      cleanApiText(report.pendingReviewType) ||
+      companyResponse?.responseType ||
+      '',
+    assignmentHistory: Array.isArray(report.assignmentHistory)
+      ? report.assignmentHistory
+      : [],
+    userMessage: cleanApiText(
+      report.userMessage ||
+        report.publicMessage ||
+        report.adminUserMessage ||
+        companyResponse?.userMessage,
+    ),
     timeline: Array.isArray(report.timeline) ? report.timeline : [],
     images: originalImages,
     progressImages,
@@ -533,9 +693,12 @@ export async function getCompanyReportById(reportId) {
 }
 
 export async function getCompanyMaintenanceTeams() {
-  const data = await request('/api/company/maintenance-teams');
-  const items = Array.isArray(data) ? data : data?.items || [];
-  return items.map(normalizeTeam);
+  const data = await request('/api/company/teams');
+  const items = Array.isArray(data)
+    ? data
+    : data?.items || data?.teams || data?.maintenanceTeams || [];
+
+  return items.map(normalizeTeam).filter(Boolean);
 }
 
 export async function assignMaintenanceTeamToReport(reportId, payload) {

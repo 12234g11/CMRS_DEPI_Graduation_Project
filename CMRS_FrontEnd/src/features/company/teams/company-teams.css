@@ -406,6 +406,31 @@
   font-weight: 850;
 }
 
+.company-team-system-note {
+  margin-top: 18px;
+  padding: 13px 14px;
+  border-radius: 16px;
+  background: rgba(2, 95, 72, 0.06);
+  border: 1px solid rgba(2, 95, 72, 0.12);
+  color: var(--color-subtitle);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.8;
+  font-size: 0.84rem;
+  font-weight: 850;
+}
+
+.company-team-system-note svg {
+  margin-top: 4px;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.company-team-system-note p {
+  margin: 0;
+}
+
 .company-team-form-grid {
   margin-top: 20px;
   display: grid;
@@ -419,6 +444,10 @@
   color: var(--color-subtitle);
   font-size: 0.86rem;
   font-weight: 900;
+}
+
+.company-team-form-field--full {
+  margin-top: 14px;
 }
 
 .company-team-form-field input,
@@ -997,5 +1026,62 @@
   .company-teams-open-filters-btn,
   .company-teams-filter-card__mobile-actions .company-teams-filter-card__add-btn {
     width: min(100%, 260px);
+  }
+}
+/* Real API states */
+
+.company-teams-alert {
+  padding: 14px 16px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.company-teams-alert--danger {
+  border: 1px solid rgba(194, 74, 74, 0.18);
+  background: rgba(239, 124, 124, 0.1);
+  color: #a83f3f;
+}
+
+.company-teams-alert button {
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #fff;
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.company-teams-table-state {
+  width: 100%;
+  min-height: 96px;
+  display: grid;
+  place-items: center;
+  color: var(--color-subtitle);
+  font-size: 0.9rem;
+  font-weight: 950;
+  text-align: center;
+}
+
+.company-teams-page button:disabled,
+.company-team-modal button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+@media (max-width: 640px) {
+  .company-teams-alert {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .company-teams-alert button {
+    width: 100%;
   }
 }

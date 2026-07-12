@@ -42,6 +42,49 @@ export const REPORT_STATUS_FILTER_OPTIONS = [
   { value: REPORT_STATUS_API_VALUES.resolved, label: 'تم الحل' },
 ];
 
+
+export const USER_REPORT_STATS_STATUS_DEFINITIONS = [
+  {
+    statusKey: REPORT_STATUS_API_VALUES.underReview,
+    displayName: 'قيد المراجعة',
+    color: 'warning',
+  },
+  {
+    statusKey: REPORT_STATUS_API_VALUES.inProgress,
+    displayName: 'جاري التنفيذ',
+    color: 'primary',
+  },
+  {
+    statusKey: REPORT_STATUS_API_VALUES.resolved,
+    displayName: 'تم الحل',
+    color: 'success',
+  },
+  {
+    statusKey: REPORT_STATUS_API_VALUES.unableToExecute,
+    displayName: 'متعذر التنفيذ',
+    color: 'secondary',
+  },
+  {
+    statusKey: REPORT_STATUS_API_VALUES.rejected,
+    displayName: 'مرفوض',
+    color: 'danger',
+  },
+];
+
+export const IN_PROGRESS_INCLUDED_STATUSES = [
+  { statusKey: REPORT_STATUS_API_VALUES.accepted, label: 'مقبول' },
+  { statusKey: REPORT_STATUS_API_VALUES.assigned, label: 'تم التعيين' },
+  { statusKey: REPORT_STATUS_API_VALUES.inProgress, label: 'جاري التنفيذ' },
+  {
+    statusKey: REPORT_STATUS_API_VALUES.pendingAdminApproval,
+    label: 'بانتظار مراجعة الأدمن',
+  },
+  {
+    statusKey: REPORT_STATUS_API_VALUES.needsCompletion,
+    label: 'مطلوب استكمال',
+  },
+];
+
 function normalizeStatusValue(status = '') {
   return String(status || '')
     .trim()
@@ -151,6 +194,8 @@ export function getReportStatusKey(status = '') {
       'awaitingapproval',
       'بانتظاراعتمادالأدمن',
       'فيانتظاراعتمادالأدمن',
+      'بانتظارمراجعةالأدمن',
+      'فيانتظارمراجعةالأدمن',
     ].includes(normalizedStatus)
   ) {
     return REPORT_STATUS_API_VALUES.pendingAdminApproval;
@@ -209,19 +254,22 @@ export function getStatusTone(status = '') {
     return 'success';
   }
 
-  if (
-    statusKey === REPORT_STATUS_API_VALUES.accepted ||
-    statusKey === REPORT_STATUS_API_VALUES.assigned ||
-    statusKey === REPORT_STATUS_API_VALUES.inProgress
-  ) {
-    return 'info';
+  if (statusKey === REPORT_STATUS_API_VALUES.rejected) {
+    return 'danger';
+  }
+
+  if (statusKey === REPORT_STATUS_API_VALUES.unableToExecute) {
+    return 'secondary';
   }
 
   if (
-    statusKey === REPORT_STATUS_API_VALUES.rejected ||
-    statusKey === REPORT_STATUS_API_VALUES.unableToExecute
+    statusKey === REPORT_STATUS_API_VALUES.accepted ||
+    statusKey === REPORT_STATUS_API_VALUES.assigned ||
+    statusKey === REPORT_STATUS_API_VALUES.inProgress ||
+    statusKey === REPORT_STATUS_API_VALUES.pendingAdminApproval ||
+    statusKey === REPORT_STATUS_API_VALUES.needsCompletion
   ) {
-    return 'danger';
+    return 'info';
   }
 
   return 'warning';
@@ -327,6 +375,10 @@ function parseCounterValue(value, fallback = 0) {
 function pickCounter(report = {}, keys = []) {
   const nestedSources = [
     report,
+    report.verifyInfo,
+    report.VerifyInfo,
+    report.followInfo,
+    report.FollowInfo,
     report.verificationSummary,
     report.VerificationSummary,
     report.verificationStats,
@@ -386,6 +438,8 @@ function getReportCounters(report = {}) {
       'PositiveVerificationsCount',
       'verifiedTrueCount',
       'VerifiedTrueCount',
+      'upvoteCount',
+      'UpvoteCount',
       'upVoteCount',
       'UpVoteCount',
       'upVotesCount',
@@ -421,6 +475,8 @@ function getReportCounters(report = {}) {
       'NegativeVerificationsCount',
       'verifiedFalseCount',
       'VerifiedFalseCount',
+      'downvoteCount',
+      'DownvoteCount',
       'downVoteCount',
       'DownVoteCount',
       'downVotesCount',
@@ -445,6 +501,149 @@ function getReportCounters(report = {}) {
   };
 }
 
+
+function cleanPublicText(value) {
+  const text = String(value ?? '').trim();
+  if (!text || ['null', 'undefined', 'string'].includes(text.toLowerCase())) return '';
+  return text;
+}
+
+function preparePublicExecutionInfo(report = {}, statusKey = '') {
+  const source =
+    report.publicExecutionInfo ||
+    report.PublicExecutionInfo ||
+    report.executionInfo ||
+    report.ExecutionInfo ||
+    report.adminDecision ||
+    report.AdminDecision ||
+    {};
+
+  const reassignment =
+    source.reassignment ||
+    source.Reassignment ||
+    report.reassignment ||
+    report.Reassignment ||
+    {};
+
+  const decisionType = cleanPublicText(
+    source.decisionType ||
+      source.DecisionType ||
+      source.adminDecisionType ||
+      source.AdminDecisionType ||
+      report.adminDecisionType ||
+      report.AdminDecisionType,
+  );
+
+  const publicMessage = cleanPublicText(
+    source.userMessage ||
+      source.UserMessage ||
+      source.publicMessage ||
+      source.PublicMessage ||
+      source.messageToUser ||
+      source.MessageToUser ||
+      report.userMessage ||
+      report.UserMessage ||
+      report.publicMessage ||
+      report.PublicMessage ||
+      report.adminUserMessage ||
+      report.AdminUserMessage,
+  );
+
+  const unableToExecuteReason = cleanPublicText(
+    source.unableToExecuteReason ||
+      source.UnableToExecuteReason ||
+      source.publicUnableToExecuteReason ||
+      source.PublicUnableToExecuteReason ||
+      report.unableToExecuteReason ||
+      report.UnableToExecuteReason ||
+      report.publicUnableToExecuteReason ||
+      report.PublicUnableToExecuteReason,
+  );
+
+  const needsCompletionMessage = cleanPublicText(
+    source.needsCompletionMessage ||
+      source.NeedsCompletionMessage ||
+      source.publicUpdate ||
+      source.PublicUpdate ||
+      report.needsCompletionMessage ||
+      report.NeedsCompletionMessage,
+  );
+
+  const previousCompanyName = cleanPublicText(
+    reassignment.previousCompanyName ||
+      reassignment.PreviousCompanyName ||
+      source.previousCompanyName ||
+      source.PreviousCompanyName ||
+      report.previousAssignedCompanyName ||
+      report.PreviousAssignedCompanyName,
+  );
+
+  const currentCompanyName = cleanPublicText(
+    reassignment.currentCompanyName ||
+      reassignment.CurrentCompanyName ||
+      reassignment.newCompanyName ||
+      reassignment.NewCompanyName ||
+      source.currentCompanyName ||
+      source.CurrentCompanyName ||
+      report.assignedCompanyName ||
+      report.AssignedCompanyName ||
+      report.concernedCompanyName ||
+      report.ConcernedCompanyName,
+  );
+
+  const normalizedDecision = normalizeStatusValue(decisionType);
+  const wasReassigned = Boolean(
+    reassignment.wasReassigned ??
+      reassignment.WasReassigned ??
+      source.wasReassigned ??
+      source.WasReassigned ??
+      report.wasReassigned ??
+      report.WasReassigned ??
+      normalizedDecision.includes('reassign'),
+  );
+
+  const result = {
+    decisionType,
+    publicMessage,
+    unableToExecuteReason,
+    needsCompletionMessage,
+    pendingReviewType: cleanPublicText(
+      source.pendingReviewType ||
+        source.PendingReviewType ||
+        report.pendingReviewType ||
+        report.PendingReviewType,
+    ),
+    wasReassigned,
+    previousCompanyName,
+    currentCompanyName,
+    reassignedAt:
+      reassignment.reassignedAt ||
+      reassignment.ReassignedAt ||
+      source.reassignedAt ||
+      source.ReassignedAt ||
+      report.reassignedAt ||
+      report.ReassignedAt ||
+      null,
+    unableToExecuteAt:
+      source.unableToExecuteAt ||
+      source.UnableToExecuteAt ||
+      report.unableToExecuteAt ||
+      report.UnableToExecuteAt ||
+      null,
+  };
+
+  if (
+    statusKey === REPORT_STATUS_API_VALUES.unableToExecute &&
+    !result.publicMessage
+  ) {
+    result.publicMessage =
+      result.unableToExecuteReason ||
+      'تعذر تنفيذ البلاغ بعد مراجعة الجهة المختصة.';
+  }
+
+  return result;
+}
+
 export function prepareReportForUi(report = {}) {
   const reportImages = getReportImages(report);
   const imageUrls = reportImages
@@ -462,6 +661,7 @@ export function prepareReportForUi(report = {}) {
 
   const statusKey = getReportStatusKey(rawStatus);
   const counters = getReportCounters(report);
+  const executionInfo = preparePublicExecutionInfo(report, statusKey);
 
   return {
     ...report,
@@ -535,6 +735,11 @@ export function prepareReportForUi(report = {}) {
       report.tone ||
       report.Tone ||
       getStatusTone(statusKey),
+
+    executionInfo,
+    pendingReviewType: executionInfo.pendingReviewType,
+    userMessage: executionInfo.publicMessage,
+    assignedCompanyName: executionInfo.currentCompanyName,
 
     ownerUserId:
       report.ownerUserId ||
@@ -626,6 +831,82 @@ function extractReportsPage(response) {
     pageSize,
     totalPages,
   };
+}
+
+
+function normalizeStatsColor(color = '', statusKey = '') {
+  const normalizedColor = String(color || '').trim().toLowerCase();
+
+  if (
+    ['primary', 'info', 'warning', 'success', 'danger', 'secondary'].includes(
+      normalizedColor
+    )
+  ) {
+    return normalizedColor;
+  }
+
+  if (statusKey === REPORT_STATUS_API_VALUES.inProgress) return 'primary';
+  if (statusKey === REPORT_STATUS_API_VALUES.resolved) return 'success';
+  if (statusKey === REPORT_STATUS_API_VALUES.rejected) return 'danger';
+  if (statusKey === REPORT_STATUS_API_VALUES.unableToExecute) return 'secondary';
+
+  return 'warning';
+}
+
+function prepareUserReportStats(response) {
+  const data = getResponseData(response) || {};
+  const rawCards = data.statusCards || data.StatusCards || [];
+  const cards = Array.isArray(rawCards) ? rawCards : [];
+
+  const normalizedCards = USER_REPORT_STATS_STATUS_DEFINITIONS.map(
+    (definition) => {
+      const apiCard = cards.find((card = {}) => {
+        const rawKey =
+          card.statusKey || card.StatusKey || card.key || card.Key || '';
+
+        return (
+          Boolean(rawKey) &&
+          getReportStatusKey(rawKey) === definition.statusKey
+        );
+      });
+
+      const count = Number(apiCard?.count ?? apiCard?.Count ?? 0);
+      const apiColor = apiCard?.color || apiCard?.Color || definition.color;
+
+      return {
+        statusKey: definition.statusKey,
+        displayName:
+          apiCard?.displayName ||
+          apiCard?.DisplayName ||
+          definition.displayName,
+        count: Number.isFinite(count) ? count : 0,
+        color: normalizeStatsColor(apiColor, definition.statusKey),
+      };
+    }
+  );
+
+  const totalReports = Number(
+    data.totalReports ??
+      data.TotalReports ??
+      data.totalCount ??
+      data.TotalCount ??
+      0
+  );
+
+  return {
+    totalReports: Number.isFinite(totalReports) ? totalReports : 0,
+    statusCards: normalizedCards,
+  };
+}
+
+export async function getUserReportStats() {
+  try {
+    const response = await axiosClient.get('/api/Report/user/stats');
+
+    return prepareUserReportStats(response);
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error));
+  }
 }
 
 export async function getUserReports(input = {}) {

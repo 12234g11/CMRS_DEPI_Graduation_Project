@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FiCheck,
   FiChevronDown,
@@ -15,20 +15,28 @@ import {
 } from '../api/companyNotificationsApi';
 import CompanyNotificationsList from '../components/CompanyNotificationsList';
 import {
+  COMPANY_NOTIFICATION_READ_FILTERS,
+  COMPANY_NOTIFICATION_TYPES,
   companyNotificationFilterOptions,
-  companyNotifications,
-} from '../mocks/companyNotificationsMockData';
+} from '../constants/companyNotifications';
 import '../company-notifications.css';
 
-const READ_FILTERS = {
-  ALL: 'all',
-  UNREAD: 'unread',
+const EMPTY_TYPE_COUNTS = {
+  all: 0,
+  [COMPANY_NOTIFICATION_TYPES.REPORT_ASSIGNED]: 0,
+  [COMPANY_NOTIFICATION_TYPES.SOLUTION_ACCEPTED]: 0,
+  [COMPANY_NOTIFICATION_TYPES.NEEDS_COMPLETION]: 0,
 };
 
 function CompanyNotificationsPage() {
-  const [notifications, setNotifications] = useState(companyNotifications);
+  const [notifications, setNotifications] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [typeCounts, setTypeCounts] = useState(EMPTY_TYPE_COUNTS);
   const [activeTypeFilter, setActiveTypeFilter] = useState('all');
-  const [activeReadFilter, setActiveReadFilter] = useState(READ_FILTERS.ALL);
+  const [activeReadFilter, setActiveReadFilter] = useState(
+    COMPANY_NOTIFICATION_READ_FILTERS.ALL,
+  );
   const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,34 +44,48 @@ function CompanyNotificationsPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const filterDropdownRef = useRef(null);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadNotifications() {
+  const loadNotifications = useCallback(
+    async ({ signal, silent = false } = {}) => {
       try {
-        setIsLoading(true);
+        if (!silent) setIsLoading(true);
         setErrorMessage('');
 
-        const data = await getCompanyNotificationsData();
-        if (!isMounted) return;
+        const data = await getCompanyNotificationsData({
+          type: activeTypeFilter,
+          readStatus: activeReadFilter,
+          signal,
+        });
 
-        setNotifications(data?.notifications || []);
+        if (signal?.aborted) return;
+
+        setNotifications(data.notifications || []);
+        setTotalCount(data.totalCount || 0);
+        setUnreadCount(data.unreadCount || 0);
+        setTypeCounts({
+          ...EMPTY_TYPE_COUNTS,
+          ...(data.typeCounts || {}),
+        });
       } catch (error) {
-        if (!isMounted) return;
+        if (error?.name === 'AbortError' || signal?.aborted) return;
 
         setNotifications([]);
+        setTotalCount(0);
+        setUnreadCount(0);
+        setTypeCounts(EMPTY_TYPE_COUNTS);
         setErrorMessage(error?.message || 'حدث خطأ أثناء تحميل الإشعارات.');
       } finally {
-        if (isMounted) setIsLoading(false);
+        if (!signal?.aborted && !silent) setIsLoading(false);
       }
-    }
+    },
+    [activeReadFilter, activeTypeFilter],
+  );
 
-    loadNotifications();
+  useEffect(() => {
+    const controller = new AbortController();
+    loadNotifications({ signal: controller.signal });
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    return () => controller.abort();
+  }, [loadNotifications]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -99,46 +121,13 @@ function CompanyNotificationsPage() {
     [activeTypeFilter],
   );
 
-  const unreadCount = useMemo(
-    () => notifications.filter((notification) => !notification.isRead).length,
-    [notifications],
-  );
-
-  const typeCounts = useMemo(() => {
-    return companyNotificationFilterOptions.reduce((counts, filter) => {
-      if (filter.value === 'all') {
-        counts[filter.value] = notifications.length;
-      } else {
-        counts[filter.value] = notifications.filter(
-          (notification) => notification.type === filter.value,
-        ).length;
-      }
-
-      return counts;
-    }, {});
-  }, [notifications]);
-
-  const visibleNotifications = useMemo(() => {
-    return notifications.filter((notification) => {
-      const matchesReadFilter =
-        activeReadFilter === READ_FILTERS.ALL || !notification.isRead;
-
-      const matchesTypeFilter =
-        activeTypeFilter === 'all' ||
-        notification.type === activeTypeFilter;
-
-      return matchesReadFilter && matchesTypeFilter;
-    });
-  }, [activeReadFilter, activeTypeFilter, notifications]);
-
   const activeTypeTotalCount = useMemo(() => {
-    if (activeTypeFilter === 'all') return notifications.length;
-    return typeCounts[activeTypeFilter] || 0;
-  }, [activeTypeFilter, notifications.length, typeCounts]);
+    if (activeTypeFilter === 'all') {
+      return typeCounts.all ?? totalCount;
+    }
 
-  function syncNotificationsData(data) {
-    setNotifications(data?.notifications || []);
-  }
+    return typeCounts[activeTypeFilter] || 0;
+  }, [activeTypeFilter, totalCount, typeCounts]);
 
   function handleTypeFilterChange(nextFilter) {
     setActiveTypeFilter(nextFilter);
@@ -155,8 +144,8 @@ function CompanyNotificationsPage() {
       setIsActionLoading(true);
       setErrorMessage('');
 
-      const data = await markCompanyNotificationAsRead(notificationId);
-      syncNotificationsData(data);
+      await markCompanyNotificationAsRead(notificationId);
+      await loadNotifications({ silent: true });
     } catch (error) {
       setErrorMessage(error?.message || 'حدث خطأ أثناء تحديث حالة الإشعار.');
     } finally {
@@ -165,15 +154,21 @@ function CompanyNotificationsPage() {
   }
 
   async function handleMarkAllAsRead() {
-    if (!unreadCount) return;
+    if (!unreadCount || isActionLoading) return;
 
     try {
       setIsActionLoading(true);
       setErrorMessage('');
 
-      const data = await markAllCompanyNotificationsAsRead();
-      syncNotificationsData(data);
-      setActiveReadFilter(READ_FILTERS.ALL);
+      await markAllCompanyNotificationsAsRead();
+
+      if (
+        activeReadFilter === COMPANY_NOTIFICATION_READ_FILTERS.UNREAD
+      ) {
+        setActiveReadFilter(COMPANY_NOTIFICATION_READ_FILTERS.ALL);
+      } else {
+        await loadNotifications({ silent: true });
+      }
     } catch (error) {
       setErrorMessage(
         error?.message || 'حدث خطأ أثناء تحديد الإشعارات كمقروءة.',
@@ -188,8 +183,8 @@ function CompanyNotificationsPage() {
       setIsActionLoading(true);
       setErrorMessage('');
 
-      const data = await deleteCompanyNotification(notificationId);
-      syncNotificationsData(data);
+      await deleteCompanyNotification(notificationId);
+      await loadNotifications({ silent: true });
     } catch (error) {
       setErrorMessage(error?.message || 'حدث خطأ أثناء حذف الإشعار.');
     } finally {
@@ -210,9 +205,13 @@ function CompanyNotificationsPage() {
             <button
               type="button"
               className={`company-notifications-read-tab ${
-                activeReadFilter === READ_FILTERS.ALL ? 'is-active' : ''
+                activeReadFilter === COMPANY_NOTIFICATION_READ_FILTERS.ALL
+                  ? 'is-active'
+                  : ''
               }`}
-              onClick={() => handleReadFilterChange(READ_FILTERS.ALL)}
+              onClick={() =>
+                handleReadFilterChange(COMPANY_NOTIFICATION_READ_FILTERS.ALL)
+              }
             >
               <span>كل الإشعارات</span>
               <strong>{activeTypeTotalCount}</strong>
@@ -221,9 +220,15 @@ function CompanyNotificationsPage() {
             <button
               type="button"
               className={`company-notifications-read-tab ${
-                activeReadFilter === READ_FILTERS.UNREAD ? 'is-active' : ''
+                activeReadFilter === COMPANY_NOTIFICATION_READ_FILTERS.UNREAD
+                  ? 'is-active'
+                  : ''
               }`}
-              onClick={() => handleReadFilterChange(READ_FILTERS.UNREAD)}
+              onClick={() =>
+                handleReadFilterChange(
+                  COMPANY_NOTIFICATION_READ_FILTERS.UNREAD,
+                )
+              }
             >
               <span>غير مقروءة</span>
               <strong>{unreadCount}</strong>
@@ -316,18 +321,19 @@ function CompanyNotificationsPage() {
           </div>
         ) : (
           <CompanyNotificationsList
-            notifications={visibleNotifications}
+            notifications={notifications}
             onMarkAsRead={handleMarkAsRead}
             onDelete={handleDeleteNotification}
+            isActionLoading={isActionLoading}
             emptyTitle={
-              activeReadFilter === READ_FILTERS.UNREAD
+              activeReadFilter === COMPANY_NOTIFICATION_READ_FILTERS.UNREAD
                 ? 'لا توجد إشعارات غير مقروءة'
                 : activeTypeFilter !== 'all'
                   ? 'لا توجد إشعارات من هذا النوع'
                   : 'لا توجد إشعارات'
             }
             emptyMessage={
-              activeReadFilter === READ_FILTERS.UNREAD
+              activeReadFilter === COMPANY_NOTIFICATION_READ_FILTERS.UNREAD
                 ? 'لا توجد إشعارات غير مقروءة حسب الفلتر الحالي.'
                 : activeTypeFilter !== 'all'
                   ? 'جرّب اختيار نوع إشعار آخر.'
@@ -376,10 +382,14 @@ function CompanyNotificationsPage() {
                 <button
                   type="button"
                   className={`company-notifications-read-tab ${
-                    activeReadFilter === READ_FILTERS.ALL ? 'is-active' : ''
+                    activeReadFilter === COMPANY_NOTIFICATION_READ_FILTERS.ALL
+                      ? 'is-active'
+                      : ''
                   }`}
                   onClick={() => {
-                    handleReadFilterChange(READ_FILTERS.ALL);
+                    handleReadFilterChange(
+                      COMPANY_NOTIFICATION_READ_FILTERS.ALL,
+                    );
                     setIsMobileFilterOpen(false);
                   }}
                 >
@@ -390,10 +400,15 @@ function CompanyNotificationsPage() {
                 <button
                   type="button"
                   className={`company-notifications-read-tab ${
-                    activeReadFilter === READ_FILTERS.UNREAD ? 'is-active' : ''
+                    activeReadFilter ===
+                    COMPANY_NOTIFICATION_READ_FILTERS.UNREAD
+                      ? 'is-active'
+                      : ''
                   }`}
                   onClick={() => {
-                    handleReadFilterChange(READ_FILTERS.UNREAD);
+                    handleReadFilterChange(
+                      COMPANY_NOTIFICATION_READ_FILTERS.UNREAD,
+                    );
                     setIsMobileFilterOpen(false);
                   }}
                 >

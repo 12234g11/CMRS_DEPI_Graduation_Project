@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   FiFilter,
   FiPlus,
@@ -23,15 +23,17 @@ import CompanyTeamsToolbar from '../components/CompanyTeamsToolbar';
 import CompanyTeamStatusModal from '../components/CompanyTeamStatusModal';
 import {
   companyTeamAvailabilityOptions,
-  companyTeams,
   companyTeamStatusOptions,
   getCompanyTeamsStats,
 } from '../mocks/companyTeamsMockData';
 import '../company-teams.css';
 
 function CompanyTeamsPage() {
-  const [teams, setTeams] = useState(companyTeams);
-  const [stats, setStats] = useState(getCompanyTeamsStats(companyTeams));
+  const [teams, setTeams] = useState([]);
+  const [stats, setStats] = useState(getCompanyTeamsStats([]));
+  const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState('');
+  const [actionError, setActionError] = useState('');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -42,23 +44,51 @@ function CompanyTeamsPage() {
   const [formTeam, setFormTeam] = useState(null);
   const [detailsTeam, setDetailsTeam] = useState(null);
   const [statusTeam, setStatusTeam] = useState(null);
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
 
   const isFormModalOpen = formMode === 'create' || formMode === 'edit';
 
-  useEffect(() => {
-    let isMounted = true;
+  const syncTeamsData = useCallback((data) => {
+    const nextTeams = Array.isArray(data?.teams) ? data.teams : [];
 
-    getCompanyTeamsData().then((data) => {
-      if (!isMounted) return;
+    if (data?.hasTeamsList !== false) {
+      setTeams(nextTeams);
+      setStats(Array.isArray(data?.stats) ? data.stats : getCompanyTeamsStats(nextTeams));
+      return;
+    }
 
-      setTeams(data.teams);
-      setStats(data.stats);
-    });
+    if (data?.team) {
+      setTeams((currentTeams) => {
+        const teamExists = currentTeams.some((team) => team.id === data.team.id);
+        const mergedTeams = teamExists
+          ? currentTeams.map((team) => (team.id === data.team.id ? data.team : team))
+          : [data.team, ...currentTeams];
 
-    return () => {
-      isMounted = false;
-    };
+        setStats(getCompanyTeamsStats(mergedTeams));
+        return mergedTeams;
+      });
+    }
   }, []);
+
+  const loadTeamsData = useCallback(async () => {
+    setIsLoading(true);
+    setPageError('');
+
+    try {
+      const data = await getCompanyTeamsData();
+      syncTeamsData(data);
+    } catch (error) {
+      setPageError(error.message || 'تعذر تحميل فرق الصيانة. حاول مرة أخرى.');
+      setTeams([]);
+      setStats(getCompanyTeamsStats([]));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [syncTeamsData]);
+
+  useEffect(() => {
+    loadTeamsData();
+  }, [loadTeamsData]);
 
   const activeFiltersCount = useMemo(() => {
     let count = 0;
@@ -97,11 +127,6 @@ function CompanyTeamsPage() {
     });
   }, [availabilityFilter, searchTerm, statusFilter, teams]);
 
-  function syncTeamsData(data) {
-    setTeams(data.teams);
-    setStats(data.stats);
-  }
-
   function handleResetFilters() {
     setSearchTerm('');
     setStatusFilter('all');
@@ -113,12 +138,14 @@ function CompanyTeamsPage() {
   }
 
   function handleAddTeam() {
+    setActionError('');
     setFormMode('create');
     setFormTeam(null);
     setDetailsTeam(null);
   }
 
   function handleEditTeam(team) {
+    setActionError('');
     setFormMode('edit');
     setFormTeam(team);
     setDetailsTeam(null);
@@ -130,21 +157,36 @@ function CompanyTeamsPage() {
   }
 
   async function handleSaveTeam(payload) {
-    if (formMode === 'edit' && formTeam) {
-      const data = await updateCompanyTeam(formTeam.id, payload);
-      syncTeamsData(data);
-    } else {
-      const data = await createCompanyTeam(payload);
-      syncTeamsData(data);
-    }
+    setActionError('');
 
-    handleCloseFormModal();
+    try {
+      if (formMode === 'edit' && formTeam) {
+        const data = await updateCompanyTeam(formTeam.id, payload);
+        syncTeamsData(data);
+      } else {
+        const data = await createCompanyTeam(payload);
+        syncTeamsData(data);
+      }
+
+      handleCloseFormModal();
+    } catch (error) {
+      throw new Error(error.message || 'تعذر حفظ بيانات فرقة الصيانة. حاول مرة أخرى.');
+    }
   }
 
   async function handleConfirmStatus(team, nextStatus) {
-    const data = await updateCompanyTeamStatus(team.id, nextStatus);
-    syncTeamsData(data);
-    setStatusTeam(null);
+    setIsStatusUpdating(true);
+    setActionError('');
+
+    try {
+      const data = await updateCompanyTeamStatus(team.id, nextStatus);
+      syncTeamsData(data);
+      setStatusTeam(null);
+    } catch (error) {
+      setActionError(error.message || 'تعذر تحديث حالة فرقة الصيانة. حاول مرة أخرى.');
+    } finally {
+      setIsStatusUpdating(false);
+    }
   }
 
   return (
@@ -153,6 +195,24 @@ function CompanyTeamsPage() {
         title="فرق الصيانة"
         subtitle="Company Teams - إدارة فرق الصيانة التابعة للشركة"
       />
+
+      {pageError ? (
+        <div className="company-teams-alert company-teams-alert--danger" role="alert">
+          <span>{pageError}</span>
+          <button type="button" onClick={loadTeamsData}>
+            إعادة المحاولة
+          </button>
+        </div>
+      ) : null}
+
+      {actionError ? (
+        <div className="company-teams-alert company-teams-alert--danger" role="alert">
+          <span>{actionError}</span>
+          <button type="button" onClick={() => setActionError('')}>
+            إغلاق
+          </button>
+        </div>
+      ) : null}
 
       <CompanyTeamsStatsCards stats={stats} />
 
@@ -179,6 +239,7 @@ function CompanyTeamsPage() {
               type="button"
               className="company-teams-filter-card__add-btn"
               onClick={handleAddTeam}
+              disabled={isLoading}
             >
               <FiPlus />
               إضافة فرقة
@@ -196,6 +257,7 @@ function CompanyTeamsPage() {
             onAvailabilityChange={setAvailabilityFilter}
             onReset={handleResetFilters}
             onAddTeam={handleAddTeam}
+            isDisabled={isLoading}
           />
 
           <div className="company-teams-filter-card__mobile-actions">
@@ -213,6 +275,7 @@ function CompanyTeamsPage() {
               type="button"
               className="company-teams-filter-card__add-btn"
               onClick={handleAddTeam}
+              disabled={isLoading}
             >
               <FiPlus />
               إضافة فرقة
@@ -228,6 +291,7 @@ function CompanyTeamsPage() {
       >
         <CompanyTeamsTable
           teams={filteredTeams}
+          isLoading={isLoading}
           onViewTeam={setDetailsTeam}
           onEditTeam={handleEditTeam}
           onChangeStatus={setStatusTeam}
@@ -326,6 +390,7 @@ function CompanyTeamsPage() {
         team={statusTeam}
         onClose={() => setStatusTeam(null)}
         onConfirm={handleConfirmStatus}
+        isUpdating={isStatusUpdating}
       />
     </div>
   );

@@ -185,6 +185,10 @@ function parseCounterValue(value, fallback = 0) {
 function pickCounter(report = {}, keys = []) {
   const nestedSources = [
     report,
+    report.verifyInfo,
+    report.VerifyInfo,
+    report.followInfo,
+    report.FollowInfo,
     report.verificationSummary,
     report.VerificationSummary,
     report.verificationStats,
@@ -244,6 +248,8 @@ function getReportEngagementStats(report = {}) {
       'PositiveVerificationsCount',
       'verifiedTrueCount',
       'VerifiedTrueCount',
+      'upvoteCount',
+      'UpvoteCount',
       'upVoteCount',
       'UpVoteCount',
       'upVotesCount',
@@ -279,6 +285,8 @@ function getReportEngagementStats(report = {}) {
       'NegativeVerificationsCount',
       'verifiedFalseCount',
       'VerifiedFalseCount',
+      'downvoteCount',
+      'DownvoteCount',
       'downVoteCount',
       'DownVoteCount',
       'downVotesCount',
@@ -332,6 +340,79 @@ function isRejectedReport(report = {}) {
     statusLabel.includes('مرفوض') ||
     statusTone === 'danger'
   );
+}
+
+
+function getExecutionOutcomePresentation(report = {}) {
+  const execution = report.executionInfo || {};
+  const statusKey = String(report.statusKey || report.status || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+  const decisionType = String(execution.decisionType || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+
+  if (
+    statusKey.includes('unabletoexecute') ||
+    decisionType.includes('acceptcannotfix') ||
+    decisionType.includes('cannotfixaccepted')
+  ) {
+    return {
+      tone: 'unable',
+      icon: <FiXCircle />,
+      title: 'تعذر تنفيذ البلاغ',
+      message:
+        execution.publicMessage ||
+        execution.unableToExecuteReason ||
+        'تعذر تنفيذ البلاغ بعد مراجعة الجهة المختصة.',
+      meta: execution.unableToExecuteAt
+        ? `تاريخ القرار: ${formatReportDate(execution.unableToExecuteAt)}`
+        : '',
+    };
+  }
+
+  if (execution.wasReassigned || decisionType.includes('reassign')) {
+    return {
+      tone: 'reassigned',
+      icon: <FiUsers />,
+      title: 'تم تحويل البلاغ إلى جهة تنفيذ أخرى',
+      message:
+        execution.publicMessage ||
+        'تعذر على الجهة السابقة تنفيذ البلاغ، وتم إسناده إلى جهة أخرى لاستكمال العمل.',
+      meta: execution.currentCompanyName
+        ? `الجهة الحالية: ${execution.currentCompanyName}`
+        : '',
+    };
+  }
+
+  if (statusKey.includes('pendingadminapproval')) {
+    return {
+      tone: 'pending',
+      icon: <FiInfo />,
+      title: 'الرد قيد مراجعة الإدارة',
+      message:
+        execution.publicMessage ||
+        'تراجع الإدارة رد جهة التنفيذ قبل اعتماد القرار النهائي وإبلاغك بالنتيجة.',
+      meta: '',
+    };
+  }
+
+  if (statusKey.includes('needscompletion')) {
+    return {
+      tone: 'completion',
+      icon: <FiAlertTriangle />,
+      title: 'جهة التنفيذ تستكمل العمل',
+      message:
+        execution.publicMessage ||
+        execution.needsCompletionMessage ||
+        'طلبت الإدارة استكمال بعض الأعمال قبل اعتماد النتيجة النهائية.',
+      meta: '',
+    };
+  }
+
+  return null;
 }
 
 function DetailBlock({ icon, label, children, className = '' }) {
@@ -416,13 +497,11 @@ function ReportDetailsModal({ report, onClose }) {
 
   const isRejected = isRejectedReport(report);
   const rejectionReason = getRejectionReason(report);
+  const executionOutcome = getExecutionOutcomePresentation(report);
 
-  const canShowOnMap =
-    Boolean(position?.lat && position?.lng) && !isRejected;
+  const canShowOnMap = Boolean(position?.lat && position?.lng);
 
-  const mapButtonDisabledReason = isRejected
-    ? 'لا يمكن عرض البلاغ المرفوض على الخريطة.'
-    : 'لا توجد إحداثيات متاحة لهذا البلاغ';
+  const mapButtonDisabledReason = 'لا توجد إحداثيات متاحة لهذا البلاغ';
 
   function showPreviousImage(event) {
     event?.stopPropagation?.();
@@ -455,13 +534,6 @@ function ReportDetailsModal({ report, onClose }) {
   }
 
   function handleShowOnMap() {
-    if (isRejected) {
-      window.alert(
-        'لا يمكن عرض البلاغ المرفوض على الخريطة لأن الخريطة لا تعرض البلاغات المرفوضة.'
-      );
-      return;
-    }
-
     if (!position?.lat || !position?.lng) {
       window.alert('لا توجد إحداثيات متاحة لهذا البلاغ لعرضه على الخريطة.');
       return;
@@ -534,6 +606,21 @@ function ReportDetailsModal({ report, onClose }) {
             <DetailBlock icon={<FiMapPin />} label="الموقع">
               <strong>{location}</strong>
             </DetailBlock>
+
+            {executionOutcome ? (
+              <section
+                className={`user-report-modal__execution-outcome is-${executionOutcome.tone}`}
+              >
+                <span className="user-report-modal__execution-outcome-icon">
+                  {executionOutcome.icon}
+                </span>
+                <div>
+                  <strong>{executionOutcome.title}</strong>
+                  <p>{executionOutcome.message}</p>
+                  {executionOutcome.meta ? <small>{executionOutcome.meta}</small> : null}
+                </div>
+              </section>
+            ) : null}
 
             {isRejected ? (
               <DetailBlock
@@ -695,9 +782,7 @@ function ReportDetailsModal({ report, onClose }) {
                 title={canShowOnMap ? undefined : mapButtonDisabledReason}
               >
                 <FiMapPin />
-                <span>
-                  {isRejected ? 'غير متاح للبلاغ المرفوض' : 'عرض المشكلة على الخريطة'}
-                </span>
+                <span>عرض المشكلة على الخريطة</span>
               </button>
             </div>
           </div>

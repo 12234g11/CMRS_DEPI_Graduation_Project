@@ -6,7 +6,7 @@
 GET    /api/company/reports
 GET    /api/company/reports/{reportId}
 GET    /api/company/reports/options
-GET    /api/company/maintenance-teams
+GET    /api/company/teams
 PATCH  /api/company/reports/{reportId}/assign-team
 PATCH  /api/company/reports/{reportId}/start-work
 POST   /api/company/reports/{reportId}/proof
@@ -91,7 +91,7 @@ proofType = StartWork
 تم ربط اختيار وتغيير فرقة الصيانة باستخدام:
 
 ```http
-GET /api/company/maintenance-teams
+GET /api/company/teams
 PATCH /api/company/reports/{reportId}/assign-team
 ```
 

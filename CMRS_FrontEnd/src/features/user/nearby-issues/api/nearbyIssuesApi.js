@@ -12,48 +12,114 @@ export const NEARBY_REPORT_STATUS_API_VALUES = {
   accepted: 'Accepted',
   assigned: 'Assigned',
   inProgress: 'InProgress',
+  pendingAdminApproval: 'PendingAdminApproval',
+  needsCompletion: 'NeedsCompletion',
   resolved: 'Resolved',
+  unableToExecute: 'UnableToExecute',
 };
 
 export const NEARBY_VISIBLE_STATUS_VALUES = [
   NEARBY_REPORT_STATUS_API_VALUES.accepted,
   NEARBY_REPORT_STATUS_API_VALUES.assigned,
   NEARBY_REPORT_STATUS_API_VALUES.inProgress,
+  NEARBY_REPORT_STATUS_API_VALUES.pendingAdminApproval,
+  NEARBY_REPORT_STATUS_API_VALUES.needsCompletion,
   NEARBY_REPORT_STATUS_API_VALUES.resolved,
+  NEARBY_REPORT_STATUS_API_VALUES.unableToExecute,
 ];
 
 export const NEARBY_STATUS_FILTER_OPTIONS = [
-  { label: 'كل الحالات', value: NEARBY_REPORT_STATUS_API_VALUES.all },
-  { label: 'مقبول', value: NEARBY_REPORT_STATUS_API_VALUES.accepted },
-  { label: 'تم التعيين', value: NEARBY_REPORT_STATUS_API_VALUES.assigned },
-  { label: 'جاري التنفيذ', value: NEARBY_REPORT_STATUS_API_VALUES.inProgress },
-  { label: 'تم الحل', value: NEARBY_REPORT_STATUS_API_VALUES.resolved },
+  {
+    label: 'كل الحالات',
+    value: NEARBY_REPORT_STATUS_API_VALUES.all,
+    dotClassName: 'all',
+  },
+  {
+    label: 'مقبول',
+    value: NEARBY_REPORT_STATUS_API_VALUES.accepted,
+    dotClassName: 'accepted',
+  },
+  {
+    label: 'تم التعيين',
+    value: NEARBY_REPORT_STATUS_API_VALUES.assigned,
+    dotClassName: 'assigned',
+  },
+  {
+    label: 'جاري التنفيذ',
+    value: NEARBY_REPORT_STATUS_API_VALUES.inProgress,
+    dotClassName: 'in-progress',
+  },
+  {
+    label: 'بانتظار مراجعة الأدمن',
+    value: NEARBY_REPORT_STATUS_API_VALUES.pendingAdminApproval,
+    dotClassName: 'pending-admin-approval',
+  },
+  {
+    label: 'مطلوب استكمال',
+    value: NEARBY_REPORT_STATUS_API_VALUES.needsCompletion,
+    dotClassName: 'needs-completion',
+  },
+  {
+    label: 'تم الحل',
+    value: NEARBY_REPORT_STATUS_API_VALUES.resolved,
+    dotClassName: 'resolved',
+  },
+  {
+    label: 'متعذر التنفيذ',
+    value: NEARBY_REPORT_STATUS_API_VALUES.unableToExecute,
+    dotClassName: 'unable-to-execute',
+  },
 ];
 
 export const NEARBY_STATUS_LEGEND_ITEMS = [
   {
     id: NEARBY_REPORT_STATUS_API_VALUES.accepted,
     label: 'مقبول',
-    description: 'بلاغ تمت مراجعته والتأكد أنه صالح للظهور للمستخدمين القريبين.',
+    description:
+      'تمت مراجعة البلاغ واعتماده، وأصبح صالحًا للظهور للمستخدمين القريبين.',
     dotClassName: 'accepted',
   },
   {
     id: NEARBY_REPORT_STATUS_API_VALUES.assigned,
     label: 'تم التعيين',
-    description: 'تم إسناد البلاغ إلى شركة أو جهة مسؤولة عن التنفيذ.',
+    description:
+      'تم إسناد البلاغ إلى شركة أو جهة مسؤولة، في انتظار بدء أعمال التنفيذ.',
     dotClassName: 'assigned',
   },
   {
     id: NEARBY_REPORT_STATUS_API_VALUES.inProgress,
     label: 'جاري التنفيذ',
-    description: 'الجهة المسؤولة بدأت التعامل مع البلاغ وتحديث حالته.',
+    description:
+      'بدأت الجهة المسؤولة العمل على البلاغ، ويتم تحديث حالة التنفيذ حتى الانتهاء.',
     dotClassName: 'in-progress',
+  },
+  {
+    id: NEARBY_REPORT_STATUS_API_VALUES.pendingAdminApproval,
+    label: 'بانتظار مراجعة الأدمن',
+    description:
+      'أرسلت الجهة نتيجة التنفيذ أو طلب الإغلاق، والحالة تنتظر قرار الأدمن.',
+    dotClassName: 'pending-admin-approval',
+  },
+  {
+    id: NEARBY_REPORT_STATUS_API_VALUES.needsCompletion,
+    label: 'مطلوب استكمال',
+    description:
+      'طلب الأدمن استكمال أعمال أو بيانات إضافية قبل اعتماد نتيجة التنفيذ.',
+    dotClassName: 'needs-completion',
   },
   {
     id: NEARBY_REPORT_STATUS_API_VALUES.resolved,
     label: 'تم الحل',
-    description: 'تم إنهاء المشكلة، ويمكن تقييم جودة الحل خلال فترة الظهور.',
+    description:
+      'تم اعتماد اكتمال التنفيذ وإغلاق البلاغ بعد التأكد من معالجة المشكلة.',
     dotClassName: 'resolved',
+  },
+  {
+    id: NEARBY_REPORT_STATUS_API_VALUES.unableToExecute,
+    label: 'متعذر التنفيذ',
+    description:
+      'تعذر تنفيذ الحل بسبب عائق مسجل، وتم توضيح الحالة للمستخدمين القريبين.',
+    dotClassName: 'unable-to-execute',
   },
 ];
 
@@ -61,14 +127,30 @@ const STATUS_TONE = {
   Accepted: 'warning',
   Assigned: 'info',
   InProgress: 'info',
+  PendingAdminApproval: 'warning',
+  NeedsCompletion: 'warning',
   Resolved: 'success',
+  UnableToExecute: 'secondary',
+};
+
+const STATUS_COLOR_CLASS = {
+  Accepted: 'accepted',
+  Assigned: 'assigned',
+  InProgress: 'in-progress',
+  PendingAdminApproval: 'pending-admin-approval',
+  NeedsCompletion: 'needs-completion',
+  Resolved: 'resolved',
+  UnableToExecute: 'unable-to-execute',
 };
 
 const STATUS_LABEL = {
   Accepted: 'مقبول',
   Assigned: 'تم التعيين',
   InProgress: 'جاري التنفيذ',
+  PendingAdminApproval: 'بانتظار مراجعة الأدمن',
+  NeedsCompletion: 'مطلوب استكمال',
   Resolved: 'تم الحل',
+  UnableToExecute: 'متعذر التنفيذ',
 };
 
 function normalizeStatusValue(status = '') {
@@ -115,6 +197,31 @@ export function getNearbyReportStatusKey(status = '') {
 
   if (
     [
+      'pendingadminapproval',
+      'pendingadminreview',
+      'pendingreview',
+      'waitingadminapproval',
+      'بانتظارمراجعةالأدمن',
+      'بانتظارمراجعةالادمن',
+    ].includes(normalizedStatus)
+  ) {
+    return NEARBY_REPORT_STATUS_API_VALUES.pendingAdminApproval;
+  }
+
+  if (
+    [
+      'needscompletion',
+      'needcompletion',
+      'requirescompletion',
+      'requestcompletion',
+      'مطلوباستكمال',
+    ].includes(normalizedStatus)
+  ) {
+    return NEARBY_REPORT_STATUS_API_VALUES.needsCompletion;
+  }
+
+  if (
+    [
       'resolved',
       'solved',
       'completed',
@@ -128,6 +235,19 @@ export function getNearbyReportStatusKey(status = '') {
     return NEARBY_REPORT_STATUS_API_VALUES.resolved;
   }
 
+  if (
+    [
+      'unabletoexecute',
+      'cannotexecute',
+      'cannotfix',
+      'executionfailed',
+      'failedexecution',
+      'متعذرالتنفيذ',
+    ].includes(normalizedStatus)
+  ) {
+    return NEARBY_REPORT_STATUS_API_VALUES.unableToExecute;
+  }
+
   return '';
 }
 
@@ -139,6 +259,12 @@ function getStatusTone(status) {
   const statusKey = getNearbyReportStatusKey(status);
 
   return STATUS_TONE[statusKey] || 'warning';
+}
+
+function getStatusColorClass(status) {
+  const statusKey = getNearbyReportStatusKey(status);
+
+  return STATUS_COLOR_CLASS[statusKey] || 'accepted';
 }
 
 function getStatusLabel(report = {}) {
@@ -350,6 +476,114 @@ function getCurrentUserVerifyVote(report = {}) {
   return isVerifiedByCurrentUser ? 1 : null;
 }
 
+
+function cleanPublicText(value) {
+  const text = String(value ?? '').trim();
+  if (!text || ['null', 'undefined', 'string'].includes(text.toLowerCase())) return '';
+  return text;
+}
+
+function preparePublicExecutionInfo(report = {}, statusKey = '') {
+  const source =
+    report.publicExecutionInfo ||
+    report.PublicExecutionInfo ||
+    report.executionInfo ||
+    report.ExecutionInfo ||
+    report.adminDecision ||
+    report.AdminDecision ||
+    {};
+
+  const reassignment =
+    source.reassignment ||
+    source.Reassignment ||
+    report.reassignment ||
+    report.Reassignment ||
+    {};
+
+  const decisionType = cleanPublicText(
+    source.decisionType ||
+      source.DecisionType ||
+      report.adminDecisionType ||
+      report.AdminDecisionType,
+  );
+
+  const publicMessage = cleanPublicText(
+    source.userMessage ||
+      source.UserMessage ||
+      source.publicMessage ||
+      source.PublicMessage ||
+      source.messageToUser ||
+      source.MessageToUser ||
+      report.userMessage ||
+      report.UserMessage ||
+      report.publicMessage ||
+      report.PublicMessage,
+  );
+
+  const unableToExecuteReason = cleanPublicText(
+    source.unableToExecuteReason ||
+      source.UnableToExecuteReason ||
+      source.publicUnableToExecuteReason ||
+      source.PublicUnableToExecuteReason ||
+      report.unableToExecuteReason ||
+      report.UnableToExecuteReason,
+  );
+
+  const normalizedDecision = normalizeStatusValue(decisionType);
+  const wasReassigned = Boolean(
+    reassignment.wasReassigned ??
+      reassignment.WasReassigned ??
+      source.wasReassigned ??
+      source.WasReassigned ??
+      report.wasReassigned ??
+      report.WasReassigned ??
+      normalizedDecision.includes('reassign'),
+  );
+
+  const currentCompanyName = cleanPublicText(
+    reassignment.currentCompanyName ||
+      reassignment.CurrentCompanyName ||
+      reassignment.newCompanyName ||
+      reassignment.NewCompanyName ||
+      source.currentCompanyName ||
+      source.CurrentCompanyName ||
+      report.assignedCompanyName ||
+      report.AssignedCompanyName ||
+      report.concernedCompanyName ||
+      report.ConcernedCompanyName,
+  );
+
+  return {
+    decisionType,
+    publicMessage:
+      publicMessage ||
+      (statusKey === NEARBY_REPORT_STATUS_API_VALUES.unableToExecute
+        ? unableToExecuteReason || 'تعذر تنفيذ البلاغ بعد مراجعة الجهة المختصة.'
+        : ''),
+    unableToExecuteReason,
+    pendingReviewType: cleanPublicText(
+      source.pendingReviewType ||
+        source.PendingReviewType ||
+        report.pendingReviewType ||
+        report.PendingReviewType,
+    ),
+    wasReassigned,
+    currentCompanyName,
+    previousCompanyName: cleanPublicText(
+      reassignment.previousCompanyName ||
+        reassignment.PreviousCompanyName ||
+        report.previousAssignedCompanyName ||
+        report.PreviousAssignedCompanyName,
+    ),
+    reassignedAt:
+      reassignment.reassignedAt ||
+      reassignment.ReassignedAt ||
+      source.reassignedAt ||
+      source.ReassignedAt ||
+      null,
+  };
+}
+
 function prepareNearbyReport(report = {}) {
   const reportImages = getReportImages(report);
 
@@ -366,6 +600,7 @@ function prepareNearbyReport(report = {}) {
 
   const statusKey = getNearbyReportStatusKey(rawStatus);
   const statusTone = getStatusTone(statusKey);
+  const executionInfo = preparePublicExecutionInfo(report, statusKey);
 
   const categoryLabel =
     report.issueCategoryName ||
@@ -409,6 +644,11 @@ function prepareNearbyReport(report = {}) {
     statusLabel: getStatusLabel(report),
     tone: statusTone,
     statusTone,
+    statusColorClass: getStatusColorClass(statusKey),
+    executionInfo,
+    pendingReviewType: executionInfo.pendingReviewType,
+    userMessage: executionInfo.publicMessage,
+    assignedCompanyName: executionInfo.currentCompanyName,
 
     area:
       report.area?.city ||
