@@ -57,6 +57,11 @@ const USER_NOTIFICATION_TYPE_FILTERS = [
     label: 'اعتماد الحل',
     description: 'عند اعتماد حل البلاغ',
   },
+  {
+    value: USER_NOTIFICATION_TYPE.REPORT_UNABLE_TO_EXECUTE,
+    label: 'تعذر التنفيذ',
+    description: 'عند قبول تعذر التنفيذ وإغلاق البلاغ',
+  },
 ];
 
 const READ_FILTERS = {

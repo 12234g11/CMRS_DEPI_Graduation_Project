@@ -671,8 +671,8 @@
 }
 
 .company-teams-table {
-  width: 1080px;
-  min-width: 1080px;
+  width: 1200px;
+  min-width: 1200px;
   max-width: none;
 }
 
@@ -688,8 +688,8 @@
   }
 
   .company-teams-table {
-    width: 1080px;
-    min-width: 1080px;
+    width: 1200px;
+    min-width: 1200px;
   }
 }
 

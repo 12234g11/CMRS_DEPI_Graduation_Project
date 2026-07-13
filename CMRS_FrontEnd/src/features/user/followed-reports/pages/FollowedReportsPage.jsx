@@ -20,10 +20,13 @@ import {
   getFollowedReportDetails,
   getFollowedReports,
   unfollowReport,
+  unverifyReport,
+  verifyReport,
 } from '../api/followedReportsApi';
 import FollowedReportDetailsModal from '../components/FollowedReportDetailsModal';
 import FollowedReportsMapLegend from '../components/FollowedReportsMapLegend';
 import FollowedReportsTable from '../components/FollowedReportsTable';
+import UnfollowConfirmationModal from '../components/UnfollowConfirmationModal';
 import '../../reports/user-reports.css';
 import '../followed-reports.css';
 
@@ -92,6 +95,136 @@ function toMapMarker(report = {}) {
     statusLabel: report.statusLabel,
     tone: report.statusTone,
     position: report.position,
+  };
+}
+
+function readResponseValue(source = {}, ...keys) {
+  for (const key of keys) {
+    if (source?.[key] !== undefined && source?.[key] !== null) {
+      return source[key];
+    }
+  }
+
+  return null;
+}
+
+function toSafeCount(value, fallback = 0) {
+  const parsedValue = Number(value);
+  return Number.isFinite(parsedValue) ? Math.max(0, parsedValue) : fallback;
+}
+
+function toResponseBoolean(value, fallback = false) {
+  if (typeof value === 'boolean') return value;
+  if (value === 1 || value === '1') return true;
+  if (value === 0 || value === '0') return false;
+
+  if (typeof value === 'string') {
+    const normalizedValue = value.trim().toLowerCase();
+    if (['true', 'yes'].includes(normalizedValue)) return true;
+    if (['false', 'no'].includes(normalizedValue)) return false;
+  }
+
+  return fallback;
+}
+
+function normalizeVerifyVote(value) {
+  const parsedValue = Number(value);
+  if (parsedValue === 1) return 1;
+  if (parsedValue === -1) return -1;
+  return null;
+}
+
+function getReportCurrentVerifyVote(report = {}) {
+  return (
+    normalizeVerifyVote(
+      report.currentUserVerifyVote ??
+        report.userVerifyVote ??
+        report.verifyVote ??
+        report.userVote
+    ) ?? (report.isVerifiedByCurrentUser ? 1 : null)
+  );
+}
+
+function getVerifyResponseVote(data = {}, fallbackVote = null) {
+  return (
+    normalizeVerifyVote(
+      readResponseValue(
+        data,
+        'currentUserVerifyVote',
+        'CurrentUserVerifyVote',
+        'verifyVote',
+        'VerifyVote',
+        'userVerifyVote',
+        'UserVerifyVote',
+        'userVote',
+        'UserVote'
+      )
+    ) ?? fallbackVote
+  );
+}
+
+function calculateNextVerifyCounts({
+  currentReport,
+  data,
+  normalizedVote,
+  shouldRemoveCurrentVote,
+}) {
+  const previousVote = getReportCurrentVerifyVote(currentReport);
+  const currentUpvoteCount = toSafeCount(currentReport.upvoteCount);
+  const currentDownvoteCount = toSafeCount(currentReport.downvoteCount);
+
+  const responseUpvoteCount = readResponseValue(
+    data,
+    'upvoteCount',
+    'UpvoteCount',
+    'validReportCount',
+    'ValidReportCount',
+    'correctReportCount',
+    'CorrectReportCount'
+  );
+  const responseDownvoteCount = readResponseValue(
+    data,
+    'downvoteCount',
+    'DownvoteCount',
+    'invalidReportCount',
+    'InvalidReportCount',
+    'wrongReportCount',
+    'WrongReportCount'
+  );
+
+  let nextUpvoteCount = toSafeCount(responseUpvoteCount, currentUpvoteCount);
+  let nextDownvoteCount = toSafeCount(
+    responseDownvoteCount,
+    currentDownvoteCount
+  );
+
+  if (responseUpvoteCount == null && responseDownvoteCount == null) {
+    nextUpvoteCount = currentUpvoteCount;
+    nextDownvoteCount = currentDownvoteCount;
+
+    if (shouldRemoveCurrentVote) {
+      if (previousVote === 1) {
+        nextUpvoteCount = Math.max(0, nextUpvoteCount - 1);
+      }
+      if (previousVote === -1) {
+        nextDownvoteCount = Math.max(0, nextDownvoteCount - 1);
+      }
+    } else if (previousVote !== normalizedVote) {
+      if (previousVote === 1) {
+        nextUpvoteCount = Math.max(0, nextUpvoteCount - 1);
+      }
+      if (previousVote === -1) {
+        nextDownvoteCount = Math.max(0, nextDownvoteCount - 1);
+      }
+
+      if (normalizedVote === 1) nextUpvoteCount += 1;
+      if (normalizedVote === -1) nextDownvoteCount += 1;
+    }
+  }
+
+  return {
+    upvoteCount: nextUpvoteCount,
+    downvoteCount: nextDownvoteCount,
   };
 }
 
@@ -171,6 +304,10 @@ function FollowedReportsPage() {
   const [selectedReportDetails, setSelectedReportDetails] = useState(null);
   const [loadingReportId, setLoadingReportId] = useState('');
   const [unfollowingReportId, setUnfollowingReportId] = useState('');
+  const [pendingUnfollowReport, setPendingUnfollowReport] = useState(null);
+  const [verifyingAction, setVerifyingAction] = useState('');
+  const [modalActionMessage, setModalActionMessage] = useState('');
+  const [modalActionError, setModalActionError] = useState('');
 
   useEffect(() => {
     const searchChanged = previousSearchQueryRef.current !== searchQuery;
@@ -451,6 +588,8 @@ function FollowedReportsPage() {
     try {
       setLoadingReportId(reportId);
       setErrorMessage('');
+      setModalActionMessage('');
+      setModalActionError('');
 
       const details = await getFollowedReportDetails(reportId);
       setSelectedReportDetails(mergeReportDetails(summary, details));
@@ -463,20 +602,145 @@ function FollowedReportsPage() {
     }
   }
 
-  async function handleUnfollow(reportOrMapReport) {
+  function updateReportEngagement(reportId, updater) {
+    const cleanReportId = String(reportId);
+
+    setReports((currentReports) =>
+      currentReports.map((currentReport) =>
+        String(currentReport.reportId || currentReport.id) === cleanReportId
+          ? updater(currentReport)
+          : currentReport
+      )
+    );
+
+    setSelectedReportDetails((currentReport) => {
+      if (
+        !currentReport ||
+        String(currentReport.reportId || currentReport.id) !== cleanReportId
+      ) {
+        return currentReport;
+      }
+
+      return updater(currentReport);
+    });
+  }
+
+  async function handleToggleVerify(report, vote = 1) {
+    const reportId = report?.reportId || report?.id;
+    if (!reportId || verifyingAction) return;
+
+    const normalizedVote = Number(vote) === -1 ? -1 : 1;
+    const currentVote = getReportCurrentVerifyVote(report);
+    const shouldRemoveCurrentVote =
+      report.isVerifiedByCurrentUser && currentVote === normalizedVote;
+
+    setModalActionError('');
+    setModalActionMessage('');
+    setVerifyingAction(`${reportId}:${normalizedVote}`);
+
+    try {
+      const data = (shouldRemoveCurrentVote
+        ? await unverifyReport(reportId)
+        : await verifyReport(reportId, normalizedVote)) || {};
+
+      updateReportEngagement(reportId, (currentReport) => {
+        const { upvoteCount, downvoteCount } = calculateNextVerifyCounts({
+          currentReport,
+          data,
+          normalizedVote,
+          shouldRemoveCurrentVote,
+        });
+
+        const nextIsVerified = toResponseBoolean(
+          readResponseValue(
+            data,
+            'isVerifiedByCurrentUser',
+            'IsVerifiedByCurrentUser'
+          ),
+          !shouldRemoveCurrentVote
+        );
+        const nextVote = nextIsVerified
+          ? getVerifyResponseVote(data, normalizedVote)
+          : null;
+        const responseVerifyCount = readResponseValue(
+          data,
+          'verifyCount',
+          'VerifyCount'
+        );
+
+        return {
+          ...currentReport,
+          verifyCount:
+            responseVerifyCount != null
+              ? toSafeCount(responseVerifyCount, upvoteCount + downvoteCount)
+              : upvoteCount + downvoteCount,
+          upvoteCount,
+          downvoteCount,
+          isVerifiedByCurrentUser: nextIsVerified,
+          currentUserVerifyVote: nextVote,
+          canCurrentUserVerify: toResponseBoolean(
+            readResponseValue(
+              data,
+              'canCurrentUserVerify',
+              'CanCurrentUserVerify'
+            ),
+            nextIsVerified ? currentReport.canCurrentUserVerify : true
+          ),
+        };
+      });
+
+      if (shouldRemoveCurrentVote) {
+        setModalActionMessage('تم إلغاء تصويتك على البلاغ.');
+      } else if (normalizedVote === 1) {
+        setModalActionMessage('تم تسجيل أن البلاغ صحيح.');
+      } else {
+        setModalActionMessage('تم تسجيل أن البلاغ غير صحيح.');
+      }
+    } catch (error) {
+      setModalActionError(
+        error?.message || 'تعذر تحديث تصويت البلاغ حاليًا.'
+      );
+    } finally {
+      setVerifyingAction('');
+    }
+  }
+
+  function getUnfollowTarget(reportOrMapReport) {
     const sourceReport = reportOrMapReport?.rawReport || reportOrMapReport;
     const reportId =
       sourceReport?.reportId ||
       sourceReport?.id ||
       reportOrMapReport?.originalId;
 
+    if (!reportId) return null;
+
+    return {
+      ...sourceReport,
+      reportId,
+      title:
+        sourceReport?.title ||
+        reportOrMapReport?.title ||
+        sourceReport?.reportNumber ||
+        'البلاغ المحدد',
+    };
+  }
+
+  function handleUnfollow(reportOrMapReport) {
+    if (unfollowingReportId) return;
+
+    const targetReport = getUnfollowTarget(reportOrMapReport);
+    if (!targetReport) return;
+
+    setErrorMessage('');
+    setSuccessMessage('');
+    setModalActionMessage('');
+    setModalActionError('');
+    setPendingUnfollowReport(targetReport);
+  }
+
+  async function handleConfirmUnfollow() {
+    const reportId = pendingUnfollowReport?.reportId;
     if (!reportId || unfollowingReportId) return;
-
-    const shouldUnfollow = window.confirm(
-      'هل أنت متأكد من إلغاء متابعة هذا البلاغ؟ سيختفي من هذه الصفحة.'
-    );
-
-    if (!shouldUnfollow) return;
 
     try {
       setUnfollowingReportId(reportId);
@@ -485,10 +749,11 @@ function FollowedReportsPage() {
 
       await unfollowReport(reportId);
 
+      setPendingUnfollowReport(null);
       setSelectedReportDetails(null);
       clearMapSelection();
       setHighlightedReportId(null);
-      setSuccessMessage('تم إلغاء متابعة البلاغ بنجاح.');
+      setSuccessMessage('تم إلغاء متابعة البلاغ وإزالته من الصفحة بنجاح.');
 
       if (reports.length === 1 && pageNumber > 1) {
         setPageNumber((currentPage) => Math.max(1, currentPage - 1));
@@ -661,16 +926,44 @@ function FollowedReportsPage() {
         ? createPortal(
             <FollowedReportDetailsModal
               report={selectedReportDetails}
-              onClose={() => setSelectedReportDetails(null)}
+              onClose={() => {
+                setSelectedReportDetails(null);
+                setModalActionMessage('');
+                setModalActionError('');
+              }}
               onUnfollow={handleUnfollow}
+              onToggleVerify={handleToggleVerify}
               isUnfollowing={
                 String(unfollowingReportId) ===
                 String(selectedReportDetails.reportId)
               }
+              isVerifyUpLoading={
+                verifyingAction === `${selectedReportDetails.reportId}:1`
+              }
+              isVerifyDownLoading={
+                verifyingAction === `${selectedReportDetails.reportId}:-1`
+              }
+              actionMessage={modalActionMessage}
+              actionError={modalActionError}
             />,
             document.body
           )
         : null}
+
+
+      <UnfollowConfirmationModal
+        isOpen={Boolean(pendingUnfollowReport)}
+        reportTitle={pendingUnfollowReport?.title}
+        isLoading={
+          Boolean(pendingUnfollowReport) &&
+          String(unfollowingReportId) ===
+            String(pendingUnfollowReport?.reportId)
+        }
+        onCancel={() => {
+          if (!unfollowingReportId) setPendingUnfollowReport(null);
+        }}
+        onConfirm={handleConfirmUnfollow}
+      />
     </div>
   );
 }

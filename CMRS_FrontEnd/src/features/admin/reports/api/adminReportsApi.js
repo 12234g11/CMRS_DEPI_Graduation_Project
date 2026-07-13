@@ -283,6 +283,115 @@ function normalizeCompanyResponse(response, report = {}) {
   };
 }
 
+function normalizeAdminDecision(report = {}, companyResponse = null) {
+  const source =
+    report.adminDecision ||
+    report.AdminDecision ||
+    report.companyResponseDecision ||
+    report.CompanyResponseDecision ||
+    companyResponse?.adminDecision ||
+    companyResponse?.AdminDecision ||
+    (companyResponse &&
+    (companyResponse.reviewStatus ||
+      companyResponse.decision ||
+      companyResponse.adminNote ||
+      companyResponse.userMessage ||
+      companyResponse.completionRequirements)
+      ? companyResponse
+      : null);
+
+  if (!source) return null;
+
+  const decisionType = cleanApiText(
+    source.decisionType ||
+      source.DecisionType ||
+      source.decision ||
+      source.Decision ||
+      source.reviewStatus ||
+      source.ReviewStatus,
+  );
+
+  return {
+    ...source,
+    decisionId: source.decisionId || source.DecisionId || source.id || source.Id || '',
+    companyResponseId:
+      source.companyResponseId ||
+      source.CompanyResponseId ||
+      source.submissionId ||
+      source.SubmissionId ||
+      companyResponse?.id ||
+      '',
+    decisionType,
+    decisionLabel: cleanApiText(
+      source.decisionLabel ||
+        source.DecisionLabel ||
+        source.label ||
+        source.Label ||
+        source.reviewLabel ||
+        source.ReviewLabel,
+    ),
+    sourceResponseType: cleanApiText(
+      source.sourceResponseType ||
+        source.SourceResponseType ||
+        source.responseType ||
+        source.ResponseType ||
+        companyResponse?.responseType,
+    ),
+    companyMessage: cleanApiText(
+      source.companyMessage ||
+        source.CompanyMessage ||
+        source.messageToCompany ||
+        source.MessageToCompany ||
+        source.adminNote ||
+        source.AdminNote ||
+        companyResponse?.adminNote,
+    ),
+    publicUserMessage: cleanApiText(
+      source.publicUserMessage ||
+        source.PublicUserMessage ||
+        source.userMessage ||
+        source.UserMessage ||
+        source.publicMessage ||
+        source.PublicMessage ||
+        source.messageToUser ||
+        source.MessageToUser ||
+        companyResponse?.userMessage,
+    ),
+    publicUnableReason: cleanApiText(
+      source.publicUnableReason ||
+        source.PublicUnableReason ||
+        source.publicUnableToExecuteReason ||
+        source.PublicUnableToExecuteReason ||
+        source.unableToExecuteReason ||
+        source.UnableToExecuteReason,
+    ),
+    completionRequirements: cleanApiText(
+      source.completionRequirements ||
+        source.CompletionRequirements ||
+        source.requiredCompletion ||
+        source.RequiredCompletion ||
+        source.requirements ||
+        source.Requirements,
+    ),
+    previousCompanyId:
+      source.previousCompanyId || source.PreviousCompanyId || report.previousCompanyId || '',
+    previousCompanyName: cleanApiText(
+      source.previousCompanyName ||
+        source.PreviousCompanyName ||
+        report.previousCompanyName,
+    ),
+    newCompanyId: source.newCompanyId || source.NewCompanyId || '',
+    newCompanyName: cleanApiText(source.newCompanyName || source.NewCompanyName),
+    isFinal: Boolean(source.isFinal ?? source.IsFinal ?? false),
+    decidedAt:
+      source.decidedAt ||
+      source.DecidedAt ||
+      source.reviewedAt ||
+      source.ReviewedAt ||
+      null,
+  };
+}
+
 function getCompanyResponseCollection(report = {}) {
   if (Array.isArray(report.companySubmissions)) return report.companySubmissions;
   if (Array.isArray(report.companyResponses)) return report.companyResponses;
@@ -367,6 +476,15 @@ export function normalizeAdminReport(report = {}) {
     companyResponseHistory: getCompanyResponseCollection(report).map((response) => (
       normalizeCompanyResponse(response, report)
     )),
+    adminDecision: normalizeAdminDecision(
+      report,
+      normalizeCompanyResponse(
+        report.companyResponse ||
+          report.latestCompanyResponse ||
+          getCompanyResponseCollection(report).at(-1),
+        report,
+      ),
+    ),
     pendingReviewType:
       cleanApiText(report.pendingReviewType) ||
       normalizeCompanyResponse(
@@ -533,45 +651,60 @@ export async function getAssignmentCompaniesForReport(reportId, filters = {}) {
 
 
 export async function assignCompanyToReport(reportId, payload) {
-  const response = await axiosClient.post(
+  if (payload.isReassignment) {
+    await reviewCompanyResponse(reportId, {
+      action: 'reassign',
+      decision: 'reassign',
+      companyResponseId: payload.companyResponseId,
+      submissionId: payload.companyResponseId,
+      newCompanyId: payload.companyId,
+      previousCompanyId: payload.previousCompanyId,
+      companyMessage: null,
+      publicUserMessage: null,
+      publicUnableReason: null,
+      completionRequirements: null,
+      excludeCurrentCompany: true,
+    });
+
+    return getAdminReportById(reportId);
+  }
+
+  await axiosClient.post(
     buildAdminUrl(`/reports/${reportId}/assign-company`),
     {
       companyId: payload.companyId,
       adminNote: payload.adminNote || null,
       assignmentSource: payload.assignmentSource || 'manual',
+      isReassignment: Boolean(payload.isReassignment),
+      previousCompanyId: payload.previousCompanyId || null,
+      companyResponseId: payload.companyResponseId || null,
     },
   );
 
-  const data = unwrapResponse(response) || {};
-
-  return {
-    ...data,
-    companyId: data.assignedCompanyId || data.assignment?.companyId || payload.companyId,
-    assignedCompany:
-      data.assignedCompanyName || data.assignment?.companyName || data.concernedCompanyName || '',
-    concernedCompany: data.concernedCompanyName || data.assignedCompanyName || '',
-    status: data.statusLabel || data.status || '',
-    statusValue: data.status || '',
-    statusTone: getStatusTone(data.status, data.statusLabel),
-  };
+  return getAdminReportById(reportId);
 }
 
 export async function reviewCompanyResponse(reportId, payload) {
   const response = await axiosClient.post(
     buildAdminUrl(`/reports/${reportId}/company-response/review`),
     {
-      // Legacy fields remain for the current backend.
       action: payload.action,
-      adminNote: payload.adminNote || null,
-      excludeCurrentCompany: Boolean(payload.excludeCurrentCompany),
+      decision: payload.decision || payload.action || null,
+      companyResponseId: payload.companyResponseId || payload.submissionId || null,
+      submissionId: payload.submissionId || payload.companyResponseId || null,
 
-      // Future cannot-fix flow fields. .NET safely ignores unknown fields
-      // until the backend contract is upgraded.
-      decision: payload.decision || null,
-      submissionId: payload.submissionId || null,
-      userMessage: payload.userMessage || null,
+      // Keep adminNote/userMessage for backward compatibility while sending
+      // the explicit fields required by the upgraded backend contract.
+      adminNote: payload.companyMessage || payload.adminNote || null,
+      userMessage: payload.publicUserMessage || payload.userMessage || null,
+      companyMessage: payload.companyMessage || payload.adminNote || null,
+      publicUserMessage: payload.publicUserMessage || payload.userMessage || null,
+      publicUnableReason: payload.publicUnableReason || null,
+      completionRequirements: payload.completionRequirements || null,
+
+      excludeCurrentCompany: Boolean(payload.excludeCurrentCompany),
       newCompanyId: payload.newCompanyId || null,
-      newAssignmentNote: payload.newAssignmentNote || null,
+      previousCompanyId: payload.previousCompanyId || null,
       dueDate: payload.dueDate || null,
     },
   );
@@ -579,90 +712,105 @@ export async function reviewCompanyResponse(reportId, payload) {
   return unwrapResponse(response);
 }
 
-function isUnsupportedCompanyReviewAction(error) {
-  return [400, 404, 405, 422].includes(Number(error?.response?.status));
-}
-
 export async function acceptCompanyFix(reportId, payload = {}) {
-  // The deployed backend validates this legacy action case-sensitively.
-  // Send the exact action name expected by the API; lowercase values such as
-  // `approve`, `accept`, and `accept_solution` are rejected as invalid.
-  await reviewCompanyResponse(reportId, {
-    action: 'Approve',
-    decision: 'accept_solution',
-    submissionId: payload.submissionId,
-    adminNote: payload.adminNote,
-    userMessage: payload.userMessage,
-    excludeCurrentCompany: false,
-  });
+  const reviewResponse = await axiosClient.post(
+    buildAdminUrl(`/reports/${reportId}/company-response/review`),
+    {
+      action: 'AcceptFix',
+      adminNote: payload.adminNote || payload.companyMessage || null,
+    },
+  );
 
-  return getAdminReportById(reportId);
+  const reviewData = unwrapResponse(reviewResponse) || {};
+  const updatedReport = await getAdminReportById(reportId);
+  const reviewedResponse = normalizeCompanyResponse(
+    reviewData.companyResponse,
+    updatedReport,
+  );
+  const reviewedAdminNote = cleanApiText(
+    reviewData.companyResponse?.adminNote || payload.adminNote || payload.companyMessage,
+  );
+
+  if (!reviewedResponse && !reviewedAdminNote) return updatedReport;
+
+  return {
+    ...updatedReport,
+    companyResponse: {
+      ...(updatedReport.companyResponse || {}),
+      ...(reviewedResponse || {}),
+      adminNote: reviewedAdminNote || reviewedResponse?.adminNote || '',
+    },
+    adminDecision: {
+      ...(updatedReport.adminDecision || {}),
+      decisionType:
+        reviewedResponse?.reviewStatus || updatedReport.adminDecision?.decisionType || 'accepted',
+      decisionLabel:
+        reviewedResponse?.reviewLabel || updatedReport.adminDecision?.decisionLabel || 'تم قبول الحل',
+      companyMessage:
+        reviewedAdminNote || updatedReport.adminDecision?.companyMessage || '',
+    },
+  };
 }
 
 export async function requestCompanyCompletion(reportId, payload = {}) {
-  const isCannotFixDecision = payload.decision === 'reject_and_continue';
+  const reviewResponse = await axiosClient.post(
+    buildAdminUrl(`/reports/${reportId}/company-response/review`),
+    {
+      action: 'RequestCompletion',
+      adminNote: payload.adminNote || payload.companyMessage || null,
+    },
+  );
 
-  try {
-    await reviewCompanyResponse(reportId, {
-      action: isCannotFixDecision ? 'reject_and_continue' : 'reject',
-      decision: payload.decision || 'request_completion',
-      submissionId: payload.submissionId,
-      adminNote: payload.adminNote,
-      userMessage: payload.userMessage,
-      excludeCurrentCompany: false,
-    });
-  } catch (error) {
-    if (!isCannotFixDecision || !isUnsupportedCompanyReviewAction(error)) throw error;
+  const reviewData = unwrapResponse(reviewResponse) || {};
+  const updatedReport = await getAdminReportById(reportId);
+  const reviewedResponse = normalizeCompanyResponse(
+    reviewData.companyResponse,
+    updatedReport,
+  );
+  const reviewedAdminNote = cleanApiText(
+    reviewData.companyResponse?.adminNote || payload.adminNote || payload.companyMessage,
+  );
 
-    await reviewCompanyResponse(reportId, {
-      action: 'reject',
-      adminNote: payload.adminNote,
-      excludeCurrentCompany: false,
-    });
-  }
+  if (!reviewedResponse && !reviewedAdminNote) return updatedReport;
 
-  return getAdminReportById(reportId);
+  return {
+    ...updatedReport,
+    companyResponse: {
+      ...(updatedReport.companyResponse || {}),
+      ...(reviewedResponse || {}),
+      adminNote: reviewedAdminNote || reviewedResponse?.adminNote || '',
+    },
+    adminDecision: {
+      ...(updatedReport.adminDecision || {}),
+      decisionType:
+        reviewedResponse?.reviewStatus ||
+        updatedReport.adminDecision?.decisionType ||
+        'needs_completion',
+      decisionLabel:
+        reviewedResponse?.reviewLabel ||
+        updatedReport.adminDecision?.decisionLabel ||
+        'مطلوب استكمال',
+      companyMessage:
+        reviewedAdminNote || updatedReport.adminDecision?.companyMessage || '',
+      completionRequirements:
+        reviewedAdminNote || updatedReport.adminDecision?.completionRequirements || '',
+    },
+  };
 }
 
 export async function acceptCompanyCannotFix(reportId, payload = {}) {
-  try {
-    await reviewCompanyResponse(reportId, {
-      action: 'accept_cannot_fix',
-      decision: 'accept_cannot_fix',
-      submissionId: payload.submissionId,
-      adminNote: payload.adminNote,
-      userMessage: payload.userMessage,
-      excludeCurrentCompany: false,
-    });
-  } catch (error) {
-    if (!isUnsupportedCompanyReviewAction(error)) throw error;
-
-    // Backward-compatible behavior until the dedicated decision is added.
-    await closeAdminReport(reportId);
-  }
-
-  return getAdminReportById(reportId);
-}
-
-export async function prepareReportReassignment(reportId, payload = {}) {
-  try {
-    await reviewCompanyResponse(reportId, {
-      action: 'reassign',
-      decision: 'reassign',
-      submissionId: payload.submissionId,
-      adminNote: payload.adminNote,
-      userMessage: payload.userMessage,
-      excludeCurrentCompany: true,
-    });
-  } catch (error) {
-    if (!isUnsupportedCompanyReviewAction(error)) throw error;
-
-    await reviewCompanyResponse(reportId, {
-      action: 'reject',
-      adminNote: payload.adminNote,
-      excludeCurrentCompany: true,
-    });
-  }
+  await reviewCompanyResponse(reportId, {
+    action: 'accept_cannot_fix',
+    decision: 'accept_cannot_fix',
+    companyResponseId: payload.companyResponseId || payload.submissionId,
+    submissionId: payload.submissionId || payload.companyResponseId,
+    companyMessage: payload.companyMessage || payload.adminNote,
+    publicUserMessage: payload.publicUserMessage || payload.userMessage,
+    publicUnableReason:
+      payload.publicUnableReason || payload.publicUserMessage || payload.userMessage,
+    completionRequirements: null,
+    excludeCurrentCompany: false,
+  });
 
   return getAdminReportById(reportId);
 }

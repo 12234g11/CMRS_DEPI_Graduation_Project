@@ -362,28 +362,12 @@ function getExecutionOutcomePresentation(report = {}) {
     return {
       tone: 'unable',
       icon: <FiXCircle />,
-      title: 'تعذر تنفيذ البلاغ',
-      message:
-        execution.publicMessage ||
-        execution.unableToExecuteReason ||
-        'تعذر تنفيذ البلاغ بعد مراجعة الجهة المختصة.',
+      title: execution.decisionLabel || 'تم إغلاق البلاغ لتعذر التنفيذ',
+      message: execution.publicMessage || 'لا توجد بيانات للعرض',
+      reason: execution.unableToExecuteReason || 'لا توجد بيانات للعرض',
       meta: execution.unableToExecuteAt
         ? `تاريخ القرار: ${formatReportDate(execution.unableToExecuteAt)}`
-        : '',
-    };
-  }
-
-  if (execution.wasReassigned || decisionType.includes('reassign')) {
-    return {
-      tone: 'reassigned',
-      icon: <FiUsers />,
-      title: 'تم تحويل البلاغ إلى جهة تنفيذ أخرى',
-      message:
-        execution.publicMessage ||
-        'تعذر على الجهة السابقة تنفيذ البلاغ، وتم إسناده إلى جهة أخرى لاستكمال العمل.',
-      meta: execution.currentCompanyName
-        ? `الجهة الحالية: ${execution.currentCompanyName}`
-        : '',
+        : 'تاريخ القرار: لا توجد بيانات للعرض',
     };
   }
 
@@ -393,7 +377,6 @@ function getExecutionOutcomePresentation(report = {}) {
       icon: <FiInfo />,
       title: 'الرد قيد مراجعة الإدارة',
       message:
-        execution.publicMessage ||
         'تراجع الإدارة رد جهة التنفيذ قبل اعتماد القرار النهائي وإبلاغك بالنتيجة.',
       meta: '',
     };
@@ -405,9 +388,7 @@ function getExecutionOutcomePresentation(report = {}) {
       icon: <FiAlertTriangle />,
       title: 'جهة التنفيذ تستكمل العمل',
       message:
-        execution.publicMessage ||
-        execution.needsCompletionMessage ||
-        'طلبت الإدارة استكمال بعض الأعمال قبل اعتماد النتيجة النهائية.',
+        'تستكمل جهة التنفيذ العمل على البلاغ قبل اعتماد النتيجة النهائية.',
       meta: '',
     };
   }
@@ -617,6 +598,9 @@ function ReportDetailsModal({ report, onClose }) {
                 <div>
                   <strong>{executionOutcome.title}</strong>
                   <p>{executionOutcome.message}</p>
+                  {executionOutcome.reason ? (
+                    <small>سبب التعذر: {executionOutcome.reason}</small>
+                  ) : null}
                   {executionOutcome.meta ? <small>{executionOutcome.meta}</small> : null}
                 </div>
               </section>

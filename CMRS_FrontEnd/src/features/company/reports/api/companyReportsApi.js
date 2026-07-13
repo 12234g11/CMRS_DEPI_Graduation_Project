@@ -15,8 +15,6 @@ const COMPANY_REPORT_STATUS_OPTIONS_FALLBACK = [
   { value: 'تم الحل', label: 'تم الحل' },
 ];
 
-const PROGRESS_PROOF_STORAGE_KEY = 'cmrs:company-report-progress-proofs:v1';
-
 const COMPANY_REPORT_PRIORITY_OPTIONS_FALLBACK = [
   { value: 'all', label: 'كل الأولويات' },
   { value: 'عالية', label: 'عالية' },
@@ -256,44 +254,6 @@ function inferCompanyResponseType(companyResponse = {}, report = {}) {
   return explicitType || '';
 }
 
-function readProgressProofsMap() {
-  if (typeof window === 'undefined') return {};
-
-  try {
-    const rawValue = window.localStorage.getItem(PROGRESS_PROOF_STORAGE_KEY);
-    const parsedValue = rawValue ? JSON.parse(rawValue) : {};
-    return parsedValue && typeof parsedValue === 'object' ? parsedValue : {};
-  } catch {
-    return {};
-  }
-}
-
-function getStoredProgressProofs(reportId) {
-  if (!reportId) return [];
-  const proofsMap = readProgressProofsMap();
-  return normalizeImages(proofsMap[String(reportId)] || []);
-}
-
-function storeProgressProofs(reportId, imageUrls = []) {
-  if (typeof window === 'undefined' || !reportId || !imageUrls.length) return;
-
-  try {
-    const proofsMap = readProgressProofsMap();
-    proofsMap[String(reportId)] = Array.from(
-      new Set([
-        ...normalizeImages(proofsMap[String(reportId)] || []),
-        ...normalizeImages(imageUrls),
-      ]),
-    );
-    window.localStorage.setItem(
-      PROGRESS_PROOF_STORAGE_KEY,
-      JSON.stringify(proofsMap),
-    );
-  } catch {
-    // Classification storage is a UX enhancement; failed storage must not block API actions.
-  }
-}
-
 function normalizeStatus(report) {
   const rawStatus =
     report.companyStatus ||
@@ -359,21 +319,34 @@ function normalizePriority(report) {
 function normalizeAdminReview(adminReview, companyResponse = null) {
   const reviewSource =
     adminReview ||
+    companyResponse?.adminReview ||
+    companyResponse?.AdminReview ||
     (companyResponse
       ? {
           status: companyResponse.reviewStatus,
           label: companyResponse.reviewLabel,
-          note: companyResponse.adminNote || companyResponse.reviewNote,
+          companyMessage: companyResponse.adminNote || companyResponse.reviewNote,
+          completionRequirements: companyResponse.completionRequirements,
           reviewedAt: companyResponse.reviewedAt,
-          userMessage: companyResponse.userMessage || companyResponse.publicMessage,
-          decision: companyResponse.decision,
+          decisionType: companyResponse.decisionType || companyResponse.decision,
+          isFinal: companyResponse.isFinal,
         }
       : null);
 
   if (!reviewSource) return null;
 
+  const decisionType = cleanApiText(
+    reviewSource.decisionType ||
+      reviewSource.DecisionType ||
+      reviewSource.decision ||
+      reviewSource.Decision ||
+      reviewSource.status ||
+      reviewSource.Status ||
+      reviewSource.reviewStatus ||
+      reviewSource.ReviewStatus,
+  );
   const normalizedStatus = compactKey(
-    reviewSource.status || reviewSource.reviewStatus || reviewSource.decision,
+    reviewSource.status || reviewSource.reviewStatus || decisionType,
   );
 
   const statusAliases = {
@@ -385,13 +358,13 @@ function normalizeAdminReview(adminReview, companyResponse = null) {
     cannotfixapproved: 'cannot_fix_accepted',
     acceptedcannotfix: 'cannot_fix_accepted',
     acceptcannotfix: 'cannot_fix_accepted',
-    accept_cannot_fix: 'cannot_fix_accepted',
     needcompletion: 'needs_completion',
     needscompletion: 'needs_completion',
-    rejectandcontinue: 'cannot_fix_rejected',
-    rejectcannotfix: 'cannot_fix_rejected',
-    cannotfixrejected: 'cannot_fix_rejected',
-    rejectedcannotfix: 'cannot_fix_rejected',
+    requestcompletion: 'needs_completion',
+    rejectandcontinue: 'needs_completion',
+    rejectcannotfix: 'needs_completion',
+    cannotfixrejected: 'needs_completion',
+    rejectedcannotfix: 'needs_completion',
     rejected: 'rejected',
     reassigned: 'reassigned',
     reassign: 'reassigned',
@@ -400,15 +373,48 @@ function normalizeAdminReview(adminReview, companyResponse = null) {
     pendingreview: 'pending',
   };
 
+  const companyMessage = cleanApiText(
+    reviewSource.companyMessage ||
+      reviewSource.CompanyMessage ||
+      reviewSource.messageToCompany ||
+      reviewSource.MessageToCompany ||
+      reviewSource.note ||
+      reviewSource.Note ||
+      reviewSource.adminNote ||
+      reviewSource.AdminNote ||
+      reviewSource.reviewNote ||
+      reviewSource.ReviewNote,
+  );
+
   return {
     ...reviewSource,
     status: statusAliases[normalizedStatus] || reviewSource.status || 'pending',
-    label: cleanApiText(reviewSource.label || reviewSource.reviewLabel),
-    note: cleanApiText(reviewSource.note || reviewSource.adminNote || reviewSource.reviewNote),
-    userMessage: cleanApiText(
-      reviewSource.userMessage || reviewSource.publicMessage || reviewSource.messageToUser,
+    decisionType,
+    label: cleanApiText(
+      reviewSource.label ||
+        reviewSource.Label ||
+        reviewSource.reviewLabel ||
+        reviewSource.ReviewLabel ||
+        reviewSource.decisionLabel ||
+        reviewSource.DecisionLabel,
     ),
-    reviewedAt: reviewSource.reviewedAt || reviewSource.decidedAt || null,
+    companyMessage,
+    note: companyMessage,
+    completionRequirements: cleanApiText(
+      reviewSource.completionRequirements ||
+        reviewSource.CompletionRequirements ||
+        reviewSource.requiredCompletion ||
+        reviewSource.RequiredCompletion ||
+        reviewSource.requirements ||
+        reviewSource.Requirements,
+    ),
+    reviewedAt:
+      reviewSource.reviewedAt ||
+      reviewSource.ReviewedAt ||
+      reviewSource.decidedAt ||
+      reviewSource.DecidedAt ||
+      null,
+    isFinal: Boolean(reviewSource.isFinal ?? reviewSource.IsFinal ?? false),
   };
 }
 
@@ -576,19 +582,7 @@ function normalizeReport(report) {
   const status = normalizeStatus(report);
   const priority = normalizePriority(report);
 
-  const serverProgressImages = normalizeImages(
-    report.progressImages || report.proofImages || report.executionProofImages,
-  );
-  const progressImages = Array.from(
-    new Set([
-      ...serverProgressImages,
-      ...getStoredProgressProofs(reportId),
-    ]),
-  );
-  const progressImagesSet = new Set(progressImages);
-  const originalImages = normalizeImages(report.images).filter(
-    (imageUrl) => !progressImagesSet.has(imageUrl),
-  );
+  const originalImages = normalizeImages(report.images);
 
   const rawPosition = report.position || {};
   const position = {
@@ -632,7 +626,10 @@ function normalizeReport(report) {
           normalizeCompanyResponse(submission, report),
         )
       : [],
-    adminReview: normalizeAdminReview(report.adminReview, companyResponse),
+    adminReview: normalizeAdminReview(
+      report.adminReview || report.AdminReview || report.adminDecision || report.AdminDecision,
+      companyResponse,
+    ),
     pendingReviewType:
       cleanApiText(report.pendingReviewType) ||
       companyResponse?.responseType ||
@@ -640,15 +637,9 @@ function normalizeReport(report) {
     assignmentHistory: Array.isArray(report.assignmentHistory)
       ? report.assignmentHistory
       : [],
-    userMessage: cleanApiText(
-      report.userMessage ||
-        report.publicMessage ||
-        report.adminUserMessage ||
-        companyResponse?.userMessage,
-    ),
+    userMessage: '',
     timeline: Array.isArray(report.timeline) ? report.timeline : [],
     images: originalImages,
-    progressImages,
   };
 }
 
@@ -737,21 +728,6 @@ function appendFilesToFormData(formData, fieldName, files = []) {
   });
 }
 
-export async function uploadCompanyReportProof(reportId, image) {
-  const formData = new FormData();
-  formData.append('image', image);
-
-  const data = await request(`/api/company/reports/${reportId}/proof`, {
-    method: 'POST',
-    body: formData,
-    isFormData: true,
-  });
-
-  return data?.imageUrl
-    ? { ...data, imageUrl: normalizeImageUrl(data.imageUrl) }
-    : data;
-}
-
 export async function getCompanyReportFilterOptions() {
   const data = await request('/api/company/reports/options');
 
@@ -817,55 +793,7 @@ export async function startCompanyReportWork(reportId, payload = {}) {
     body: payload.note ? { note: payload.note } : undefined,
   });
 
-  const startedReport = normalizeReport(data);
-  const proofFiles = Array.isArray(payload.files) ? payload.files : [];
-
-  if (!proofFiles.length) return startedReport;
-
-  const uploadedProofUrls = [];
-  const failedProofs = [];
-
-  for (const image of proofFiles) {
-    try {
-      const uploadResult = await uploadCompanyReportProof(reportId, image);
-      if (uploadResult?.imageUrl) uploadedProofUrls.push(uploadResult.imageUrl);
-    } catch (error) {
-      failedProofs.push({ fileName: image?.name || 'صورة', error });
-    }
-  }
-
-  if (uploadedProofUrls.length) {
-    storeProgressProofs(reportId, uploadedProofUrls);
-  }
-
-  let refreshedReport = startedReport;
-
-  try {
-    refreshedReport = await getCompanyReportById(reportId);
-  } catch {
-    // Starting work already succeeded; keep the returned report if refreshing fails.
-  }
-
-  const reportWithProofs = {
-    ...refreshedReport,
-    progressImages: Array.from(
-      new Set([
-        ...(refreshedReport?.progressImages || []),
-        ...uploadedProofUrls,
-      ]),
-    ),
-  };
-
-  if (failedProofs.length) {
-    const partialError = new Error(
-      `تم بدء التنفيذ، لكن تعذر رفع ${failedProofs.length} من صور إثبات البداية. يمكنك إعادة رفعها لاحقًا.`,
-    );
-    partialError.partialReport = reportWithProofs;
-    partialError.failedProofs = failedProofs;
-    throw partialError;
-  }
-
-  return reportWithProofs;
+  return normalizeReport(data);
 }
 
 export async function submitCompanyReportSolution(reportId, payload) {

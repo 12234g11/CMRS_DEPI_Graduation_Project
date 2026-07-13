@@ -4,7 +4,6 @@ import {
   FiAlertCircle,
   FiCheckCircle,
   FiFileText,
-  FiImage,
   FiPlayCircle,
   FiUsers,
   FiX,
@@ -17,7 +16,6 @@ function StartWorkConfirmationModal({
   report,
   teamName,
   note,
-  imagesCount = 0,
   errorMessage = '',
   onClose,
   onConfirm,
@@ -164,15 +162,6 @@ function StartWorkConfirmationModal({
               </div>
             </article>
 
-            <article>
-              <span className="company-start-confirmation-modal__summary-icon">
-                <FiImage />
-              </span>
-              <div>
-                <small>صور بداية التنفيذ</small>
-                <strong>{imagesCount ? `${imagesCount} صورة` : 'لا توجد صور'}</strong>
-              </div>
-            </article>
           </div>
 
           <div className="company-start-confirmation-modal__notice">

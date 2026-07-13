@@ -1,5 +1,6 @@
 import {
   FiCheckCircle,
+  FiBarChart2,
   FiClock,
   FiPhone,
   FiTool,
@@ -67,6 +68,12 @@ function CompanyTeamDetailsModal({ team, onClose, onEditTeam }) {
             <FiTool />
             <span>المهام النشطة المحسوبة</span>
             <strong>{team.activeTasks}</strong>
+          </div>
+
+          <div>
+            <FiBarChart2 />
+            <span>السعة القصوى للمهام النشطة</span>
+            <strong>{team.maxCapacity || 'غير محددة'}</strong>
           </div>
 
           <div>

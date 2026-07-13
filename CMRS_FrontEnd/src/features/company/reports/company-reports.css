@@ -3470,6 +3470,33 @@
   font-weight: 850;
 }
 
+.company-admin-decision-card__message,
+.company-admin-decision-card__requirements {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(2, 95, 72, 0.12);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.company-admin-decision-card__message b,
+.company-admin-decision-card__requirements b {
+  color: var(--color-primary);
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 950;
+}
+
+.company-admin-decision-card__message p,
+.company-admin-decision-card__requirements p {
+  margin: 6px 0 0;
+}
+
+.company-admin-decision-card__requirements {
+  border-color: rgba(200, 135, 0, 0.22);
+  background: rgba(255, 193, 7, 0.08);
+}
+
 /* Action cards and validation */
 
 .company-report-action-card {
@@ -3749,6 +3776,31 @@
   color: var(--color-text);
   font-weight: 850;
   line-height: 1.8;
+}
+
+.company-company-response-card__admin-review {
+  padding: 14px;
+  border: 1px solid rgba(200, 135, 0, 0.2);
+  border-radius: 14px;
+  background: rgba(255, 193, 7, 0.08);
+}
+
+.company-company-response-card__admin-review strong {
+  color: #8a6200;
+  display: block;
+  font-weight: 950;
+}
+
+.company-company-response-card__admin-review p {
+  margin: 7px 0 0;
+  color: var(--color-text);
+  font-weight: 850;
+  line-height: 1.8;
+}
+
+.company-company-response-card__admin-review p + p {
+  padding-top: 8px;
+  border-top: 1px dashed rgba(200, 135, 0, 0.22);
 }
 
 .company-company-response-card__images h3 {

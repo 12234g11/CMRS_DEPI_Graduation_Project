@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   FiAlertCircle,
-  FiCamera,
   FiChevronDown,
   FiEye,
   FiImage,
   FiPlayCircle,
-  FiPlus,
   FiSend,
   FiTrash2,
   FiXCircle,
@@ -39,9 +37,9 @@ function UpdateReportStatusForm({
   onStartWork,
   onCannotFix,
   onRequestTeamSelection,
+  onFilePickerOpen,
 }) {
   const [startNote, setStartNote] = useState('');
-  const [startImages, setStartImages] = useState([]);
   const [cannotFixReason, setCannotFixReason] = useState('');
   const [cannotFixNote, setCannotFixNote] = useState('');
   const [cannotFixImages, setCannotFixImages] = useState([]);
@@ -53,15 +51,8 @@ function UpdateReportStatusForm({
   const [isStartConfirmationOpen, setIsStartConfirmationOpen] = useState(false);
   const [isCannotFixConfirmationOpen, setIsCannotFixConfirmationOpen] = useState(false);
 
-  const startFileInputRef = useRef(null);
-  const startCameraInputRef = useRef(null);
   const cannotFixFileInputRef = useRef(null);
-  const startImagesRef = useRef([]);
   const cannotFixImagesRef = useRef([]);
-
-  useEffect(() => {
-    startImagesRef.current = startImages;
-  }, [startImages]);
 
   useEffect(() => {
     cannotFixImagesRef.current = cannotFixImages;
@@ -69,7 +60,6 @@ function UpdateReportStatusForm({
 
   useEffect(() => {
     return () => {
-      revokeImages(startImagesRef.current);
       revokeImages(cannotFixImagesRef.current);
     };
   }, []);
@@ -95,6 +85,11 @@ function UpdateReportStatusForm({
       delete nextErrors.submit;
       return nextErrors;
     });
+  }
+
+  function openFilePicker(inputRef) {
+    onFilePickerOpen?.();
+    inputRef.current?.click();
   }
 
   function addImages(filesList, currentImages, setImages, errorField) {
@@ -165,11 +160,8 @@ function UpdateReportStatusForm({
     try {
       await onStartWork?.({
         note: startNote.trim(),
-        files: startImages.map((image) => image.file),
       });
 
-      revokeImages(startImages);
-      setStartImages([]);
       setStartNote('');
       setErrors({});
       setIsStartConfirmationOpen(false);
@@ -277,8 +269,8 @@ function UpdateReportStatusForm({
               <strong>{isReturnedCannotFix ? 'استئناف تنفيذ البلاغ' : 'بدء تنفيذ البلاغ'}</strong>
               <p>
                 {isReturnedCannotFix
-                  ? 'راجع ملاحظات الأدمن ثم أضف تحديثًا وصورًا اختيارية لاستئناف التنفيذ.'
-                  : 'اختر فرقة الصيانة أولًا، ثم أضف ملاحظة وصور المعاينة قبل تغيير الحالة إلى جاري التنفيذ.'}
+                  ? 'راجع ملاحظات الأدمن ثم أضف تحديثًا اختياريًا لاستئناف التنفيذ.'
+                  : 'اختر فرقة الصيانة أولًا، ثم أضف ملاحظة اختيارية قبل تغيير الحالة إلى جاري التنفيذ.'}
               </p>
             </div>
 
@@ -332,94 +324,6 @@ function UpdateReportStatusForm({
             ) : null}
           </label>
 
-          <div className="company-report-form-field">
-            <span>
-              صور معاينة وبداية التنفيذ <small>(اختيارية)</small>
-            </span>
-
-            <div className="company-start-proof-upload">
-              <input
-                ref={startFileInputRef}
-                type="file"
-                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                multiple
-                onChange={(event) => {
-                  addImages(
-                    event.target.files,
-                    startImages,
-                    setStartImages,
-                    'startImages',
-                  );
-                  event.target.value = '';
-                }}
-              />
-              <input
-                ref={startCameraInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                capture="environment"
-                onChange={(event) => {
-                  addImages(
-                    event.target.files,
-                    startImages,
-                    setStartImages,
-                    'startImages',
-                  );
-                  event.target.value = '';
-                }}
-              />
-
-              <div>
-                <FiImage />
-                <strong>أرفق دليل المعاينة أو بداية العمل</strong>
-                <p>حتى {MAX_REPORT_IMAGES} صور، وبحد أقصى 5 ميجابايت للصورة.</p>
-              </div>
-
-              <div className="company-start-proof-upload__actions">
-                <button type="button" onClick={() => startFileInputRef.current?.click()}>
-                  <FiPlus />
-                  اختيار صور
-                </button>
-                <button type="button" onClick={() => startCameraInputRef.current?.click()}>
-                  <FiCamera />
-                  فتح الكاميرا
-                </button>
-              </div>
-            </div>
-
-            {errors.startImages ? (
-              <small className="company-report-field-error">{errors.startImages}</small>
-            ) : null}
-          </div>
-
-          {startImages.length ? (
-            <div className="company-solution-images-preview company-start-images-preview">
-              {startImages.map((image) => (
-                <article key={image.id} className="company-solution-image-preview">
-                  <img src={image.previewUrl} alt={image.name} />
-                  <div className="company-solution-image-preview__overlay">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setPreviewImage({ url: image.previewUrl, alt: image.name })
-                      }
-                    >
-                      <FiEye />
-                      معاينة
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeImage(image.id, setStartImages)}
-                    >
-                      <FiTrash2 />
-                      حذف
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : null}
-
           <button
             type="button"
             className="company-start-work-btn"
@@ -430,7 +334,7 @@ function UpdateReportStatusForm({
             {isSavingAction === 'start'
               ? isReturnedCannotFix
                 ? 'جاري استئناف التنفيذ...'
-                : 'جاري بدء التنفيذ ورفع الدليل...'
+                : 'جاري بدء التنفيذ...'
               : isReturnedCannotFix
                 ? 'استئناف التنفيذ'
                 : 'تأكيد بدء التنفيذ'}
@@ -536,7 +440,7 @@ function UpdateReportStatusForm({
                 <button
                   type="button"
                   className="company-cannot-fix-upload-btn"
-                  onClick={() => cannotFixFileInputRef.current?.click()}
+                  onClick={() => openFilePicker(cannotFixFileInputRef)}
                 >
                   <FiImage />
                   إضافة صور توضيحية
@@ -627,7 +531,6 @@ function UpdateReportStatusForm({
         report={report}
         teamName={report.assignedTeam?.name}
         note={startNote}
-        imagesCount={startImages.length}
         errorMessage={isStartConfirmationOpen ? errors.submit : ''}
         onClose={() => {
           if (isSavingAction !== 'start') {

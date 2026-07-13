@@ -24,6 +24,7 @@ function getNotificationIcon(type) {
   if (normalizedType === 'reportassignedtocompany') return <FiFileText />;
   if (normalizedType === 'reportinprogress') return <FiTool />;
   if (normalizedType === 'reportresolved') return <FiCheckCircle />;
+  if (normalizedType === 'reportunabletoexecute') return <FiXCircle />;
   if (normalizedType.includes('system')) return <FiInfo />;
 
   return <FiBell />;
@@ -38,6 +39,7 @@ function getNotificationTone(type) {
   if (normalizedType === 'reportassignedtocompany') return 'primary';
   if (normalizedType === 'reportinprogress') return 'warning';
   if (normalizedType === 'reportresolved') return 'success';
+  if (normalizedType === 'reportunabletoexecute') return 'danger';
   if (normalizedType.includes('system')) return 'neutral';
 
   return 'primary';
@@ -68,6 +70,10 @@ function getNotificationTitle(type) {
 
   if (normalizedType === 'reportresolved') {
     return 'تم اعتماد الحل';
+  }
+
+  if (normalizedType === 'reportunabletoexecute') {
+    return 'تم إغلاق البلاغ لتعذر التنفيذ';
   }
 
   if (normalizedType.includes('system')) {
@@ -172,7 +178,7 @@ function NotificationItem({ notification, onMarkAsRead, onDelete, onViewReport }
           </span>
         </div>
 
-        <p>{notification.message}</p>
+        <p>{notification.message || 'لا توجد بيانات للعرض'}</p>
 
         {notification.reportId ? (
           <div className="user-notification-item__meta">

@@ -98,27 +98,7 @@ function getExecutionStatePresentation({
   publicUpdate,
   publicMessage,
   unableToExecuteReason,
-  needsCompletionReason,
-  wasReassigned,
-  currentCompanyName,
-  decisionType,
 }) {
-  if (
-    wasReassigned ||
-    String(decisionType || '').toLowerCase().includes('reassign')
-  ) {
-    return {
-      tone: 'info',
-      icon: 'briefcase',
-      title: 'تم تحويل البلاغ إلى جهة تنفيذ أخرى',
-      description:
-        publicMessage ||
-        (currentCompanyName
-          ? `تم إسناد البلاغ إلى ${currentCompanyName} لاستكمال التنفيذ.`
-          : 'تعذر على الجهة السابقة تنفيذ البلاغ وتم تحويله إلى جهة أخرى.'),
-    };
-  }
-
   switch (statusKey) {
     case 'Accepted':
       return {
@@ -168,7 +148,7 @@ function getExecutionStatePresentation({
         description:
           publicMessage ||
           unableToExecuteReason ||
-          'تعذر تنفيذ البلاغ بعد مراجعة الجهة المختصة.',
+          'لا توجد بيانات للعرض',
       };
 
     case 'NeedsCompletion':
@@ -177,8 +157,7 @@ function getExecutionStatePresentation({
         icon: 'info',
         title: 'البلاغ مطلوب استكماله',
         description:
-          needsCompletionReason ||
-          'يحتاج البلاغ إلى استكمال إجراء أو بيانات قبل متابعة التنفيذ.',
+          'تستكمل جهة التنفيذ العمل على البلاغ قبل اعتماد النتيجة النهائية.',
       };
 
     case 'PendingAdminApproval':
@@ -213,7 +192,12 @@ function FollowedReportDetailsModal({
   report,
   onClose,
   onUnfollow,
+  onToggleVerify,
   isUnfollowing = false,
+  isVerifyUpLoading = false,
+  isVerifyDownLoading = false,
+  actionMessage = '',
+  actionError = '',
 }) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
@@ -239,6 +223,13 @@ function FollowedReportDetailsModal({
 
   const activeImage = images[activeImageIndex] || images[0] || null;
   const hasMultipleImages = images.length > 1;
+  const currentVerifyVote = Number(report.currentUserVerifyVote || 0);
+  const isPositiveVerified =
+    report.isVerifiedByCurrentUser && currentVerifyVote !== -1;
+  const isNegativeVerified =
+    report.isVerifiedByCurrentUser && currentVerifyVote === -1;
+  const canToggleVerify =
+    report.canCurrentUserVerify !== false || report.isVerifiedByCurrentUser;
   const reporter = report.reporterPublicInfo;
   const reporterStats = reporter?.statistics || {};
   const reporterItems = reporter
@@ -319,10 +310,6 @@ function FollowedReportDetailsModal({
     publicUpdate: execution?.publicUpdate,
     publicMessage: execution?.publicMessage,
     unableToExecuteReason: execution?.unableToExecuteReason,
-    needsCompletionReason: execution?.needsCompletionReason,
-    wasReassigned: execution?.wasReassigned,
-    currentCompanyName: execution?.currentCompanyName,
-    decisionType: execution?.decisionType,
   });
 
   const assignedAt =
@@ -359,14 +346,6 @@ function FollowedReportDetailsModal({
           label: 'تاريخ الحل',
           value: resolvedAt,
           icon: <FiCheckCircle />,
-        }
-      : null,
-    execution?.wasReassigned && execution?.reassignedAt
-      ? {
-          key: 'reassigned',
-          label: 'تاريخ إعادة الإسناد',
-          value: execution.reassignedAt,
-          icon: <FiBriefcase />,
         }
       : null,
     statusKey === 'UnableToExecute' && currentStatusAt
@@ -531,16 +510,6 @@ function FollowedReportDetailsModal({
                 </div>
               </div>
 
-              {execution?.publicMessage && statusKey !== 'UnableToExecute' ? (
-                <DetailBlock
-                  icon={<FiShield />}
-                  label="رسالة الإدارة للمستخدم"
-                  className="followed-report-modal__status-reason"
-                >
-                  <p>{execution.publicMessage}</p>
-                </DetailBlock>
-              ) : null}
-
               {hasCompanyDetails ? (
                 <div className="followed-report-modal__company-card">
                   <div>
@@ -569,36 +538,34 @@ function FollowedReportDetailsModal({
                     </SummaryCard>
                   ))}
 
-                  {execution?.publicUpdate ? (
+                  {execution?.publicUpdate &&
+                  !['UnableToExecute', 'NeedsCompletion'].includes(statusKey) ? (
                     <DetailBlock icon={<FiInfo />} label="آخر تحديث">
                       <p>{execution.publicUpdate}</p>
                     </DetailBlock>
                   ) : null}
                 </div>
               ) : null}
+              {statusKey === 'UnableToExecute' ? (
+                <>
+                  <DetailBlock
+                    icon={<FiShield />}
+                    label="رسالة الإدارة للمستخدمين"
+                    className="followed-report-modal__status-reason"
+                  >
+                    <p>{execution?.publicMessage || 'لا توجد بيانات للعرض'}</p>
+                  </DetailBlock>
 
-              {statusKey === 'UnableToExecute' &&
-              (execution?.publicMessage || execution?.unableToExecuteReason) ? (
-                <DetailBlock
-                  icon={<FiXCircle />}
-                  label="سبب تعذر التنفيذ"
-                  className="followed-report-modal__status-reason"
-                >
-                  <p>
-                    {execution.publicMessage || execution.unableToExecuteReason}
-                  </p>
-                </DetailBlock>
-              ) : null}
-
-              {statusKey === 'NeedsCompletion' &&
-              execution?.needsCompletionReason ? (
-                <DetailBlock
-                  icon={<FiInfo />}
-                  label="سبب طلب الاستكمال"
-                  className="followed-report-modal__status-reason"
-                >
-                  <p>{execution.needsCompletionReason}</p>
-                </DetailBlock>
+                  <DetailBlock
+                    icon={<FiXCircle />}
+                    label="سبب تعذر التنفيذ"
+                    className="followed-report-modal__status-reason"
+                  >
+                    <p>
+                      {execution?.unableToExecuteReason || 'لا توجد بيانات للعرض'}
+                    </p>
+                  </DetailBlock>
+                </>
               ) : null}
 
               {statusKey === 'PendingAdminApproval' ? (
@@ -730,19 +697,99 @@ function FollowedReportDetailsModal({
               </SummaryCard>
             </div>
 
-            <div className="user-report-modal__engagement-grid">
-              <SummaryCard icon={<FiUsers />} label="المتابعات">
-                <strong>{report.followersCount ?? 0}</strong>
-              </SummaryCard>
+            <div className="followed-report-modal__engagement-actions">
+              <button
+                type="button"
+                className="followed-report-modal__engagement-btn followed-report-modal__engagement-btn--follow is-active"
+                onClick={() => onUnfollow?.(report)}
+                disabled={
+                  report.canCurrentUserUnfollow === false || isUnfollowing
+                }
+                title="إلغاء متابعة البلاغ"
+              >
+                <span
+                  className="followed-report-modal__engagement-icon"
+                  aria-hidden="true"
+                >
+                  <FiUsers />
+                </span>
+                <span className="followed-report-modal__engagement-content">
+                  <small>إجمالي المتابعات</small>
+                  <strong>{report.followersCount ?? 0}</strong>
+                  <span>
+                    {isUnfollowing ? 'جاري إلغاء المتابعة...' : 'إلغاء المتابعة'}
+                  </span>
+                </span>
+              </button>
 
-              <SummaryCard icon={<FiCheckCircle />} label="التصديق">
-                <strong>{report.upvoteCount ?? 0}</strong>
-              </SummaryCard>
+              <button
+                type="button"
+                className={`followed-report-modal__engagement-btn followed-report-modal__engagement-btn--upvote ${
+                  isPositiveVerified ? 'is-active' : ''
+                }`}
+                onClick={() => onToggleVerify?.(report, 1)}
+                disabled={!canToggleVerify || isVerifyUpLoading || isVerifyDownLoading}
+                title={isPositiveVerified ? 'إلغاء تصديق البلاغ' : 'البلاغ صحيح'}
+              >
+                <span
+                  className="followed-report-modal__engagement-icon"
+                  aria-hidden="true"
+                >
+                  <FiCheckCircle />
+                </span>
+                <span className="followed-report-modal__engagement-content">
+                  <small>إجمالي التصديقات</small>
+                  <strong>{report.upvoteCount ?? 0}</strong>
+                  <span>
+                    {isVerifyUpLoading
+                      ? 'جاري التحديث...'
+                      : isPositiveVerified
+                        ? 'إلغاء التصديق'
+                        : 'البلاغ صحيح'}
+                  </span>
+                </span>
+              </button>
 
-              <SummaryCard icon={<FiXCircle />} label="التكذيب">
-                <strong>{report.downvoteCount ?? 0}</strong>
-              </SummaryCard>
+              <button
+                type="button"
+                className={`followed-report-modal__engagement-btn followed-report-modal__engagement-btn--downvote ${
+                  isNegativeVerified ? 'is-active' : ''
+                }`}
+                onClick={() => onToggleVerify?.(report, -1)}
+                disabled={!canToggleVerify || isVerifyDownLoading || isVerifyUpLoading}
+                title={isNegativeVerified ? 'إلغاء تكذيب البلاغ' : 'البلاغ غير صحيح'}
+              >
+                <span
+                  className="followed-report-modal__engagement-icon"
+                  aria-hidden="true"
+                >
+                  <FiXCircle />
+                </span>
+                <span className="followed-report-modal__engagement-content">
+                  <small>إجمالي التكذيبات</small>
+                  <strong>{report.downvoteCount ?? 0}</strong>
+                  <span>
+                    {isVerifyDownLoading
+                      ? 'جاري التحديث...'
+                      : isNegativeVerified
+                        ? 'إلغاء التكذيب'
+                        : 'البلاغ غير صحيح'}
+                  </span>
+                </span>
+              </button>
             </div>
+
+            {actionMessage ? (
+              <div className="followed-report-modal__action-feedback is-success">
+                {actionMessage}
+              </div>
+            ) : null}
+
+            {actionError ? (
+              <div className="followed-report-modal__action-feedback is-error">
+                {actionError}
+              </div>
+            ) : null}
           </div>
         </div>
       </article>

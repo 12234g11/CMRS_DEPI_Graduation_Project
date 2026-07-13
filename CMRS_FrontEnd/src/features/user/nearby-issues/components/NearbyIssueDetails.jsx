@@ -8,7 +8,6 @@ import {
   FiChevronRight,
   FiEye,
   FiInfo,
-  FiRefreshCw,
   FiX,
   FiXCircle,
 } from 'react-icons/fi';
@@ -166,25 +165,12 @@ function getPublicExecutionOutcome(issue = {}) {
     return {
       tone: 'unable',
       icon: <FiAlertTriangle />,
-      title: 'تعذر تنفيذ البلاغ',
-      message:
-        execution.publicMessage ||
-        execution.unableToExecuteReason ||
-        'تعذر تنفيذ البلاغ بعد مراجعة الجهة المختصة.',
-    };
-  }
-
-  if (execution.wasReassigned || decisionType.includes('reassign')) {
-    return {
-      tone: 'reassigned',
-      icon: <FiRefreshCw />,
-      title: 'تم تحويل البلاغ إلى جهة تنفيذ أخرى',
-      message:
-        execution.publicMessage ||
-        'تعذر على الجهة السابقة تنفيذ البلاغ، وتم إسناده إلى جهة أخرى لاستكمال العمل.',
-      meta: execution.currentCompanyName
-        ? `الجهة الحالية: ${execution.currentCompanyName}`
-        : '',
+      title: execution.decisionLabel || 'تم إغلاق البلاغ لتعذر التنفيذ',
+      message: execution.publicMessage || 'لا توجد بيانات للعرض',
+      reason: execution.unableToExecuteReason || 'لا توجد بيانات للعرض',
+      meta: execution.unableToExecuteAt
+        ? `تاريخ القرار: ${formatDate(execution.unableToExecuteAt)}`
+        : 'تاريخ القرار: لا توجد بيانات للعرض',
     };
   }
 
@@ -194,7 +180,6 @@ function getPublicExecutionOutcome(issue = {}) {
       icon: <FiInfo />,
       title: 'بانتظار مراجعة الإدارة',
       message:
-        execution.publicMessage ||
         'تراجع الإدارة رد جهة التنفيذ قبل اعتماد القرار النهائي.',
     };
   }
@@ -292,6 +277,9 @@ function NearbyIssueDetails({
           <div>
             <strong>{executionOutcome.title}</strong>
             <p>{executionOutcome.message}</p>
+            {executionOutcome.reason ? (
+              <small>سبب التعذر: {executionOutcome.reason}</small>
+            ) : null}
             {executionOutcome.meta ? <small>{executionOutcome.meta}</small> : null}
           </div>
         </section>

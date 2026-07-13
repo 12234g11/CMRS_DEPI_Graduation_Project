@@ -9,20 +9,13 @@ GET    /api/company/reports/options
 GET    /api/company/teams
 PATCH  /api/company/reports/{reportId}/assign-team
 PATCH  /api/company/reports/{reportId}/start-work
-POST   /api/company/reports/{reportId}/proof
 POST   /api/company/reports/{reportId}/solution
 POST   /api/company/reports/{reportId}/cannot-fix
 ```
 
 ## 1. أعداد التفاعل المجتمعي
 
-صفحة تفاصيل البلاغ تعرض حاليًا 3 كروت بقيم مؤقتة `—`:
-
-- عدد المتابعين.
-- عدد المصدقين على البلاغ.
-- عدد المكذبين للبلاغ.
-
-شكل مقترح لإضافتها مستقبلًا داخل استجابة:
+صفحة تفاصيل البلاغ مرتبطة بالقيم الراجعة مباشرة داخل استجابة:
 
 ```http
 GET /api/company/reports/{reportId}
@@ -30,61 +23,36 @@ GET /api/company/reports/{reportId}
 
 ```json
 {
-  "communityStats": {
-    "followersCount": 0,
-    "verifiedCount": 0,
-    "rejectedCount": 0
-  }
+  "followersCount": 0,
+  "upvoteCount": 0,
+  "downvoteCount": 0
 }
 ```
 
-الكروت غير متصلة بأي field أو endpoint في النسخة الحالية تنفيذًا للطلب.
+الربط المستخدم في الفرونت:
 
-## 2. صور تقدم وبداية التنفيذ
+- عدد المتابعين ← `followersCount`.
+- عدد المصدقين ← `upvoteCount`.
+- عدد المكذبين ← `downvoteCount`.
 
-تم ربط endpoint الموجود حاليًا:
+في حالة عدم وجود إحدى القيم أو رجوعها بقيمة غير صالحة، يعرض الفرونت `0` بدلًا من الشرطة أو كسر الواجهة.
+
+## 2. صور رد الشركة
+
+لا يرسل الفرونت أي صور عند تنفيذ:
 
 ```http
-POST /api/company/reports/{reportId}/proof
+PATCH /api/company/reports/{reportId}/start-work
 ```
 
-وهو يرفع صورة واحدة في كل request ويرجع:
+طلب بدء أو استئناف التنفيذ يرسل الملاحظة الاختيارية فقط. الصور تُرسل حصريًا في الحالتين التاليتين:
 
-```json
-{
-  "imageUrl": "/uploads/proof.webp"
-}
+```http
+POST /api/company/reports/{reportId}/solution
+POST /api/company/reports/{reportId}/cannot-fix
 ```
 
-الفرونت يرسل كل صورة بشكل منفصل بعد نجاح `start-work`، ويعرض الصور فورًا داخل قسم **صور المعاينة وبداية التنفيذ**. كما يحتفظ بتصنيف الروابط مؤقتًا في LocalStorage على نفس الجهاز حتى لا تختلط مباشرة بصور البلاغ الأصلية.
-
-لكن الحل النهائي الصحيح من الباك هو أن ترجع استجابة تفاصيل البلاغ field منفصلًا:
-
-```json
-{
-  "progressImages": [
-    "/uploads/proof-1.webp",
-    "/uploads/proof-2.webp"
-  ]
-}
-```
-
-الـ frontend يدعم حاليًا أي اسم من الأسماء التالية:
-
-```txt
-progressImages
-proofImages
-executionProofImages
-```
-
-لو الباك يضيف صور proof إلى `images` فقط، فلن يمكن تمييزها بشكل دائم كصور بداية تنفيذ على جهاز آخر أو بعد مسح LocalStorage.
-
-بديل آخر: تعديل endpoint الرفع ليستقبل نوع الصورة:
-
-```txt
-image = file
-proofType = StartWork
-```
+ويتم إرسالها داخل `multipart/form-data` بالحقل `images`.
 
 ## 3. فرق الصيانة
 

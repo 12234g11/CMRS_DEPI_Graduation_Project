@@ -2584,6 +2584,17 @@
   box-shadow: 0 10px 24px rgba(2, 95, 72, 0.08);
 }
 
+.admin-assignment-reassignment-note {
+  padding: 14px 16px;
+  border: 1px solid rgba(2, 95, 72, 0.16);
+  border-radius: 16px;
+  background: rgba(2, 95, 72, 0.06);
+  color: var(--color-primary);
+  font-size: 0.86rem;
+  font-weight: 850;
+  line-height: 1.9;
+}
+
 .admin-assignment-modal__actions {
   padding: 14px 24px 22px;
   border-top: 1px solid rgba(2, 95, 72, 0.08);
@@ -5021,6 +5032,15 @@
   border-top: 1px dashed rgba(15, 118, 110, 0.18);
 }
 
+.admin-company-response-field-hint {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-subtitle);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.7;
+}
+
 @media (max-width: 900px) {
   .admin-company-response-decision-guide {
     grid-template-columns: 1fr;
@@ -5055,3 +5075,283 @@
   }
 }
 
+
+/* Company solution decision note modal */
+.admin-company-decision-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+}
+
+.admin-company-decision-modal-backdrop__dismiss {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: rgba(9, 24, 20, 0.66);
+  backdrop-filter: blur(6px);
+  cursor: default;
+}
+
+.admin-company-decision-modal-backdrop__dismiss:disabled {
+  cursor: wait;
+}
+
+.admin-company-decision-modal {
+  position: relative;
+  z-index: 1;
+  width: min(610px, 100%);
+  max-height: calc(100dvh - 44px);
+  padding: 22px;
+  border: 1px solid rgba(2, 95, 72, 0.13);
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 28px 90px rgba(5, 28, 22, 0.28);
+  overflow-y: auto;
+  direction: rtl;
+}
+
+.admin-company-decision-modal.is-completion {
+  border-color: rgba(188, 126, 0, 0.22);
+}
+
+.admin-company-decision-modal__header {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 38px;
+  align-items: start;
+  gap: 13px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(2, 95, 72, 0.09);
+}
+
+.admin-company-decision-modal__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: rgba(2, 95, 72, 0.1);
+  color: var(--color-primary);
+  display: grid;
+  place-items: center;
+}
+
+.admin-company-decision-modal.is-completion .admin-company-decision-modal__icon {
+  background: rgba(188, 126, 0, 0.12);
+  color: #9b6900;
+}
+
+.admin-company-decision-modal__icon svg {
+  width: 23px;
+  height: 23px;
+}
+
+.admin-company-decision-modal__header h3 {
+  margin: 2px 0 0;
+  color: var(--color-text);
+  font-size: 1.08rem;
+  font-weight: 950;
+}
+
+.admin-company-decision-modal__header p {
+  margin: 6px 0 0;
+  color: var(--color-subtitle);
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.75;
+}
+
+.admin-company-decision-modal__close {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(100, 116, 139, 0.09);
+  color: var(--color-subtitle);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.admin-company-decision-modal__close:hover:not(:disabled) {
+  background: rgba(100, 116, 139, 0.15);
+  color: var(--color-text);
+}
+
+.admin-company-decision-modal__close:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-company-decision-modal__field {
+  position: relative;
+  margin-top: 20px;
+  display: grid;
+  gap: 9px;
+  color: var(--color-text-soft);
+  font-size: 0.9rem;
+  font-weight: 950;
+}
+
+.admin-company-decision-modal__field textarea {
+  width: 100%;
+  min-height: 150px;
+  padding: 14px 16px 34px;
+  border: 1.5px solid rgba(2, 95, 72, 0.16);
+  border-radius: 17px;
+  background: #f8fbfa;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 800;
+  line-height: 1.8;
+  outline: none;
+  resize: vertical;
+  transition:
+    border-color var(--transition-base),
+    box-shadow var(--transition-base),
+    background var(--transition-base);
+}
+
+.admin-company-decision-modal.is-completion .admin-company-decision-modal__field textarea {
+  border-color: rgba(188, 126, 0, 0.22);
+  background: #fffdf8;
+}
+
+.admin-company-decision-modal__field textarea:focus {
+  border-color: rgba(2, 95, 72, 0.52);
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(2, 95, 72, 0.09);
+}
+
+.admin-company-decision-modal.is-completion .admin-company-decision-modal__field textarea:focus {
+  border-color: rgba(188, 126, 0, 0.58);
+  box-shadow: 0 10px 24px rgba(188, 126, 0, 0.1);
+}
+
+.admin-company-decision-modal__field textarea.is-invalid {
+  border-color: #dc2626;
+  background: #fffafa;
+}
+
+.admin-company-decision-modal__counter {
+  position: absolute;
+  bottom: 11px;
+  left: 14px;
+  color: var(--color-subtitle);
+  font-size: 0.72rem;
+  font-weight: 850;
+  pointer-events: none;
+}
+
+.admin-company-decision-modal__error {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 13px;
+  background: #fef2f2;
+  color: #b91c1c;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 900;
+  line-height: 1.65;
+}
+
+.admin-company-decision-modal__error svg {
+  width: 17px;
+  height: 17px;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.admin-company-decision-modal__actions {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: minmax(120px, 0.65fr) minmax(190px, 1.35fr);
+  gap: 10px;
+}
+
+.admin-company-decision-modal__actions button {
+  min-height: 48px;
+  padding: 11px 16px;
+  border: 0;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 950;
+  cursor: pointer;
+  transition:
+    transform var(--transition-base),
+    opacity var(--transition-base),
+    box-shadow var(--transition-base);
+}
+
+.admin-company-decision-modal__actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.admin-company-decision-modal__actions button:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.admin-company-decision-modal__cancel {
+  background: rgba(100, 116, 139, 0.11);
+  color: var(--color-text-soft);
+}
+
+.admin-company-decision-modal__confirm {
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(2, 95, 72, 0.2);
+}
+
+.admin-company-decision-modal.is-completion .admin-company-decision-modal__confirm {
+  background: #bd8000;
+  box-shadow: 0 12px 26px rgba(188, 126, 0, 0.2);
+}
+
+.admin-company-decision-modal__confirm svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 560px) {
+  .admin-company-decision-modal-backdrop {
+    align-items: end;
+    padding: 12px;
+  }
+
+  .admin-company-decision-modal {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    padding: 18px 16px;
+    border-radius: 22px;
+  }
+
+  .admin-company-decision-modal__header {
+    grid-template-columns: 46px minmax(0, 1fr) 36px;
+    gap: 10px;
+  }
+
+  .admin-company-decision-modal__icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+  }
+
+  .admin-company-decision-modal__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-company-decision-modal__cancel {
+    order: 2;
+  }
+}

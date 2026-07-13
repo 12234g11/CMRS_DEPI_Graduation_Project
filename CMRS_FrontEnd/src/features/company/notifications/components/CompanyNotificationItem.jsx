@@ -24,11 +24,14 @@ function getNotificationIcon(type) {
     return <FiFileText />;
   }
 
-  if (normalizedType === COMPANY_NOTIFICATION_TYPES.SOLUTION_ACCEPTED) {
+  if (
+    normalizedType === COMPANY_NOTIFICATION_TYPES.SOLUTION_ACCEPTED ||
+    normalizedType === COMPANY_NOTIFICATION_TYPES.CANNOT_FIX_ACCEPTED
+  ) {
     return <FiCheckCircle />;
   }
 
-  if (normalizedType === COMPANY_NOTIFICATION_TYPES.NEEDS_COMPLETION) {
+  if (normalizedType === COMPANY_NOTIFICATION_TYPES.COMPLETION_REQUESTED) {
     return <FiAlertTriangle />;
   }
 
@@ -48,11 +51,14 @@ function getNotificationTone(notification) {
 
   const normalizedType = normalizeType(notification?.type);
 
-  if (normalizedType === COMPANY_NOTIFICATION_TYPES.SOLUTION_ACCEPTED) {
+  if (
+    normalizedType === COMPANY_NOTIFICATION_TYPES.SOLUTION_ACCEPTED ||
+    normalizedType === COMPANY_NOTIFICATION_TYPES.CANNOT_FIX_ACCEPTED
+  ) {
     return 'success';
   }
 
-  if (normalizedType === COMPANY_NOTIFICATION_TYPES.NEEDS_COMPLETION) {
+  if (normalizedType === COMPANY_NOTIFICATION_TYPES.COMPLETION_REQUESTED) {
     return 'warning';
   }
 
@@ -80,8 +86,12 @@ function getNotificationTitle(notification) {
     return 'تم قبول الحل وإغلاق البلاغ';
   }
 
-  if (normalizedType === COMPANY_NOTIFICATION_TYPES.NEEDS_COMPLETION) {
-    return 'الأدمن طلب استكمال الحل';
+  if (normalizedType === COMPANY_NOTIFICATION_TYPES.CANNOT_FIX_ACCEPTED) {
+    return 'تم قبول طلب تعذر التنفيذ';
+  }
+
+  if (normalizedType === COMPANY_NOTIFICATION_TYPES.COMPLETION_REQUESTED) {
+    return 'الأدمن طلب استكمال التنفيذ';
   }
 
   if (normalizedType === COMPANY_NOTIFICATION_TYPES.ADMIN_FEEDBACK) {
@@ -174,7 +184,7 @@ function CompanyNotificationItem({
           </span>
         </div>
 
-        <p>{notification.message}</p>
+        <p>{notification.message || 'لا توجد بيانات للعرض'}</p>
 
         {reportNumber ? (
           <div className="company-notification-item__meta">

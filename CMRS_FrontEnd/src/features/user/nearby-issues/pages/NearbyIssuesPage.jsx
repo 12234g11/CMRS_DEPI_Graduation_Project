@@ -6,6 +6,7 @@ import DashboardSectionCard from '../../../../shared/components/dashboard/Dashbo
 import PageHeader from '../../../../shared/components/ui/PageHeader';
 import ReportsMap from '../../../map/components/ReportsMap';
 import NearbyIssuesList from '../components/NearbyIssuesList';
+import UnfollowConfirmationModal from '../components/UnfollowConfirmationModal';
 
 import {
   followReport,
@@ -445,6 +446,7 @@ function NearbyIssuesPage() {
   const [actionError, setActionError] = useState('');
   const [actionMessage, setActionMessage] = useState('');
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [pendingUnfollowIssue, setPendingUnfollowIssue] = useState(null);
   const [isRequestingCurrentLocation, setIsRequestingCurrentLocation] =
     useState(false);
 
@@ -677,18 +679,32 @@ function NearbyIssuesPage() {
     setRouteIssueId(issue.id);
   }
 
-  async function handleToggleFollow(issue) {
+  async function performFollowAction(issue, shouldUnfollow) {
     const reportId = getIssueReportId(issue);
-    if (!reportId) return;
+    if (!reportId) return false;
+
+    if (!shouldUnfollow) {
+      const latitude = Number(currentLocation?.lat);
+      const longitude = Number(currentLocation?.lng);
+
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        setActionError('يجب تحديد موقعك الحالي قبل متابعة البلاغ.');
+        setActionMessage('');
+        return false;
+      }
+    }
 
     setActionError('');
     setActionMessage('');
     setActiveAction(`follow:${reportId}`);
 
     try {
-      const data = (issue.isFollowedByCurrentUser
+      const data = (shouldUnfollow
         ? await unfollowReport(reportId)
-        : await followReport(reportId)) || {};
+        : await followReport(reportId, {
+            currentLatitude: currentLocation.lat,
+            currentLongitude: currentLocation.lng,
+          })) || {};
 
       const nextIsFollowedForMessage = toResponseBoolean(
         readResponseValue(
@@ -696,7 +712,7 @@ function NearbyIssuesPage() {
           'isFollowedByCurrentUser',
           'IsFollowedByCurrentUser'
         ),
-        !issue.isFollowedByCurrentUser
+        !shouldUnfollow
       );
 
       updateIssue(reportId, (currentIssue) => {
@@ -707,7 +723,7 @@ function NearbyIssuesPage() {
             'isFollowedByCurrentUser',
             'IsFollowedByCurrentUser'
           ),
-          !wasFollowed
+          !shouldUnfollow
         );
 
         const currentFollowersCount = toSafeCount(currentIssue.followersCount);
@@ -729,6 +745,8 @@ function NearbyIssuesPage() {
           ...currentIssue,
           followersCount: nextFollowersCount,
           isFollowedByCurrentUser: nextIsFollowed,
+          followedAt: readResponseValue(data, 'followedAt', 'FollowedAt') ??
+            (nextIsFollowed ? currentIssue.followedAt : null),
           canCurrentUserFollow: toResponseBoolean(
             readResponseValue(
               data,
@@ -743,12 +761,39 @@ function NearbyIssuesPage() {
       setActionMessage(
         nextIsFollowedForMessage
           ? 'تمت متابعة البلاغ بنجاح.'
-          : 'تم إلغاء متابعة البلاغ.'
+          : 'تم إلغاء متابعة البلاغ بنجاح.'
       );
+
+      return true;
     } catch (error) {
       setActionError(error?.message || 'تعذر تحديث متابعة البلاغ حاليًا.');
+      return false;
     } finally {
       setActiveAction('');
+    }
+  }
+
+  function handleToggleFollow(issue) {
+    const reportId = getIssueReportId(issue);
+    if (!reportId || activeAction) return;
+
+    if (issue.isFollowedByCurrentUser) {
+      setActionError('');
+      setActionMessage('');
+      setPendingUnfollowIssue(issue);
+      return;
+    }
+
+    void performFollowAction(issue, false);
+  }
+
+  async function handleConfirmUnfollow() {
+    if (!pendingUnfollowIssue) return;
+
+    const didUnfollow = await performFollowAction(pendingUnfollowIssue, true);
+
+    if (didUnfollow) {
+      setPendingUnfollowIssue(null);
     }
   }
 
@@ -963,6 +1008,19 @@ function NearbyIssuesPage() {
         activeFilter={activeFilter}
         onClose={() => setIsFilterSheetOpen(false)}
         onChange={handleFilterChange}
+      />
+
+      <UnfollowConfirmationModal
+        isOpen={Boolean(pendingUnfollowIssue)}
+        reportTitle={pendingUnfollowIssue?.title}
+        isLoading={
+          Boolean(pendingUnfollowIssue) &&
+          activeAction === `follow:${getIssueReportId(pendingUnfollowIssue)}`
+        }
+        onCancel={() => {
+          if (!activeAction) setPendingUnfollowIssue(null);
+        }}
+        onConfirm={handleConfirmUnfollow}
       />
     </div>
   );

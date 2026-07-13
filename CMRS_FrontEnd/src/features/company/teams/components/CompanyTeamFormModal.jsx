@@ -7,6 +7,7 @@ const initialValues = {
   leadName: '',
   phone: '',
   membersCount: 3,
+  maxCapacity: 5,
   status: COMPANY_TEAM_STATUSES.ACTIVE,
   notes: '',
 };
@@ -32,7 +33,8 @@ function CompanyTeamFormModal({
         name: team.name || '',
         leadName: team.leadName || '',
         phone: team.phone || '',
-        membersCount: team.membersCount || 3,
+        membersCount: team.membersCount ?? 3,
+        maxCapacity: team.maxCapacity ?? 5,
         status: team.status || COMPANY_TEAM_STATUSES.ACTIVE,
         notes: team.notes || '',
       });
@@ -73,6 +75,9 @@ function CompanyTeamFormModal({
     if (!formData.leadName.trim()) return 'من فضلك اكتب اسم قائد الفرقة.';
     if (!formData.phone.trim()) return 'من فضلك اكتب رقم التواصل.';
     if (Number(formData.membersCount) <= 0) return 'عدد الأفراد يجب أن يكون أكبر من صفر.';
+    if (!Number.isInteger(Number(formData.maxCapacity)) || Number(formData.maxCapacity) <= 0) {
+      return 'السعة القصوى يجب أن تكون رقمًا صحيحًا أكبر من صفر.';
+    }
     return '';
   }
 
@@ -94,6 +99,7 @@ function CompanyTeamFormModal({
         leadName: formData.leadName.trim(),
         phone: formData.phone.trim(),
         membersCount: Number(formData.membersCount),
+        maxCapacity: Number(formData.maxCapacity),
         status: formData.status,
         notes: formData.notes.trim(),
       });
@@ -134,8 +140,8 @@ function CompanyTeamFormModal({
         <div className="company-team-system-note" role="note">
           <FiInfo />
           <p>
-            المهام النشطة وحالة التوفر لا يتم إدخالهم من هنا. الباك يحسبهم من البلاغات الفعلية:
-            تصبح الفرقة مشغولة عند 5 بلاغات نشطة أو أكثر، وغير متاحة عند إيقافها.
+            المهام النشطة وحالة التوفر لا يتم إدخالهما أو حسابهما من الفرونت. يحدد الباك
+            حالة التوفر تلقائيًا بمقارنة المهام النشطة بالسعة القصوى الخاصة بكل فرقة.
           </p>
         </div>
 
@@ -181,6 +187,20 @@ function CompanyTeamFormModal({
               min="1"
               value={formData.membersCount}
               onChange={handleNumberChange}
+            />
+          </label>
+
+          <label className="company-team-form-field">
+            السعة القصوى للمهام النشطة
+            <input
+              name="maxCapacity"
+              type="number"
+              min="1"
+              step="1"
+              required
+              value={formData.maxCapacity}
+              onChange={handleNumberChange}
+              placeholder="مثال: 10"
             />
           </label>
         </div>

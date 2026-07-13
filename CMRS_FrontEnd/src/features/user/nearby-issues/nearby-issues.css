@@ -1704,3 +1704,188 @@
     flex-direction: column;
   }
 }
+
+/* ===== Unfollow confirmation modal ===== */
+.unfollow-confirmation {
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.unfollow-confirmation__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(4px);
+  cursor: default;
+}
+
+.unfollow-confirmation__panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 500px);
+  padding: 28px;
+  border: 1px solid rgba(15, 118, 110, 0.15);
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.25);
+  animation: unfollow-confirmation-in 180ms ease-out;
+}
+
+.unfollow-confirmation__close {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 12px;
+  color: #475569;
+  background: #f1f5f9;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.unfollow-confirmation__close:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.unfollow-confirmation__icon {
+  width: 58px;
+  height: 58px;
+  margin-bottom: 18px;
+  border-radius: 18px;
+  color: #b45309;
+  background: #fffbeb;
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.16);
+}
+
+.unfollow-confirmation__icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.unfollow-confirmation__eyebrow {
+  margin-bottom: 8px;
+  color: var(--color-primary, #025f48);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.unfollow-confirmation__content h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(1.15rem, 3vw, 1.45rem);
+  line-height: 1.5;
+}
+
+.unfollow-confirmation__content > p {
+  margin: 10px 0 0;
+  color: #64748b;
+  font-size: 0.93rem;
+  line-height: 1.85;
+}
+
+.unfollow-confirmation__report {
+  margin-top: 18px;
+  padding: 13px 15px;
+  border: 1px solid rgba(2, 95, 72, 0.13);
+  border-radius: 14px;
+  background: rgba(240, 253, 250, 0.78);
+}
+
+.unfollow-confirmation__report small,
+.unfollow-confirmation__report strong {
+  display: block;
+}
+
+.unfollow-confirmation__report small {
+  margin-bottom: 4px;
+  color: #64748b;
+  font-size: 0.73rem;
+}
+
+.unfollow-confirmation__report strong {
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
+.unfollow-confirmation__actions {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 10px;
+}
+
+.unfollow-confirmation__actions button {
+  min-height: 46px;
+  padding: 10px 14px;
+  border-radius: 13px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.unfollow-confirmation__cancel {
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  background: #fff;
+}
+
+.unfollow-confirmation__confirm {
+  border: 1px solid #b91c1c;
+  color: #fff;
+  background: #b91c1c;
+  box-shadow: 0 10px 22px rgba(185, 28, 28, 0.2);
+}
+
+.unfollow-confirmation__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+@keyframes unfollow-confirmation-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 520px) {
+  .unfollow-confirmation {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .unfollow-confirmation__panel {
+    width: 100%;
+    padding: 24px 18px 18px;
+    border-radius: 22px;
+  }
+
+  .unfollow-confirmation__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .unfollow-confirmation__confirm {
+    order: -1;
+  }
+}

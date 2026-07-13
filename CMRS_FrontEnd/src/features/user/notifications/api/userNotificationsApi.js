@@ -8,6 +8,7 @@ export const USER_NOTIFICATION_TYPE = {
   REPORT_ASSIGNED_TO_COMPANY: 'ReportAssignedToCompany',
   REPORT_IN_PROGRESS: 'ReportInProgress',
   REPORT_RESOLVED: 'ReportResolved',
+  REPORT_UNABLE_TO_EXECUTE: 'ReportUnableToExecute',
 };
 
 function getResponseData(response) {

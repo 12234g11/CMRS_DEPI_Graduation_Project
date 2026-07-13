@@ -1,4 +1,5 @@
 import {
+  FiAlertTriangle,
   FiCalendar,
   FiImage,
   FiInfo,
@@ -51,6 +52,36 @@ function UserDashboardReportDetailsModal({
     report.coverImage ||
     report.image ||
     '';
+  const rawReport = report.rawReport || {};
+  const executionInfo = report.executionInfo || rawReport.executionInfo || {};
+  const publicDecision =
+    report.publicDecision ||
+    rawReport.publicDecision ||
+    executionInfo.publicDecision ||
+    null;
+  const normalizedStatus = String(
+    report.statusKey || rawReport.statusKey || rawReport.status || report.statusLabel || '',
+  )
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+  const normalizedDecision = String(publicDecision?.decisionType || '')
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+  const showUnableToExecuteDecision =
+    normalizedStatus.includes('unabletoexecute') ||
+    normalizedDecision.includes('acceptcannotfix') ||
+    normalizedDecision.includes('cannotfixaccepted');
+  const publicMessage =
+    publicDecision?.message ||
+    executionInfo.publicMessage ||
+    executionInfo.publicUpdate ||
+    '';
+  const unableReason =
+    publicDecision?.unableToExecuteReason ||
+    executionInfo.unableToExecuteReason ||
+    '';
+  const decisionDate =
+    publicDecision?.decidedAt || executionInfo.unableToExecuteAt || null;
 
   return (
     <div className="user-dashboard-report-modal" role="dialog" aria-modal="true">
@@ -87,6 +118,30 @@ function UserDashboardReportDetailsModal({
 
         <div className="user-dashboard-report-modal__content">
           <div className="user-dashboard-report-modal__main">
+            {showUnableToExecuteDecision ? (
+              <section className="user-dashboard-report-modal__public-decision">
+                <div>
+                  <FiAlertTriangle />
+                  <strong>
+                    {publicDecision?.decisionLabel ||
+                      'تم إغلاق البلاغ لتعذر التنفيذ'}
+                  </strong>
+                </div>
+
+                <p>
+                  <b>رسالة الإدارة للمستخدمين:</b>{' '}
+                  {publicMessage || 'لا توجد بيانات للعرض'}
+                </p>
+                <p>
+                  <b>سبب تعذر التنفيذ:</b>{' '}
+                  {unableReason || 'لا توجد بيانات للعرض'}
+                </p>
+                <small>
+                  تاريخ القرار: {decisionDate ? formatDate(decisionDate) : 'لا توجد بيانات للعرض'}
+                </small>
+              </section>
+            ) : null}
+
             <DetailCard icon={<FiInfo />} label="وصف المشكلة">
               {report.description || 'لا يوجد وصف متاح لهذا البلاغ.'}
             </DetailCard>

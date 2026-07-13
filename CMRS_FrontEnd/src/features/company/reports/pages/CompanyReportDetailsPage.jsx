@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   FiAlertCircle,
@@ -45,32 +45,39 @@ const COMMUNITY_METRICS = [
   {
     id: 'followers',
     label: 'عدد المتابعين',
-    value: '—',
-    hint: 'سيظهر بعد ربط البيانات',
+    field: 'followersCount',
+    hint: 'إجمالي المتابعين لهذا البلاغ',
     icon: FiUsers,
     tone: 'followers',
   },
   {
     id: 'verified',
     label: 'عدد المصدقين',
-    value: '—',
-    hint: 'سيظهر بعد ربط البيانات',
+    field: 'upvoteCount',
+    hint: 'إجمالي الأصوات المصدقة على البلاغ',
     icon: FiCheckCircle,
     tone: 'verified',
   },
   {
     id: 'rejected',
     label: 'عدد المكذبين',
-    value: '—',
-    hint: 'سيظهر بعد ربط البيانات',
+    field: 'downvoteCount',
+    hint: 'إجمالي الأصوات المكذبة للبلاغ',
     icon: FiXCircle,
     tone: 'rejected',
   },
 ];
 
+function normalizeCommunityCount(value) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue >= 0
+    ? Math.trunc(numericValue)
+    : 0;
+}
+
 const WORKFLOW_STEPS = [
   { id: 1, title: 'تم استلام البلاغ', description: 'اختيار فرقة الصيانة', icon: FiInbox },
-  { id: 2, title: 'جاري التنفيذ', description: 'المعاينة والعمل ورفع الدليل', icon: FiPlayCircle },
+  { id: 2, title: 'جاري التنفيذ', description: 'المعاينة وبدء العمل', icon: FiPlayCircle },
   { id: 3, title: 'مراجعة الأدمن', description: 'إرسال الحل أو التعذر', icon: FiSend },
   { id: 4, title: 'القرار النهائي', description: 'قبول الحل أو طلب استكمال', icon: FiCheckCircle },
 ];
@@ -97,6 +104,9 @@ function CompanyReportDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  const lastAutoRefreshAtRef = useRef(0);
+  const isFilePickerInteractionRef = useRef(false);
+  const suppressAutoRefreshUntilRef = useRef(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -123,10 +133,73 @@ function CompanyReportDetailsPage() {
     };
   }, [reloadKey, reportId]);
 
+  function markFilePickerInteraction() {
+    isFilePickerInteractionRef.current = true;
+  }
+
+  useEffect(() => {
+    function refreshReportAccess() {
+      if (document.visibilityState !== 'visible') return;
+
+      const now = Date.now();
+      const activeElement = document.activeElement;
+      const isFileInputFocused =
+        activeElement instanceof HTMLInputElement && activeElement.type === 'file';
+
+      if (
+        isFilePickerInteractionRef.current ||
+        isFileInputFocused ||
+        now < suppressAutoRefreshUntilRef.current
+      ) {
+        isFilePickerInteractionRef.current = false;
+        suppressAutoRefreshUntilRef.current = now + 1000;
+        return;
+      }
+
+      if (now - lastAutoRefreshAtRef.current < 1000) return;
+
+      lastAutoRefreshAtRef.current = now;
+      setReloadKey((current) => current + 1);
+    }
+
+    window.addEventListener('focus', refreshReportAccess);
+    document.addEventListener('visibilitychange', refreshReportAccess);
+
+    return () => {
+      window.removeEventListener('focus', refreshReportAccess);
+      document.removeEventListener('visibilitychange', refreshReportAccess);
+    };
+  }, []);
+
   const workflowStep = useMemo(() => getWorkflowStep(report), [report]);
+  const effectiveAdminReview = useMemo(() => {
+    if (report?.adminReview) return report.adminReview;
+
+    if (report?.status === 'مطلوب استكمال') {
+      return {
+        status: 'needs_completion',
+        label: 'مطلوب استكمال التنفيذ',
+        companyMessage: '',
+        completionRequirements: '',
+        reviewedAt: null,
+      };
+    }
+
+    if (report?.status === 'متعذر التنفيذ') {
+      return {
+        status: 'cannot_fix_accepted',
+        label: 'تم قبول طلب تعذر التنفيذ',
+        companyMessage: '',
+        completionRequirements: '',
+        reviewedAt: null,
+      };
+    }
+
+    return null;
+  }, [report?.adminReview, report?.status]);
   const adminReviewPresentation = useMemo(
-    () => getAdminReviewPresentation(report?.adminReview, report?.companyResponse),
-    [report?.adminReview, report?.companyResponse],
+    () => getAdminReviewPresentation(effectiveAdminReview, report?.companyResponse),
+    [effectiveAdminReview, report?.companyResponse],
   );
 
   async function handleStartWork(payload = {}) {
@@ -200,7 +273,6 @@ function CompanyReportDetailsPage() {
     isReassigned;
   const canSubmitSolution =
     !isResolved &&
-    !isCannotFixRejected &&
     ['جاري التنفيذ', 'مطلوب استكمال'].includes(report.status);
   const isWaitingForAdmin =
     !isResolved && report.status === 'بانتظار مراجعة الأدمن';
@@ -341,7 +413,7 @@ function CompanyReportDetailsPage() {
               </span>
               <div>
                 <small>{metric.label}</small>
-                <strong>{metric.value}</strong>
+                <strong>{normalizeCommunityCount(report[metric.field])}</strong>
                 <p>{metric.hint}</p>
               </div>
             </article>
@@ -351,7 +423,7 @@ function CompanyReportDetailsPage() {
 
       <div className="company-report-details-grid">
         <main className="company-report-details-main">
-          {report.adminReview ? (
+          {effectiveAdminReview ? (
             <section className={`company-report-details-card company-admin-decision-card is-${adminReviewPresentation.tone}`}>
               <header className="company-report-section-header">
                 <div>
@@ -359,25 +431,36 @@ function CompanyReportDetailsPage() {
                   <p>راجع القرار والسبب قبل اتخاذ الخطوة التالية.</p>
                 </div>
                 <span>
-                  {report.adminReview.status === 'accepted' ? <FiCheckCircle /> : <FiMessageSquare />}
+                  {['accepted', 'cannot_fix_accepted'].includes(effectiveAdminReview.status)
+                    ? <FiCheckCircle />
+                    : <FiMessageSquare />}
                 </span>
               </header>
 
               <div className="company-admin-decision-card__content">
                 <strong>{adminReviewPresentation.title}</strong>
-                <p>{adminReviewPresentation.description}</p>
-                {report.adminReview.userMessage ? (
-                  <div className="company-admin-decision-card__public-message">
-                    <strong>الرسالة العامة للمستخدم</strong>
-                    <p>{report.adminReview.userMessage}</p>
+
+                <div className="company-admin-decision-card__message">
+                  <b>رسالة الأدمن للشركة</b>
+                  <p>{adminReviewPresentation.description || 'لا توجد بيانات للعرض'}</p>
+                </div>
+
+                {adminReviewPresentation.showCompletionRequirements ? (
+                  <div className="company-admin-decision-card__requirements">
+                    <b>الأعمال المطلوب استكمالها</b>
+                    <p>
+                      {adminReviewPresentation.completionRequirements ||
+                        'لا توجد بيانات للعرض'}
+                    </p>
                   </div>
                 ) : null}
-                {report.adminReview.reviewedAt ? (
-                  <small>
-                    <FiClock />
-                    {formatEgyptDateTime(report.adminReview.reviewedAt)}
-                  </small>
-                ) : null}
+
+                <small>
+                  <FiClock />
+                  {effectiveAdminReview.reviewedAt
+                    ? formatEgyptDateTime(effectiveAdminReview.reviewedAt)
+                    : 'لا توجد بيانات للعرض'}
+                </small>
               </div>
             </section>
           ) : null}
@@ -416,6 +499,29 @@ function CompanyReportDetailsPage() {
                 <div className="company-company-response-card__note">
                   <strong>ملاحظة الشركة</strong>
                   <p>{report.companyResponse.note}</p>
+                </div>
+              ) : null}
+
+              {report.adminReview ? (
+                <div className="company-company-response-card__admin-review">
+                  <strong>رد الأدمن على هذا الطلب</strong>
+                  <p>
+                    {report.adminReview.companyMessage ||
+                      report.adminReview.note ||
+                      'لا توجد بيانات للعرض'}
+                  </p>
+
+                  {['needs_completion', 'cannot_fix_rejected', 'rejected'].includes(
+                    report.adminReview.status,
+                  ) ? (
+                    <div>
+                      <b>المطلوب استكماله</b>
+                      <p>
+                        {report.adminReview.completionRequirements ||
+                          'لا توجد بيانات للعرض'}
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -501,7 +607,11 @@ function CompanyReportDetailsPage() {
 
               {canSubmitSolution ? (
                 <div className="company-execution-workspace__primary-action">
-                  <SolutionUploadForm report={report} onSubmitSolution={handleSubmitSolution} />
+                  <SolutionUploadForm
+                    report={report}
+                    onSubmitSolution={handleSubmitSolution}
+                    onFilePickerOpen={markFilePickerInteraction}
+                  />
                 </div>
               ) : null}
 
@@ -511,6 +621,7 @@ function CompanyReportDetailsPage() {
                   onStartWork={handleStartWork}
                   onCannotFix={handleCannotFix}
                   onRequestTeamSelection={() => setIsAssignModalOpen(true)}
+                  onFilePickerOpen={markFilePickerInteraction}
                 />
               </div>
             </section>
@@ -556,24 +667,6 @@ function CompanyReportDetailsPage() {
             </section>
           ) : null}
 
-          {report.progressImages?.length ? (
-            <section className="company-report-details-card">
-              <header className="company-report-section-header">
-                <div>
-                  <h2>صور المعاينة وبداية التنفيذ</h2>
-                  <p>الدليل المرفوع عند تحويل حالة البلاغ إلى جاري التنفيذ.</p>
-                </div>
-                <span>
-                  <FiPlayCircle />
-                </span>
-              </header>
-              <ReportImageGallery
-                images={report.progressImages}
-                altPrefix="صورة بداية التنفيذ"
-                emptyText="لا توجد صور بداية تنفيذ مرفوعة."
-              />
-            </section>
-          ) : null}
         </main>
 
         <aside className="company-report-details-side">

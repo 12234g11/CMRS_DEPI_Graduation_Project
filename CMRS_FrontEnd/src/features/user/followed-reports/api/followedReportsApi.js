@@ -1,5 +1,11 @@
-import { get, remove } from '../../../../shared/services/api/request';
+import { get, post, remove } from '../../../../shared/services/api/request';
 import { resolveAssetUrl } from '../../../../shared/services/api/assetUrl';
+
+const JSON_BODY_CONFIG = {
+  headers: {
+    'Content-Type': 'application/json',
+  },
+};
 
 export const FOLLOWED_REPORT_STATUS_API_VALUES = {
   all: 'all',
@@ -193,6 +199,74 @@ function normalizeBoolean(value, fallback = false) {
   }
 
   return fallback;
+}
+
+function normalizeVerifyVote(value) {
+  const parsedValue = Number(value);
+  if (parsedValue === 1) return 1;
+  if (parsedValue === -1) return -1;
+  return null;
+}
+
+function getCurrentUserVerifyVote(report = {}, engagement = {}) {
+  const explicitVote = normalizeVerifyVote(
+    engagement.currentUserVerifyVote ??
+      engagement.CurrentUserVerifyVote ??
+      engagement.verifyVote ??
+      engagement.VerifyVote ??
+      engagement.userVerifyVote ??
+      engagement.UserVerifyVote ??
+      engagement.userVote ??
+      engagement.UserVote ??
+      report.currentUserVerifyVote ??
+      report.CurrentUserVerifyVote ??
+      report.verifyVote ??
+      report.VerifyVote ??
+      report.userVerifyVote ??
+      report.UserVerifyVote ??
+      report.userVote ??
+      report.UserVote
+  );
+
+  if (explicitVote !== null) return explicitVote;
+
+  const isDownvotedByCurrentUser = normalizeBoolean(
+    engagement.isDownvotedByCurrentUser ??
+      engagement.IsDownvotedByCurrentUser ??
+      engagement.isRejectedByCurrentUser ??
+      engagement.IsRejectedByCurrentUser ??
+      report.isDownvotedByCurrentUser ??
+      report.IsDownvotedByCurrentUser ??
+      report.isRejectedByCurrentUser ??
+      report.IsRejectedByCurrentUser,
+    false
+  );
+
+  if (isDownvotedByCurrentUser) return -1;
+
+  const isUpvotedByCurrentUser = normalizeBoolean(
+    engagement.isUpvotedByCurrentUser ??
+      engagement.IsUpvotedByCurrentUser ??
+      engagement.isConfirmedByCurrentUser ??
+      engagement.IsConfirmedByCurrentUser ??
+      report.isUpvotedByCurrentUser ??
+      report.IsUpvotedByCurrentUser ??
+      report.isConfirmedByCurrentUser ??
+      report.IsConfirmedByCurrentUser,
+    false
+  );
+
+  if (isUpvotedByCurrentUser) return 1;
+
+  const isVerifiedByCurrentUser = normalizeBoolean(
+    engagement.isVerifiedByCurrentUser ??
+      engagement.IsVerifiedByCurrentUser ??
+      report.isVerifiedByCurrentUser ??
+      report.IsVerifiedByCurrentUser,
+    false
+  );
+
+  return isVerifiedByCurrentUser ? 1 : null;
 }
 
 function normalizeStatusTone(tone, statusKey) {
@@ -391,16 +465,14 @@ function cleanPublicText(value) {
 function prepareExecutionInfo(info, report = {}, history = [], statusKey = '') {
   const source = info && typeof info === 'object' ? info : {};
   const publicDecision =
+    source.publicDecision ||
+    source.PublicDecision ||
+    report.publicDecision ||
+    report.PublicDecision ||
     source.adminDecision ||
     source.AdminDecision ||
     report.adminDecision ||
     report.AdminDecision ||
-    {};
-  const reassignment =
-    source.reassignment ||
-    source.Reassignment ||
-    report.reassignment ||
-    report.Reassignment ||
     {};
   const decisionType = cleanPublicText(
     source.decisionType ||
@@ -410,20 +482,34 @@ function prepareExecutionInfo(info, report = {}, history = [], statusKey = '') {
       report.adminDecisionType ||
       report.AdminDecisionType,
   );
-  const publicMessage = cleanPublicText(
-    source.userMessage ||
-      source.UserMessage ||
-      source.publicMessage ||
-      source.PublicMessage ||
-      source.messageToUser ||
-      source.MessageToUser ||
-      publicDecision.userMessage ||
-      publicDecision.UserMessage ||
-      report.userMessage ||
-      report.UserMessage ||
-      report.publicMessage ||
-      report.PublicMessage,
-  );
+  const normalizedDecisionType = String(decisionType)
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+  const isUnableDecision =
+    statusKey === FOLLOWED_REPORT_STATUS_API_VALUES.unableToExecute ||
+    normalizedDecisionType.includes('acceptcannotfix') ||
+    normalizedDecisionType.includes('cannotfixaccepted');
+  const publicMessage = isUnableDecision
+    ? cleanPublicText(
+        publicDecision.message ||
+          publicDecision.Message ||
+          publicDecision.publicUserMessage ||
+          publicDecision.PublicUserMessage ||
+          publicDecision.userMessage ||
+          publicDecision.UserMessage ||
+          source.publicUpdate ||
+          source.PublicUpdate ||
+          source.publicMessage ||
+          source.PublicMessage ||
+          source.userMessage ||
+          source.UserMessage ||
+          report.publicMessage ||
+          report.PublicMessage ||
+          report.userMessage ||
+          report.UserMessage,
+      )
+    : '';
 
   const assignedAt =
     source.assignedAt ||
@@ -463,38 +549,38 @@ function prepareExecutionInfo(info, report = {}, history = [], statusKey = '') {
     ) ||
     null;
 
-  const publicUpdate =
-    source.publicUpdate ||
-    source.PublicUpdate ||
-    source.latestPublicUpdate ||
-    source.LatestPublicUpdate ||
-    source.statusUpdate ||
-    source.StatusUpdate ||
-    report.publicUpdate ||
-    report.PublicUpdate ||
-    '';
+  const publicUpdate = isUnableDecision
+    ? publicMessage
+    : statusKey === FOLLOWED_REPORT_STATUS_API_VALUES.needsCompletion ||
+        normalizedDecisionType.includes('reassign')
+      ? ''
+      : source.publicUpdate ||
+        source.PublicUpdate ||
+        source.latestPublicUpdate ||
+        source.LatestPublicUpdate ||
+        source.statusUpdate ||
+        source.StatusUpdate ||
+        report.publicUpdate ||
+        report.PublicUpdate ||
+        '';
 
-  const unableToExecuteReason = cleanPublicText(
-    source.unableToExecuteReason ||
-      source.UnableToExecuteReason ||
-      source.publicUnableToExecuteReason ||
-      source.PublicUnableToExecuteReason ||
-      source.executionFailureReason ||
-      source.ExecutionFailureReason ||
-      publicDecision.userMessage ||
-      publicDecision.UserMessage ||
-      report.unableToExecuteReason ||
-      report.UnableToExecuteReason,
-  );
+  const unableToExecuteReason = isUnableDecision
+    ? cleanPublicText(
+        publicDecision.unableToExecuteReason ||
+          publicDecision.UnableToExecuteReason ||
+          publicDecision.publicUnableReason ||
+          publicDecision.PublicUnableReason ||
+          source.unableToExecuteReason ||
+          source.UnableToExecuteReason ||
+          source.publicUnableToExecuteReason ||
+          source.PublicUnableToExecuteReason ||
+          report.unableToExecuteReason ||
+          report.UnableToExecuteReason,
+      )
+    : '';
 
-  const needsCompletionReason =
-    source.needsCompletionReason ||
-    source.NeedsCompletionReason ||
-    source.completionReason ||
-    source.CompletionReason ||
-    report.needsCompletionReason ||
-    report.NeedsCompletionReason ||
-    null;
+  // Completion instructions are private between the admin and the company.
+  const needsCompletionReason = null;
 
   const currentStatusChangedAt =
     getHistoryStatusDate(history, statusKey, true) ||
@@ -523,12 +609,37 @@ function prepareExecutionInfo(info, report = {}, history = [], statusKey = '') {
       true
     ),
     publicUpdate,
-    publicMessage:
-      publicMessage ||
-      (statusKey === FOLLOWED_REPORT_STATUS_API_VALUES.unableToExecute
-        ? unableToExecuteReason || 'تعذر تنفيذ البلاغ بعد مراجعة الجهة المختصة.'
-        : ''),
-    decisionType,
+    publicMessage,
+    decisionType: isUnableDecision ? decisionType || 'accept_cannot_fix' : '',
+    decisionLabel: isUnableDecision
+      ? cleanPublicText(
+          publicDecision.decisionLabel ||
+            publicDecision.DecisionLabel ||
+            'تم إغلاق البلاغ لتعذر التنفيذ',
+        )
+      : '',
+    publicDecision: isUnableDecision
+      ? {
+          decisionType: decisionType || 'accept_cannot_fix',
+          decisionLabel: cleanPublicText(
+            publicDecision.decisionLabel ||
+              publicDecision.DecisionLabel ||
+              'تم إغلاق البلاغ لتعذر التنفيذ',
+          ),
+          message: publicMessage,
+          unableToExecuteReason,
+          decidedAt:
+            publicDecision.decidedAt ||
+            publicDecision.DecidedAt ||
+            getHistoryStatusDate(
+              history,
+              FOLLOWED_REPORT_STATUS_API_VALUES.unableToExecute,
+              true,
+            ) ||
+            null,
+          isFinal: Boolean(publicDecision.isFinal ?? publicDecision.IsFinal ?? true),
+        }
+      : null,
     pendingReviewType: cleanPublicText(
       source.pendingReviewType ||
         source.PendingReviewType ||
@@ -537,39 +648,15 @@ function prepareExecutionInfo(info, report = {}, history = [], statusKey = '') {
     ),
     unableToExecuteReason,
     needsCompletionReason,
-    wasReassigned: Boolean(
-      reassignment.wasReassigned ??
-        reassignment.WasReassigned ??
-        source.wasReassigned ??
-        source.WasReassigned ??
-        report.wasReassigned ??
-        report.WasReassigned ??
-        String(decisionType).toLowerCase().includes('reassign'),
-    ),
-    previousCompanyName: cleanPublicText(
-      reassignment.previousCompanyName ||
-        reassignment.PreviousCompanyName ||
-        report.previousAssignedCompanyName ||
-        report.PreviousAssignedCompanyName,
-    ),
+    wasReassigned: false,
+    previousCompanyName: '',
     currentCompanyName: cleanPublicText(
-      reassignment.currentCompanyName ||
-        reassignment.CurrentCompanyName ||
-        reassignment.newCompanyName ||
-        reassignment.NewCompanyName ||
-        source.currentCompanyName ||
+      source.currentCompanyName ||
         source.CurrentCompanyName ||
         report.assignedCompanyName ||
         report.AssignedCompanyName,
     ),
-    reassignedAt:
-      reassignment.reassignedAt ||
-      reassignment.ReassignedAt ||
-      source.reassignedAt ||
-      source.ReassignedAt ||
-      report.reassignedAt ||
-      report.ReassignedAt ||
-      null,
+    reassignedAt: null,
   };
 
   return Object.values(result).some(Boolean) ? result : null;
@@ -646,6 +733,49 @@ export function prepareFollowedReport(report = {}) {
   let assignedCompanyPublicInfo = prepareCompanyPublicInfo(
     rawCompanyInfo,
     report
+  );
+
+  const followersCount = normalizeCount(
+    engagement.followersCount ??
+      engagement.FollowersCount ??
+      report.followersCount ??
+      report.FollowersCount
+  );
+  const upvoteCount = normalizeCount(
+    engagement.upvoteCount ??
+      engagement.UpvoteCount ??
+      engagement.validReportCount ??
+      engagement.ValidReportCount ??
+      engagement.correctReportCount ??
+      engagement.CorrectReportCount ??
+      report.upvoteCount ??
+      report.UpvoteCount ??
+      report.validReportCount ??
+      report.ValidReportCount ??
+      report.correctReportCount ??
+      report.CorrectReportCount
+  );
+  const downvoteCount = normalizeCount(
+    engagement.downvoteCount ??
+      engagement.DownvoteCount ??
+      engagement.invalidReportCount ??
+      engagement.InvalidReportCount ??
+      engagement.wrongReportCount ??
+      engagement.WrongReportCount ??
+      report.downvoteCount ??
+      report.DownvoteCount ??
+      report.invalidReportCount ??
+      report.InvalidReportCount ??
+      report.wrongReportCount ??
+      report.WrongReportCount
+  );
+  const currentUserVerifyVote = getCurrentUserVerifyVote(report, engagement);
+  const isVerifiedByCurrentUser = normalizeBoolean(
+    engagement.isVerifiedByCurrentUser ??
+      engagement.IsVerifiedByCurrentUser ??
+      report.isVerifiedByCurrentUser ??
+      report.IsVerifiedByCurrentUser,
+    currentUserVerifyVote !== null
   );
 
   const executionInfo = prepareExecutionInfo(
@@ -734,30 +864,38 @@ export function prepareFollowedReport(report = {}) {
       report.imagesCount ?? report.ImagesCount ?? reportImages.length,
       reportImages.length
     ),
-    followersCount: normalizeCount(
-      engagement.followersCount ??
-        engagement.FollowersCount ??
-        report.followersCount ??
-        report.FollowersCount
+    followersCount,
+    verifyCount: normalizeCount(
+      engagement.verifyCount ??
+        engagement.VerifyCount ??
+        report.verifyCount ??
+        report.VerifyCount,
+      upvoteCount + downvoteCount
     ),
-    upvoteCount: normalizeCount(
-      engagement.upvoteCount ??
-        engagement.UpvoteCount ??
-        report.upvoteCount ??
-        report.UpvoteCount
+    upvoteCount,
+    downvoteCount,
+    isVerifiedByCurrentUser,
+    canCurrentUserVerify: normalizeBoolean(
+      engagement.canCurrentUserVerify ??
+        engagement.CanCurrentUserVerify ??
+        report.canCurrentUserVerify ??
+        report.CanCurrentUserVerify,
+      true
     ),
-    downvoteCount: normalizeCount(
-      engagement.downvoteCount ??
-        engagement.DownvoteCount ??
-        report.downvoteCount ??
-        report.DownvoteCount
-    ),
+    currentUserVerifyVote:
+      currentUserVerifyVote ?? (isVerifiedByCurrentUser ? 1 : null),
     isFollowedByCurrentUser: normalizeBoolean(
-      report.isFollowedByCurrentUser ?? report.IsFollowedByCurrentUser,
+      engagement.isFollowedByCurrentUser ??
+        engagement.IsFollowedByCurrentUser ??
+        report.isFollowedByCurrentUser ??
+        report.IsFollowedByCurrentUser,
       true
     ),
     canCurrentUserUnfollow: normalizeBoolean(
-      report.canCurrentUserUnfollow ?? report.CanCurrentUserUnfollow,
+      engagement.canCurrentUserUnfollow ??
+        engagement.CanCurrentUserUnfollow ??
+        report.canCurrentUserUnfollow ??
+        report.CanCurrentUserUnfollow,
       true
     ),
     reporterPublicInfo: prepareReporterPublicInfo(
@@ -765,6 +903,7 @@ export function prepareFollowedReport(report = {}) {
     ),
     assignedCompanyPublicInfo,
     executionInfo,
+    publicDecision: executionInfo.publicDecision,
     statusHistory,
     createdAt: report.createdAt || report.CreatedAt || null,
     updatedAt: report.updatedAt || report.UpdatedAt || null,
@@ -936,6 +1075,40 @@ export async function unfollowReport(reportId) {
 
   const response = await remove(
     `/api/Follow/reports/${encodeURIComponent(reportId)}`
+  );
+
+  return getResponseData(response) || {};
+}
+
+export async function verifyReport(reportId, vote = 1) {
+  if (!reportId) {
+    throw new Error('معرّف البلاغ غير متاح.');
+  }
+
+  const normalizedVote = Number(vote) === -1 ? -1 : 1;
+  const response = await post(
+    `/api/Report/${encodeURIComponent(reportId)}/verify`,
+    {
+      reportId,
+      vote: normalizedVote,
+    },
+    JSON_BODY_CONFIG
+  );
+
+  return getResponseData(response) || {};
+}
+
+export async function unverifyReport(reportId) {
+  if (!reportId) {
+    throw new Error('معرّف البلاغ غير متاح.');
+  }
+
+  const response = await remove(
+    `/api/Report/${encodeURIComponent(reportId)}/verify`,
+    {
+      ...JSON_BODY_CONFIG,
+      data: { reportId },
+    }
   );
 
   return getResponseData(response) || {};

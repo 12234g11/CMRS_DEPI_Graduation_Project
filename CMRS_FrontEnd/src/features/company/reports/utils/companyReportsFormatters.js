@@ -76,13 +76,18 @@ export function getAdminReviewPresentation(adminReview, companyResponse = null) 
     companyResponse?.responseType ||
     companyResponse?.status ||
     '';
+  const companyMessage =
+    adminReview?.companyMessage || adminReview?.note || 'لا توجد بيانات للعرض';
+  const completionRequirements =
+    adminReview?.completionRequirements || 'لا توجد بيانات للعرض';
 
   if (status === 'accepted') {
     return {
       tone: 'accepted',
       title: adminReview.label || 'تم قبول الحل من الأدمن',
-      description:
-        adminReview.note || 'راجع الأدمن الحل واعتمده بنجاح.',
+      description: companyMessage,
+      completionRequirements: '',
+      showCompletionRequirements: false,
     };
   }
 
@@ -90,33 +95,23 @@ export function getAdminReviewPresentation(adminReview, companyResponse = null) 
     return {
       tone: 'accepted',
       title: adminReview.label || 'تم قبول طلب تعذر التنفيذ',
-      description:
-        adminReview.note ||
-        'راجع الأدمن سبب التعذر ووافق على إنهاء إسناد البلاغ لهذه الشركة.',
+      description: companyMessage,
+      completionRequirements: '',
+      showCompletionRequirements: false,
     };
   }
 
   if (status === 'reassigned') {
     return {
       tone: 'reassigned',
-      title: adminReview.label || 'تم تحويل البلاغ إلى شركة أخرى',
-      description:
-        adminReview.note ||
-        'قبل الأدمن طلب التعذر وقرر إعادة إسناد البلاغ إلى جهة تنفيذ بديلة.',
+      title: adminReview.label || 'لم يعد البلاغ مسندًا لهذه الشركة',
+      description: 'تم نقل البلاغ إلى شركة أخرى، ولا توجد إجراءات متاحة على هذا البلاغ.',
+      completionRequirements: '',
+      showCompletionRequirements: false,
     };
   }
 
-  if (status === 'cannot_fix_rejected') {
-    return {
-      tone: 'needs-completion',
-      title: adminReview.label || 'تم رفض طلب تعذر التنفيذ',
-      description:
-        adminReview.note ||
-        'طلب الأدمن من الشركة استكمال التنفيذ بدلًا من الاعتذار عن البلاغ.',
-    };
-  }
-
-  if (status === 'needs_completion') {
+  if (status === 'needs_completion' || status === 'cannot_fix_rejected') {
     const isCannotFixReview =
       responseType === 'cannot_fix' ||
       responseType === 'cannot-fix';
@@ -128,11 +123,9 @@ export function getAdminReviewPresentation(adminReview, companyResponse = null) 
         (isCannotFixReview
           ? 'تم رفض طلب التعذر ومطلوب استكمال التنفيذ'
           : 'الأدمن طلب استكمال الحل'),
-      description:
-        adminReview.note ||
-        (isCannotFixReview
-          ? 'راجع ملاحظات الأدمن ثم استأنف تنفيذ البلاغ.'
-          : 'راجع ملاحظات الأدمن، ثم استكمل التنفيذ وأرسل صورًا أوضح.'),
+      description: companyMessage,
+      completionRequirements,
+      showCompletionRequirements: true,
     };
   }
 
@@ -140,16 +133,18 @@ export function getAdminReviewPresentation(adminReview, companyResponse = null) 
     return {
       tone: 'rejected',
       title: adminReview.label || 'لم يعتمد الأدمن الرد',
-      description:
-        adminReview.note || 'راجع سبب الرفض وأرسل ردًا جديدًا بعد الاستكمال.',
+      description: companyMessage,
+      completionRequirements,
+      showCompletionRequirements: true,
     };
   }
 
   return {
     tone: 'pending',
     title: adminReview?.label || 'بانتظار مراجعة الأدمن',
-    description:
-      adminReview?.note || 'تم إرسال الرد للأدمن وجارٍ انتظار المراجعة.',
+    description: companyMessage,
+    completionRequirements: '',
+    showCompletionRequirements: false,
   };
 }
 

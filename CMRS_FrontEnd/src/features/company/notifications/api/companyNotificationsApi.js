@@ -80,9 +80,13 @@ function normalizeType(type) {
     report_assigned_to_company: COMPANY_NOTIFICATION_TYPES.REPORT_ASSIGNED,
     solutionaccepted: COMPANY_NOTIFICATION_TYPES.SOLUTION_ACCEPTED,
     solution_accepted: COMPANY_NOTIFICATION_TYPES.SOLUTION_ACCEPTED,
+    cannotfixaccepted: COMPANY_NOTIFICATION_TYPES.CANNOT_FIX_ACCEPTED,
+    cannot_fix_accepted: COMPANY_NOTIFICATION_TYPES.CANNOT_FIX_ACCEPTED,
+    completionrequested: COMPANY_NOTIFICATION_TYPES.COMPLETION_REQUESTED,
+    completion_requested: COMPANY_NOTIFICATION_TYPES.COMPLETION_REQUESTED,
     needcompletion: COMPANY_NOTIFICATION_TYPES.NEEDS_COMPLETION,
-    needscompletion: COMPANY_NOTIFICATION_TYPES.NEEDS_COMPLETION,
-    needs_completion: COMPANY_NOTIFICATION_TYPES.NEEDS_COMPLETION,
+    needscompletion: COMPANY_NOTIFICATION_TYPES.COMPLETION_REQUESTED,
+    needs_completion: COMPANY_NOTIFICATION_TYPES.COMPLETION_REQUESTED,
     adminfeedback: COMPANY_NOTIFICATION_TYPES.ADMIN_FEEDBACK,
     admin_feedback: COMPANY_NOTIFICATION_TYPES.ADMIN_FEEDBACK,
     system: COMPANY_NOTIFICATION_TYPES.SYSTEM,
@@ -94,8 +98,9 @@ function normalizeType(type) {
 function getDefaultTone(type) {
   switch (type) {
     case COMPANY_NOTIFICATION_TYPES.SOLUTION_ACCEPTED:
+    case COMPANY_NOTIFICATION_TYPES.CANNOT_FIX_ACCEPTED:
       return 'success';
-    case COMPANY_NOTIFICATION_TYPES.NEEDS_COMPLETION:
+    case COMPANY_NOTIFICATION_TYPES.COMPLETION_REQUESTED:
       return 'warning';
     case COMPANY_NOTIFICATION_TYPES.ADMIN_FEEDBACK:
       return 'info';
@@ -112,7 +117,9 @@ function getDefaultTypeLabel(type) {
       return 'بلاغ مسند';
     case COMPANY_NOTIFICATION_TYPES.SOLUTION_ACCEPTED:
       return 'حل مقبول';
-    case COMPANY_NOTIFICATION_TYPES.NEEDS_COMPLETION:
+    case COMPANY_NOTIFICATION_TYPES.CANNOT_FIX_ACCEPTED:
+      return 'تم قبول التعذر';
+    case COMPANY_NOTIFICATION_TYPES.COMPLETION_REQUESTED:
       return 'مطلوب استكمال';
     case COMPANY_NOTIFICATION_TYPES.ADMIN_FEEDBACK:
       return 'رد الأدمن';
@@ -175,7 +182,8 @@ function normalizeTypeCounts(typeCounts, notifications, totalCount) {
     all: toSafeNumber(totalCount, notifications.length),
     [COMPANY_NOTIFICATION_TYPES.REPORT_ASSIGNED]: 0,
     [COMPANY_NOTIFICATION_TYPES.SOLUTION_ACCEPTED]: 0,
-    [COMPANY_NOTIFICATION_TYPES.NEEDS_COMPLETION]: 0,
+    [COMPANY_NOTIFICATION_TYPES.CANNOT_FIX_ACCEPTED]: 0,
+    [COMPANY_NOTIFICATION_TYPES.COMPLETION_REQUESTED]: 0,
   };
 
   if (Array.isArray(typeCounts)) {

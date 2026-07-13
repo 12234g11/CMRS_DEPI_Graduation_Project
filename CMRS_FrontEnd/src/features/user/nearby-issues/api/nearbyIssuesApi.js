@@ -484,103 +484,102 @@ function cleanPublicText(value) {
 }
 
 function preparePublicExecutionInfo(report = {}, statusKey = '') {
-  const source =
+  const publicDecision =
+    report.publicDecision ||
+    report.PublicDecision ||
     report.publicExecutionInfo ||
     report.PublicExecutionInfo ||
-    report.executionInfo ||
-    report.ExecutionInfo ||
+    report.executionInfo?.publicDecision ||
+    report.ExecutionInfo?.PublicDecision ||
     report.adminDecision ||
     report.AdminDecision ||
     {};
-
-  const reassignment =
-    source.reassignment ||
-    source.Reassignment ||
-    report.reassignment ||
-    report.Reassignment ||
-    {};
-
+  const executionSource = report.executionInfo || report.ExecutionInfo || {};
   const decisionType = cleanPublicText(
-    source.decisionType ||
-      source.DecisionType ||
+    publicDecision.decisionType ||
+      publicDecision.DecisionType ||
+      executionSource.decisionType ||
+      executionSource.DecisionType ||
       report.adminDecisionType ||
       report.AdminDecisionType,
   );
-
-  const publicMessage = cleanPublicText(
-    source.userMessage ||
-      source.UserMessage ||
-      source.publicMessage ||
-      source.PublicMessage ||
-      source.messageToUser ||
-      source.MessageToUser ||
-      report.userMessage ||
-      report.UserMessage ||
-      report.publicMessage ||
-      report.PublicMessage,
-  );
-
-  const unableToExecuteReason = cleanPublicText(
-    source.unableToExecuteReason ||
-      source.UnableToExecuteReason ||
-      source.publicUnableToExecuteReason ||
-      source.PublicUnableToExecuteReason ||
-      report.unableToExecuteReason ||
-      report.UnableToExecuteReason,
-  );
-
   const normalizedDecision = normalizeStatusValue(decisionType);
-  const wasReassigned = Boolean(
-    reassignment.wasReassigned ??
-      reassignment.WasReassigned ??
-      source.wasReassigned ??
-      source.WasReassigned ??
-      report.wasReassigned ??
-      report.WasReassigned ??
-      normalizedDecision.includes('reassign'),
-  );
-
-  const currentCompanyName = cleanPublicText(
-    reassignment.currentCompanyName ||
-      reassignment.CurrentCompanyName ||
-      reassignment.newCompanyName ||
-      reassignment.NewCompanyName ||
-      source.currentCompanyName ||
-      source.CurrentCompanyName ||
-      report.assignedCompanyName ||
-      report.AssignedCompanyName ||
-      report.concernedCompanyName ||
-      report.ConcernedCompanyName,
-  );
+  const isUnableDecision =
+    statusKey === NEARBY_REPORT_STATUS_API_VALUES.unableToExecute ||
+    normalizedDecision.includes('acceptcannotfix') ||
+    normalizedDecision.includes('cannotfixaccepted');
+  const publicMessage = isUnableDecision
+    ? cleanPublicText(
+        publicDecision.message ||
+          publicDecision.Message ||
+          publicDecision.publicUserMessage ||
+          publicDecision.PublicUserMessage ||
+          publicDecision.userMessage ||
+          publicDecision.UserMessage ||
+          executionSource.publicUpdate ||
+          executionSource.PublicUpdate ||
+          executionSource.publicMessage ||
+          executionSource.PublicMessage ||
+          report.publicMessage ||
+          report.PublicMessage,
+      )
+    : '';
+  const unableToExecuteReason = isUnableDecision
+    ? cleanPublicText(
+        publicDecision.unableToExecuteReason ||
+          publicDecision.UnableToExecuteReason ||
+          publicDecision.publicUnableReason ||
+          publicDecision.PublicUnableReason ||
+          executionSource.unableToExecuteReason ||
+          executionSource.UnableToExecuteReason ||
+          report.unableToExecuteReason ||
+          report.UnableToExecuteReason,
+      )
+    : '';
+  const decidedAt =
+    publicDecision.decidedAt ||
+    publicDecision.DecidedAt ||
+    executionSource.unableToExecuteAt ||
+    executionSource.UnableToExecuteAt ||
+    null;
+  const normalizedPublicDecision = isUnableDecision
+    ? {
+        decisionType: decisionType || 'accept_cannot_fix',
+        decisionLabel: cleanPublicText(
+          publicDecision.decisionLabel ||
+            publicDecision.DecisionLabel ||
+            'تم إغلاق البلاغ لتعذر التنفيذ',
+        ),
+        message: publicMessage,
+        unableToExecuteReason,
+        decidedAt,
+        isFinal: Boolean(publicDecision.isFinal ?? publicDecision.IsFinal ?? true),
+      }
+    : null;
 
   return {
-    decisionType,
-    publicMessage:
-      publicMessage ||
-      (statusKey === NEARBY_REPORT_STATUS_API_VALUES.unableToExecute
-        ? unableToExecuteReason || 'تعذر تنفيذ البلاغ بعد مراجعة الجهة المختصة.'
-        : ''),
+    decisionType: normalizedPublicDecision?.decisionType || '',
+    decisionLabel: normalizedPublicDecision?.decisionLabel || '',
+    publicMessage,
     unableToExecuteReason,
+    publicDecision: normalizedPublicDecision,
+    unableToExecuteAt: decidedAt,
+    isFinal: normalizedPublicDecision?.isFinal || false,
     pendingReviewType: cleanPublicText(
-      source.pendingReviewType ||
-        source.PendingReviewType ||
+      executionSource.pendingReviewType ||
+        executionSource.PendingReviewType ||
         report.pendingReviewType ||
         report.PendingReviewType,
     ),
-    wasReassigned,
-    currentCompanyName,
-    previousCompanyName: cleanPublicText(
-      reassignment.previousCompanyName ||
-        reassignment.PreviousCompanyName ||
-        report.previousAssignedCompanyName ||
-        report.PreviousAssignedCompanyName,
+    wasReassigned: false,
+    previousCompanyName: '',
+    reassignedAt: null,
+    currentCompanyName: cleanPublicText(
+      report.assignedCompanyName ||
+        report.AssignedCompanyName ||
+        report.concernedCompanyName ||
+        report.ConcernedCompanyName,
     ),
-    reassignedAt:
-      reassignment.reassignedAt ||
-      reassignment.ReassignedAt ||
-      source.reassignedAt ||
-      source.ReassignedAt ||
-      null,
   };
 }
 
@@ -646,6 +645,7 @@ function prepareNearbyReport(report = {}) {
     statusTone,
     statusColorClass: getStatusColorClass(statusKey),
     executionInfo,
+    publicDecision: executionInfo.publicDecision,
     pendingReviewType: executionInfo.pendingReviewType,
     userMessage: executionInfo.publicMessage,
     assignedCompanyName: executionInfo.currentCompanyName,
@@ -798,23 +798,43 @@ export async function getNearbyReports({
       getNearbyReportStatusKey(report.statusKey || report.status) === cleanStatus
   );
 }
-export async function followReport(reportId) {
+export async function followReport(
+  reportId,
+  { currentLatitude, currentLongitude } = {}
+) {
+  if (!reportId) {
+    throw new Error('معرّف البلاغ غير متاح.');
+  }
+
+  const latitude = Number(currentLatitude);
+  const longitude = Number(currentLongitude);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new Error('يجب تحديد موقعك الحالي قبل متابعة البلاغ.');
+  }
+
   const response = await post(
-    `/api/Report/${encodeURIComponent(reportId)}/follow`,
-    null,
+    `/api/Follow/reports/${encodeURIComponent(reportId)}`,
+    {
+      currentLatitude: latitude,
+      currentLongitude: longitude,
+    },
     JSON_BODY_CONFIG
   );
 
-  return getResponseData(response);
+  return getResponseData(response) || {};
 }
 
 export async function unfollowReport(reportId) {
+  if (!reportId) {
+    throw new Error('معرّف البلاغ غير متاح.');
+  }
+
   const response = await remove(
-    `/api/Report/${encodeURIComponent(reportId)}/follow`,
-    JSON_BODY_CONFIG
+    `/api/Follow/reports/${encodeURIComponent(reportId)}`
   );
 
-  return getResponseData(response);
+  return getResponseData(response) || {};
 }
 
 export async function verifyReport(reportId, vote = 1) {

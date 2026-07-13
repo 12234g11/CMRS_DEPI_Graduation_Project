@@ -20,6 +20,7 @@ function CompanyTeamsTable({
             <th>التواصل</th>
             <th>الأفراد</th>
             <th>المهام النشطة</th>
+            <th>السعة القصوى</th>
             <th>المهام المكتملة</th>
             <th>التوفر</th>
             <th>الحالة</th>
@@ -30,7 +31,7 @@ function CompanyTeamsTable({
         <tbody>
           {isLoading ? (
             <tr>
-              <td colSpan={9}>
+              <td colSpan={10}>
                 <div className="company-teams-table-state">
                   جاري تحميل فرق الصيانة...
                 </div>
@@ -40,7 +41,7 @@ function CompanyTeamsTable({
 
           {!isLoading && !hasTeams ? (
             <tr>
-              <td colSpan={9}>
+              <td colSpan={10}>
                 <div className="company-teams-table-state">
                   لا توجد فرق صيانة مطابقة للفلاتر الحالية.
                 </div>
@@ -73,6 +74,8 @@ function CompanyTeamsTable({
                   </td>
 
                   <td>{team.activeTasks}</td>
+
+                  <td>{team.maxCapacity || 'غير محددة'}</td>
 
                   <td>{team.completedTasks}</td>
 

@@ -181,7 +181,10 @@ function AdminCompanyAssignmentPanel({ report, onAssigned, allowReassignment = f
   function isCompanyExcluded(company) {
     return (
       excludedCompanyIds.includes(company.id) ||
-      excludedCompanyNames.includes(company.name)
+      excludedCompanyNames.includes(company.name) ||
+      (canReassign &&
+        (String(company.id) === String(report.assignedCompanyId || '') ||
+          company.name === assignedCompanyName))
     );
   }
 
@@ -252,7 +255,17 @@ function AdminCompanyAssignmentPanel({ report, onAssigned, allowReassignment = f
     return () => {
       isMounted = false;
     };
-  }, [report.id, reportCategoryId, searchTerm, excludedCompanyKey, isAssignmentLocked]);
+  }, [
+    assignedCompanyName,
+    canReassign,
+    excludedCompanyKey,
+    isAssignmentLocked,
+    report.assignedCompanyId,
+    report.id,
+    reportCategoryId,
+    reportCategoryLabel,
+    searchTerm,
+  ]);
 
   const currentCompanyLabel = assignedCompanyName || 'لم يتم التعيين بعد';
 
@@ -336,8 +349,16 @@ function AdminCompanyAssignmentPanel({ report, onAssigned, allowReassignment = f
     try {
       const result = await assignCompanyToReport(report.id, {
         companyId: selectedCompany.id,
-        adminNote,
-        assignmentSource: 'manual',
+        adminNote: canReassign ? null : adminNote,
+        assignmentSource: canReassign ? 'reassignment' : 'manual',
+        isReassignment: canReassign,
+        previousCompanyId:
+          report.adminDecision?.previousCompanyId || report.assignedCompanyId || null,
+        companyResponseId:
+          report.adminDecision?.companyResponseId ||
+          report.companyResponse?.submissionId ||
+          report.companyResponse?.id ||
+          null,
       });
 
       onAssigned?.(result);
@@ -525,16 +546,23 @@ function AdminCompanyAssignmentPanel({ report, onAssigned, allowReassignment = f
                 </p>
               </div>
 
-              <label className="admin-assignment-note">
-                <span>ملاحظات للأدمن / تعليمات للشركة</span>
+              {canReassign ? (
+                <div className="admin-assignment-reassignment-note">
+                  لن يتم إرسال أي رسالة للشركة القديمة أو للمستخدمين. بعد التأكيد
+                  ينتقل البلاغ مباشرة إلى الشركة الجديدة ويصلها إشعار التعيين المعتاد فقط.
+                </div>
+              ) : (
+                <label className="admin-assignment-note">
+                  <span>ملاحظات للأدمن / تعليمات للشركة</span>
 
-                <textarea
-                  value={adminNote}
-                  onChange={(event) => setAdminNote(event.target.value)}
-                  placeholder="اكتب أي تعليمات أو ملاحظات مطلوبة للشركة..."
-                  rows={4}
-                />
-              </label>
+                  <textarea
+                    value={adminNote}
+                    onChange={(event) => setAdminNote(event.target.value)}
+                    placeholder="اكتب أي تعليمات أو ملاحظات مطلوبة للشركة..."
+                    rows={4}
+                  />
+                </label>
+              )}
             </div>
 
             <footer className="admin-assignment-modal__actions">

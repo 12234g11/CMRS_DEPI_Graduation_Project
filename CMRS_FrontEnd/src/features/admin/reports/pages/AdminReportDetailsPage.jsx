@@ -10,7 +10,6 @@ import {
   approveAdminReport,
   closeAdminReport,
   getAdminReportById,
-  prepareReportReassignment,
   rejectAdminReport,
   requestCompanyCompletion,
 } from '../api/adminReportsApi';
@@ -160,30 +159,15 @@ function AdminReportDetailsPage() {
     window.sessionStorage.removeItem(getReassignmentStorageKey(report.id));
   }
 
-  function handleCompanyAssigned(result) {
+  async function handleCompanyAssigned(updatedReport) {
     clearReassignmentMode();
 
-    setReport((currentReport) => ({
-      ...currentReport,
-      assignedCompanyId: result.companyId,
-      assignedCompany: result.assignedCompany,
-      concernedCompany: result.concernedCompany,
-      status: result.status,
-      statusTone: result.statusTone,
-      assignment: result.assignment,
-      companyResponse: null,
-      timeline: [
-        ...(currentReport.timeline || []),
-        {
-          id: `${currentReport.id}-local-assignment-${Date.now()}`,
-          actorType: 'admin',
-          actor: 'الأدمن',
-          title: 'تم تعيين شركة',
-          description: `تم تعيين البلاغ إلى ${result.assignedCompany}.`,
-          date: new Date().toLocaleString('ar-EG'),
-        },
-      ],
-    }));
+    if (updatedReport?.id) {
+      setReport(updatedReport);
+      return;
+    }
+
+    setReport(await getAdminReportById(report.id));
   }
 
   async function handleAcceptFix(payload = {}) {
@@ -206,13 +190,11 @@ function AdminReportDetailsPage() {
     setReport(updatedReport);
   }
 
-  async function handleReassign(payload = {}) {
-    const updatedReport = await prepareReportReassignment(report.id, payload);
-
-    // فتح اختيار الشركات لا يتم إلا بعد اختيار قرار إعادة الإسناد ونجاحه.
+  function handleReassign() {
+    // لا يتم تغيير الإسناد أو إرسال أي رسالة قبل اختيار الشركة الجديدة
+    // وتأكيد العملية من نافذة التعيين.
     window.sessionStorage.setItem(getReassignmentStorageKey(report.id), 'true');
     setIsReassignmentMode(true);
-    setReport(updatedReport);
 
     navigate(`${ROUTES.ADMIN_REVIEW_REPORTS}/${report.id}#company-assignment`, {
       replace: true,

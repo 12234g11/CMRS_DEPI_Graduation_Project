@@ -103,6 +103,7 @@ function CompanyReportsPage() {
   const routeSelectedReportId = location.state?.selectedReportId || null;
   const solutionPanelRef = useRef(null);
   const reportsTableSectionRef = useRef(null);
+  const lastAutoRefreshAtRef = useRef(0);
 
   const [reports, setReports] = useState([]);
   const [summary, setSummary] = useState({
@@ -227,6 +228,26 @@ function CompanyReportsPage() {
     reloadKey,
     statusFilter,
   ]);
+
+  useEffect(() => {
+    function refreshAssignedReports() {
+      if (document.visibilityState !== 'visible') return;
+
+      const now = Date.now();
+      if (now - lastAutoRefreshAtRef.current < 1000) return;
+
+      lastAutoRefreshAtRef.current = now;
+      setReloadKey((current) => current + 1);
+    }
+
+    window.addEventListener('focus', refreshAssignedReports);
+    document.addEventListener('visibilitychange', refreshAssignedReports);
+
+    return () => {
+      window.removeEventListener('focus', refreshAssignedReports);
+      document.removeEventListener('visibilitychange', refreshAssignedReports);
+    };
+  }, []);
 
   useEffect(() => {
     if (!routeSelectedReportId || mapHighlightedReportId) return;

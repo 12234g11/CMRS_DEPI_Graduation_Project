@@ -811,6 +811,38 @@
   gap: 14px;
 }
 
+.user-dashboard-report-modal__public-decision {
+  padding: 16px;
+  border: 1px solid rgba(194, 74, 74, 0.2);
+  border-radius: 18px;
+  background: rgba(239, 124, 124, 0.08);
+  display: grid;
+  gap: 10px;
+}
+
+.user-dashboard-report-modal__public-decision > div {
+  color: #a43f3f;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-dashboard-report-modal__public-decision p {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: 800;
+  line-height: 1.8;
+}
+
+.user-dashboard-report-modal__public-decision b {
+  color: #8f3737;
+}
+
+.user-dashboard-report-modal__public-decision small {
+  color: var(--color-subtitle);
+  font-weight: 800;
+}
+
 .user-dashboard-report-modal__grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

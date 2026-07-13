@@ -1,7 +1,9 @@
 export const COMPANY_NOTIFICATION_TYPES = {
   REPORT_ASSIGNED: 'report_assigned',
   ADMIN_FEEDBACK: 'admin_feedback',
-  NEEDS_COMPLETION: 'needs_completion',
+  NEEDS_COMPLETION: 'completion_requested',
+  COMPLETION_REQUESTED: 'completion_requested',
+  CANNOT_FIX_ACCEPTED: 'cannot_fix_accepted',
   SOLUTION_ACCEPTED: 'solution_accepted',
   SYSTEM: 'system',
 };
@@ -21,6 +23,11 @@ export const companyNotificationFilterOptions = [
     value: COMPANY_NOTIFICATION_TYPES.REPORT_ASSIGNED,
     label: 'بلاغات مسندة',
     description: 'البلاغات الجديدة التي تم إسنادها للشركة',
+  },
+  {
+    value: COMPANY_NOTIFICATION_TYPES.CANNOT_FIX_ACCEPTED,
+    label: 'اعتذارات مقبولة',
+    description: 'طلبات تعذر التنفيذ التي وافق عليها الأدمن',
   },
   {
     value: COMPANY_NOTIFICATION_TYPES.SOLUTION_ACCEPTED,

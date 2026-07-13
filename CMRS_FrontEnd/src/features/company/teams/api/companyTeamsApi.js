@@ -6,7 +6,6 @@ import {
 
 const DEFAULT_API_BASE_URL = 'http://balaghasp.runasp.net';
 const COMPANY_TEAMS_ENDPOINT = '/api/company/teams';
-const TEAM_ACTIVE_TASKS_LIMIT = 5;
 
 function getApiBaseUrl() {
   const envBaseUrl =
@@ -207,30 +206,19 @@ function toNumber(value, fallback = 0) {
   return Number.isFinite(numericValue) ? numericValue : fallback;
 }
 
-function resolveTeamAvailability(team, status, activeTasks) {
+function resolveTeamAvailability(team) {
   const backendAvailability = team.availability || team.teamAvailability || team.availabilityStatus;
-
-  if (backendAvailability) {
-    return normalizeAvailabilityValue(backendAvailability);
-  }
-
-  if (status === COMPANY_TEAM_STATUSES.DISABLED) {
-    return COMPANY_TEAM_AVAILABILITY.OFFLINE;
-  }
-
-  if (activeTasks >= TEAM_ACTIVE_TASKS_LIMIT) {
-    return COMPANY_TEAM_AVAILABILITY.BUSY;
-  }
-
-  return COMPANY_TEAM_AVAILABILITY.AVAILABLE;
+  return normalizeAvailabilityValue(backendAvailability);
 }
 
 function normalizeTeam(team = {}) {
   const id = team.id || team.teamId || team.companyTeamId;
   const activeTasks = toNumber(team.activeTasks ?? team.activeReportsCount, 0);
   const completedTasks = toNumber(team.completedTasks ?? team.completedReportsCount, 0);
-  const status = normalizeStatusValue(team.status || team.teamStatus);
-  const availability = resolveTeamAvailability(team, status, activeTasks);
+  const status = normalizeStatusValue(
+    team.status || team.teamStatus || (team.isDisabled ? 'disabled' : 'active'),
+  );
+  const availability = resolveTeamAvailability(team);
 
   return {
     ...team,
@@ -239,6 +227,7 @@ function normalizeTeam(team = {}) {
     leadName: team.leadName || team.leaderName || team.teamLeadName || '',
     phone: team.phone || team.phoneNumber || team.contactPhone || '',
     membersCount: toNumber(team.membersCount ?? team.members, 0),
+    maxCapacity: toNumber(team.maxCapacity ?? team.maximumCapacity ?? team.capacity, 0),
     activeTasks,
     completedTasks,
     ...getStatusMeta(status),
@@ -354,6 +343,7 @@ function buildTeamRequestBody(payload = {}) {
     leadName: payload.leadName,
     phone: payload.phone,
     membersCount: toNumber(payload.membersCount, 0),
+    maxCapacity: toNumber(payload.maxCapacity, 0),
     notes: payload.notes || '',
   };
 

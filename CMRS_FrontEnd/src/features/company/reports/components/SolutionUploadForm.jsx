@@ -26,7 +26,7 @@ function createImagePreview(file) {
   };
 }
 
-function SolutionUploadForm({ report, onSubmitSolution }) {
+function SolutionUploadForm({ report, onSubmitSolution, onFilePickerOpen }) {
   const [note, setNote] = useState('');
   const [selectedImages, setSelectedImages] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -97,6 +97,11 @@ function SolutionUploadForm({ report, onSubmitSolution }) {
       images: newErrors[0] || '',
       submit: '',
     }));
+  }
+
+  function openFilePicker(inputRef) {
+    onFilePickerOpen?.();
+    inputRef.current?.click();
   }
 
   function handleFileInputChange(event) {
@@ -194,12 +199,22 @@ function SolutionUploadForm({ report, onSubmitSolution }) {
         </span>
       </header>
 
-      {report.status === 'مطلوب استكمال' && report.adminReview?.note ? (
+      {report.status === 'مطلوب استكمال' ? (
         <div className="company-solution-required-note">
           <FiAlertCircle />
           <div>
-            <strong>ملاحظة الأدمن المطلوب تنفيذها</strong>
-            <p>{report.adminReview.note}</p>
+            <strong>رسالة الأدمن للشركة</strong>
+            <p>
+              {report.adminReview?.companyMessage ||
+                report.adminReview?.note ||
+                'لا توجد بيانات للعرض'}
+            </p>
+
+            <strong>الأعمال المطلوب استكمالها</strong>
+            <p>
+              {report.adminReview?.completionRequirements ||
+                'لا توجد بيانات للعرض'}
+            </p>
           </div>
         </div>
       ) : null}
@@ -264,7 +279,7 @@ function SolutionUploadForm({ report, onSubmitSolution }) {
           <button
             type="button"
             className="company-solution-upload-main-icon"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => openFilePicker(fileInputRef)}
             aria-label="اختيار صور من الجهاز"
           >
             <FiPlus />
@@ -275,12 +290,12 @@ function SolutionUploadForm({ report, onSubmitSolution }) {
             <p>JPG أو JPEG أو PNG أو WEBP، وبحد أقصى 5 ميجابايت للصورة.</p>
 
             <div className="company-solution-upload-actions">
-              <button type="button" onClick={() => fileInputRef.current?.click()}>
+              <button type="button" onClick={() => openFilePicker(fileInputRef)}>
                 <FiImage />
                 اختيار صور
               </button>
 
-              <button type="button" onClick={() => cameraInputRef.current?.click()}>
+              <button type="button" onClick={() => openFilePicker(cameraInputRef)}>
                 <FiCamera />
                 فتح الكاميرا
               </button>

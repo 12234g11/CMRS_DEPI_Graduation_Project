@@ -267,6 +267,10 @@ function toMapReport(report = {}) {
     coverImage: report.coverImage || report.image || report.images?.[0] || '',
     images: report.imageUrls || report.images || [],
 
+    executionInfo: report.executionInfo || {},
+    publicDecision:
+      report.publicDecision || report.executionInfo?.publicDecision || null,
+
     position,
   };
 }
@@ -313,6 +317,8 @@ function focusStateToMapReport(focusMapReport = {}) {
       createdAt: focusMapReport.date,
       coverImage: focusMapReport.coverImage,
       images: focusMapReport.images || [],
+      executionInfo: focusMapReport.executionInfo || {},
+      publicDecision: focusMapReport.publicDecision || null,
       position: focusMapReport.position,
     },
 
@@ -328,6 +334,8 @@ function focusStateToMapReport(focusMapReport = {}) {
     date: focusMapReport.date || focusMapReport.createdAt,
     coverImage: focusMapReport.coverImage || '',
     images: focusMapReport.images || [],
+    executionInfo: focusMapReport.executionInfo || {},
+    publicDecision: focusMapReport.publicDecision || null,
     position: focusMapReport.position,
   };
 }
