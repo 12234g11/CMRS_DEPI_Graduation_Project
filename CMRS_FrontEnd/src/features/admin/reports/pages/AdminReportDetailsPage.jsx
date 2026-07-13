@@ -24,6 +24,42 @@ import AdminReportSummaryCard from '../components/AdminReportSummaryCard';
 import AdminReportTimelineCard from '../components/AdminReportTimelineCard';
 import '../admin-reports.css';
 
+function hasPreparedReassignment(report = {}) {
+  const reassignmentState = String(
+    report.reassignmentStatus ||
+      report.assignmentMode ||
+      report.assignmentState ||
+      '',
+  ).toLowerCase();
+
+  return Boolean(
+    report.reassignmentPending ||
+      report.isReassignmentPending ||
+      report.canSelectNewCompany ||
+      reassignmentState.includes('reassign') ||
+      reassignmentState.includes('selectnewcompany') ||
+      reassignmentState.includes('pendingcompanyselection')
+  );
+}
+
+function hasAssignedCompany(report = {}) {
+  const assignedCompanyName =
+    report.assignedCompanyName ||
+    report.assignedCompany ||
+    report.concernedCompanyName ||
+    report.concernedCompany ||
+    '';
+
+  return Boolean(
+    report.assignedCompanyId ||
+      (assignedCompanyName && assignedCompanyName !== 'غير معين')
+  );
+}
+
+function getReassignmentStorageKey(reportId) {
+  return `admin-report-reassignment:${reportId}`;
+}
+
 function AdminReportDetailsPage() {
   const { reportId } = useParams();
   const navigate = useNavigate();
@@ -31,16 +67,24 @@ function AdminReportDetailsPage() {
 
   const [report, setReport] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isReassignmentMode, setIsReassignmentMode] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
     setIsLoading(true);
+    setIsReassignmentMode(false);
 
     getAdminReportById(reportId)
       .then((data) => {
         if (isMounted) {
+          const savedReassignmentMode =
+            window.sessionStorage.getItem(getReassignmentStorageKey(reportId)) === 'true';
+
           setReport(data);
+          setIsReassignmentMode(
+            hasPreparedReassignment(data) || savedReassignmentMode,
+          );
         }
       })
       .catch(() => {
@@ -111,7 +155,14 @@ function AdminReportDetailsPage() {
     setReport(updatedReport);
   }
 
+  function clearReassignmentMode() {
+    setIsReassignmentMode(false);
+    window.sessionStorage.removeItem(getReassignmentStorageKey(report.id));
+  }
+
   function handleCompanyAssigned(result) {
+    clearReassignmentMode();
+
     setReport((currentReport) => ({
       ...currentReport,
       assignedCompanyId: result.companyId,
@@ -137,37 +188,45 @@ function AdminReportDetailsPage() {
 
   async function handleAcceptFix(payload = {}) {
     const updatedReport = await acceptCompanyFix(report.id, payload);
+    clearReassignmentMode();
     setReport(updatedReport);
   }
 
   async function handleRequestCompletion(payload = {}) {
     const updatedReport = await requestCompanyCompletion(report.id, payload);
+
+    // طلب الاستكمال يُبقي البلاغ مع الشركة الحالية، لذلك لا نعرض اختيار شركة أخرى.
+    clearReassignmentMode();
     setReport(updatedReport);
   }
 
   async function handleAcceptCannotFix(payload = {}) {
     const updatedReport = await acceptCompanyCannotFix(report.id, payload);
+    clearReassignmentMode();
     setReport(updatedReport);
   }
 
-async function handleReassign(payload = {}) {
-  const updatedReport = await prepareReportReassignment(report.id, payload);
+  async function handleReassign(payload = {}) {
+    const updatedReport = await prepareReportReassignment(report.id, payload);
 
-  setReport(updatedReport);
+    // فتح اختيار الشركات لا يتم إلا بعد اختيار قرار إعادة الإسناد ونجاحه.
+    window.sessionStorage.setItem(getReassignmentStorageKey(report.id), 'true');
+    setIsReassignmentMode(true);
+    setReport(updatedReport);
 
-  navigate(`${ROUTES.ADMIN_REVIEW_REPORTS}/${report.id}#company-assignment`, {
-    replace: true,
-  });
-
-  window.setTimeout(() => {
-    const assignmentSection = document.getElementById('company-assignment');
-
-    assignmentSection?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
+    navigate(`${ROUTES.ADMIN_REVIEW_REPORTS}/${report.id}#company-assignment`, {
+      replace: true,
     });
-  }, 350);
-}
+
+    window.setTimeout(() => {
+      const assignmentSection = document.getElementById('company-assignment');
+
+      assignmentSection?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 350);
+  }
   if (isLoading) {
     return (
       <div className="dashboard-page admin-report-details-page">
@@ -218,7 +277,13 @@ async function handleReassign(payload = {}) {
     reportStatusText.includes('متعذر التنفيذ') ||
     reportStatusText.includes('مرفوض') ||
     reportStatusText.includes('مغلق');
-  const canShowCompanyAssignmentPanel = !isCitizenReviewStage && !isTerminalReport;
+  const reportHasAssignedCompany = hasAssignedCompany(report);
+  const canShowCompanyAssignmentPanel =
+    !isTerminalReport &&
+    (
+      isReassignmentMode ||
+      (!isCitizenReviewStage && !reportHasAssignedCompany)
+    );
 
   return (
     <div className="dashboard-page admin-report-details-page">
@@ -297,6 +362,7 @@ async function handleReassign(payload = {}) {
             <AdminCompanyAssignmentPanel
               report={report}
               onAssigned={handleCompanyAssigned}
+              allowReassignment={isReassignmentMode}
             />
           ) : null}
         </div>

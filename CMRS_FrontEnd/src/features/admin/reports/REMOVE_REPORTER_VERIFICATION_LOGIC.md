@@ -1,0 +1,1 @@
+Removed the verified/unverified UI and logic from AdminReporterCard. The card now reads and displays only reporter.trustScore as a score out of 100 with its progress indicator.

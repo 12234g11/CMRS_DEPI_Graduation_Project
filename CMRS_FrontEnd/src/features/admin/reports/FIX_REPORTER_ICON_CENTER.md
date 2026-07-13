@@ -1,0 +1,1 @@
+Centered the reporter info icon inside the dark box by enforcing flex centering, line-height reset, and svg block rendering.

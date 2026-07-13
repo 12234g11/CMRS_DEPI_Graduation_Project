@@ -1,24 +1,88 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   FiAlertTriangle,
   FiCheckCircle,
   FiLock,
 } from 'react-icons/fi';
 
-function getStatusText(report) {
-  return `${report?.statusValue || ''} ${report?.statusLabel || ''} ${report?.status || ''}`.toLowerCase();
+function normalizeStatus(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
 }
 
-function shouldShowCitizenReviewActions(report) {
-  const status = getStatusText(report);
+function getReportStatus(report) {
+  return normalizeStatus(report?.statusValue || report?.statusLabel || report?.status);
+}
+
+function getReportStatusText(report) {
+  return `${report?.statusValue || ''} ${report?.statusLabel || ''} ${report?.status || ''}`
+    .trim()
+    .toLowerCase();
+}
+
+function hasPendingCompanyResponse(report) {
+  const companyResponse = report?.companyResponse;
+  const responseReviewStatus = normalizeStatus(companyResponse?.reviewStatus);
+  const status = getReportStatus(report);
+
+  const responseIsPending = Boolean(companyResponse) && (
+    !responseReviewStatus ||
+    responseReviewStatus === 'pending' ||
+    responseReviewStatus === 'underreview' ||
+    responseReviewStatus === 'awaitingreview'
+  );
 
   return (
-    status.includes('underreview') ||
-    status.includes('under review') ||
-    status.includes('pending') ||
-    status.includes('new') ||
-    status.includes('قيد المراجعة') ||
-    status.includes('بانتظار المراجعة')
+    responseIsPending ||
+    Boolean(report?.pendingReviewType) ||
+    status.includes('pendingadminapproval') ||
+    status.includes('companyresponsereview')
+  );
+}
+
+function isTerminalReport(report) {
+  const status = getReportStatus(report);
+  const statusText = getReportStatusText(report);
+
+  return (
+    status.includes('resolved') ||
+    status.includes('rejected') ||
+    status.includes('closed') ||
+    status.includes('unabletoexecute') ||
+    status.includes('cannotexecute') ||
+    statusText.includes('تم الحل') ||
+    statusText.includes('متعذر التنفيذ') ||
+    statusText.includes('مرفوض') ||
+    statusText.includes('مغلق')
+  );
+}
+
+function canApproveCitizenReport(report) {
+  if (!report || isTerminalReport(report) || hasPendingCompanyResponse(report)) {
+    return false;
+  }
+
+  // وجود شركة مسند إليها البلاغ يعني أن مرحلة اعتماد بلاغ المواطن انتهت بالفعل.
+  if (report.assignedCompanyId || report.assignment) {
+    return false;
+  }
+
+  const status = getReportStatus(report);
+  const statusText = getReportStatusText(report);
+
+  return (
+    status === 'new' ||
+    status === 'pending' ||
+    status === 'submitted' ||
+    status === 'underreview' ||
+    status === 'pendingreview' ||
+    status === 'pendingadminapproval' ||
+    status === 'awaitingadminreview' ||
+    statusText.includes('قيد المراجعة') ||
+    statusText.includes('بانتظار مراجعة الأدمن') ||
+    statusText.includes('بانتظار المراجعة')
   );
 }
 
@@ -28,14 +92,20 @@ function AdminReportStatusForm({
   onReject,
   onCloseReport,
 }) {
-  const [rejectionReason, setRejectionReason] = useState(report.rejectionReason || '');
+  const [rejectionReason, setRejectionReason] = useState(report?.rejectionReason || '');
   const [isSaving, setIsSaving] = useState(false);
   const [activeAction, setActiveAction] = useState('');
   const [formError, setFormError] = useState('');
 
-  const canReviewCitizenReport = shouldShowCitizenReviewActions(report);
+  const showApproveAction = canApproveCitizenReport(report);
+  const showManagementActions = Boolean(report) && !isTerminalReport(report);
 
-  if (!canReviewCitizenReport) {
+  useEffect(() => {
+    setRejectionReason(report?.rejectionReason || '');
+    setFormError('');
+  }, [report?.id, report?.rejectionReason]);
+
+  if (!showManagementActions) {
     return null;
   }
 
@@ -46,8 +116,9 @@ function AdminReportStatusForm({
 
     try {
       await callback?.();
-    } catch {
-      setFormError('تعذر تنفيذ الإجراء. برجاء المحاولة مرة أخرى.');
+    } catch (error) {
+      const apiMessage = error?.response?.data?.message;
+      setFormError(apiMessage || 'تعذر تنفيذ الإجراء. برجاء المحاولة مرة أخرى.');
     } finally {
       setIsSaving(false);
       setActiveAction('');
@@ -58,7 +129,7 @@ function AdminReportStatusForm({
     const trimmedReason = rejectionReason.trim();
 
     if (!trimmedReason) {
-      setFormError('سبب الرفض مطلوب قبل رفض بلاغ المواطن.');
+      setFormError('سبب الرفض مطلوب قبل رفض البلاغ.');
       return;
     }
 
@@ -69,8 +140,8 @@ function AdminReportStatusForm({
     <section className="admin-report-details-card admin-report-action-card">
       <header className="admin-report-card-header">
         <div>
-          <h2>مراجعة بلاغ المواطن</h2>
-          <p>Citizen Report Review</p>
+          <h2>{showApproveAction ? 'مراجعة بلاغ المواطن' : 'إجراءات إدارة البلاغ'}</h2>
+          <p>{showApproveAction ? 'Citizen Report Review' : 'Report Management Actions'}</p>
         </div>
       </header>
 
@@ -83,21 +154,24 @@ function AdminReportStatusForm({
         </div>
 
         <div className="admin-report-action-buttons admin-report-action-buttons--citizen-review">
-          <button
-            type="button"
-            className="admin-report-action-button admin-report-action-button--approve"
-            onClick={() => runAction('approve', onApprove)}
-            disabled={isSaving}
-          >
-            <FiCheckCircle />
-            {activeAction === 'approve' ? 'جاري الاعتماد...' : 'اعتماد البلاغ'}
-          </button>
+          {showApproveAction ? (
+            <button
+              type="button"
+              className="admin-report-action-button admin-report-action-button--approve"
+              onClick={() => runAction('approve', onApprove)}
+              disabled={isSaving}
+            >
+              <FiCheckCircle />
+              {activeAction === 'approve' ? 'جاري الاعتماد...' : 'اعتماد البلاغ'}
+            </button>
+          ) : null}
 
           <button
             type="button"
             className="admin-report-action-button admin-report-action-button--close"
             onClick={() => runAction('close', onCloseReport)}
             disabled={isSaving}
+            title="إغلاق البلاغ إداريًا دون تسجيله كبلاغ مرفوض"
           >
             <FiLock />
             {activeAction === 'close' ? 'جاري الإغلاق...' : 'إغلاق بدون عقوبة'}
@@ -110,7 +184,7 @@ function AdminReportStatusForm({
             value={rejectionReason}
             onChange={(event) => setRejectionReason(event.target.value)}
             rows={3}
-            placeholder="اكتب سبب واضح قبل رفض بلاغ المواطن..."
+            placeholder="اكتب سببًا واضحًا قبل رفض البلاغ..."
           />
         </label>
 
@@ -121,7 +195,7 @@ function AdminReportStatusForm({
           disabled={isSaving}
         >
           <FiAlertTriangle />
-          {activeAction === 'reject' ? 'جاري الرفض...' : 'رفض بلاغ المواطن'}
+          {activeAction === 'reject' ? 'جاري الرفض...' : 'رفض البلاغ'}
         </button>
 
         {formError ? <p className="admin-report-form-error">{formError}</p> : null}

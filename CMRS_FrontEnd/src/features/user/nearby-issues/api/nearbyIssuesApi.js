@@ -801,7 +801,7 @@ export async function getNearbyReports({
 export async function followReport(reportId) {
   const response = await post(
     `/api/Report/${encodeURIComponent(reportId)}/follow`,
-    buildReportActionBody(reportId),
+    null,
     JSON_BODY_CONFIG
   );
 
@@ -811,7 +811,7 @@ export async function followReport(reportId) {
 export async function unfollowReport(reportId) {
   const response = await remove(
     `/api/Report/${encodeURIComponent(reportId)}/follow`,
-    buildDeleteConfig(reportId)
+    JSON_BODY_CONFIG
   );
 
   return getResponseData(response);

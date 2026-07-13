@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   FiArrowLeft,
   FiEye,
@@ -16,6 +16,7 @@ import UserReportsFilters from '../../reports/components/UserReportsFilters';
 import {
   FOLLOWED_REPORT_STATUS_API_VALUES,
   FOLLOWED_REPORT_STATUS_FILTER_OPTIONS,
+  findFollowedReportPage,
   getFollowedReportDetails,
   getFollowedReports,
   unfollowReport,
@@ -25,6 +26,30 @@ import FollowedReportsMapLegend from '../components/FollowedReportsMapLegend';
 import FollowedReportsTable from '../components/FollowedReportsTable';
 import '../../reports/user-reports.css';
 import '../followed-reports.css';
+
+function getNavigationReportId(location = {}) {
+  const searchParams = new URLSearchParams(location.search || '');
+
+  return String(
+    location.state?.notificationReportId ||
+      location.state?.selectedReportId ||
+      location.state?.highlightReportId ||
+      location.state?.reportId ||
+      searchParams.get('reportId') ||
+      ''
+  ).trim();
+}
+
+function isNotificationNavigation(location = {}) {
+  const searchParams = new URLSearchParams(location.search || '');
+
+  return Boolean(
+    location.state?.fromNotification ||
+      location.state?.fromNotifications ||
+      location.state?.source === 'notification' ||
+      searchParams.get('source') === 'notification'
+  );
+}
 
 function toMapReport(report = {}) {
   const reportId = report.reportId || report.id;
@@ -103,8 +128,10 @@ function mergeReportDetails(summary = {}, details = {}) {
 }
 
 function FollowedReportsPage() {
+  const location = useLocation();
   const mapSectionRef = useRef(null);
   const selectedReportCardRef = useRef(null);
+  const previousSearchQueryRef = useRef('');
 
   const [reports, setReports] = useState([]);
   const [pagination, setPagination] = useState({
@@ -130,20 +157,99 @@ function FollowedReportsPage() {
   const [selectedMapReport, setSelectedMapReport] = useState(null);
   const [routeReportId, setRouteReportId] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
-  const [highlightedReportId, setHighlightedReportId] = useState(null);
+  const [highlightedReportId, setHighlightedReportId] = useState(
+    getNavigationReportId(location) || null
+  );
+  const [notificationFocusReportId, setNotificationFocusReportId] = useState(
+    isNotificationNavigation(location)
+      ? getNavigationReportId(location) || null
+      : null
+  );
+  const [isNotificationFocusLoading, setIsNotificationFocusLoading] =
+    useState(false);
 
   const [selectedReportDetails, setSelectedReportDetails] = useState(null);
   const [loadingReportId, setLoadingReportId] = useState('');
   const [unfollowingReportId, setUnfollowingReportId] = useState('');
 
   useEffect(() => {
+    const searchChanged = previousSearchQueryRef.current !== searchQuery;
+    previousSearchQueryRef.current = searchQuery;
+
     const timer = window.setTimeout(() => {
       setDebouncedSearch(searchQuery.trim());
-      setPageNumber(1);
+
+      if (searchChanged) {
+        setPageNumber(1);
+      }
     }, 400);
 
     return () => window.clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    const nextReportId = getNavigationReportId(location);
+    const nextNotificationReportId = isNotificationNavigation(location)
+      ? nextReportId || null
+      : null;
+
+    setHighlightedReportId(nextReportId || null);
+    setNotificationFocusReportId(nextNotificationReportId);
+  }, [location.search, location.state]);
+
+  useEffect(() => {
+    if (!notificationFocusReportId) {
+      setIsNotificationFocusLoading(false);
+      return undefined;
+    }
+
+    let isCanceled = false;
+
+    async function locateNotificationReport() {
+      try {
+        setIsNotificationFocusLoading(true);
+        setErrorMessage('');
+        setSearchQuery('');
+        setDebouncedSearch('');
+        setStatusFilter(FOLLOWED_REPORT_STATUS_API_VALUES.all);
+        clearMapSelection();
+
+        const locatedReport = await findFollowedReportPage({
+          reportId: notificationFocusReportId,
+          pageSize: 10,
+        });
+
+        if (isCanceled) return;
+
+        if (!locatedReport) {
+          setErrorMessage(
+            'لم يتم العثور على البلاغ المرتبط بالإشعار داخل البلاغات المتابَعة.'
+          );
+          return;
+        }
+
+        setHighlightedReportId(notificationFocusReportId);
+        setPageNumber(locatedReport.pageNumber);
+        setNotificationFocusReportId(null);
+      } catch (error) {
+        if (isCanceled) return;
+
+        setErrorMessage(
+          error?.message || 'تعذر الوصول إلى البلاغ المرتبط بالإشعار حاليًا.'
+        );
+      } finally {
+        if (!isCanceled) {
+          setIsNotificationFocusLoading(false);
+        }
+      }
+    }
+
+    locateNotificationReport();
+
+    return () => {
+      isCanceled = true;
+    };
+  }, [notificationFocusReportId]);
 
   useEffect(() => {
     let isCanceled = false;
@@ -471,7 +577,11 @@ function FollowedReportsPage() {
         onStatusFilterChange={handleStatusFilterChange}
         statusOptions={FOLLOWED_REPORT_STATUS_FILTER_OPTIONS}
         onReset={handleResetFilters}
-        isSearching={isLoading || searchQuery.trim() !== debouncedSearch}
+        isSearching={
+          isLoading ||
+          isNotificationFocusLoading ||
+          searchQuery.trim() !== debouncedSearch
+        }
       />
 
       <section ref={mapSectionRef} className="user-dashboard-map-card">
@@ -536,7 +646,7 @@ function FollowedReportsPage() {
           highlightedReportId={highlightedReportId}
           loadingReportId={loadingReportId}
           unfollowingReportId={unfollowingReportId}
-          isLoading={isLoading}
+          isLoading={isLoading || isNotificationFocusLoading}
           emptyMessage={emptyMessage}
           onPageChange={(nextPage) => {
             setPageNumber(nextPage);

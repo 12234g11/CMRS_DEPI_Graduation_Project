@@ -20,7 +20,7 @@ export const REPORT_STATUS_LABELS = {
   [REPORT_STATUS_API_VALUES.rejected]: 'مرفوض',
   [REPORT_STATUS_API_VALUES.assigned]: 'تم التعيين',
   [REPORT_STATUS_API_VALUES.inProgress]: 'جاري التنفيذ',
-  [REPORT_STATUS_API_VALUES.pendingAdminApproval]: 'بانتظار اعتماد الأدمن',
+  [REPORT_STATUS_API_VALUES.pendingAdminApproval]: 'بانتظار مراجعة الأدمن',
   [REPORT_STATUS_API_VALUES.needsCompletion]: 'مطلوب استكمال',
   [REPORT_STATUS_API_VALUES.unableToExecute]: 'متعذر التنفيذ',
   [REPORT_STATUS_API_VALUES.resolved]: 'تم الحل',
@@ -35,7 +35,7 @@ export const REPORT_STATUS_FILTER_OPTIONS = [
   { value: REPORT_STATUS_API_VALUES.inProgress, label: 'جاري التنفيذ' },
   {
     value: REPORT_STATUS_API_VALUES.pendingAdminApproval,
-    label: 'بانتظار اعتماد الأدمن',
+    label: 'بانتظار مراجعة الأدمن',
   },
   { value: REPORT_STATUS_API_VALUES.needsCompletion, label: 'مطلوب استكمال' },
   { value: REPORT_STATUS_API_VALUES.unableToExecute, label: 'متعذر التنفيذ' },
@@ -939,6 +939,59 @@ export async function getUserReports(input = {}) {
   } catch (error) {
     throw new Error(getApiErrorMessage(error));
   }
+}
+
+export async function findUserReportPage({
+  userId,
+  reportId,
+  pageSize = 10,
+} = {}) {
+  const cleanUserId = String(userId || '').trim();
+  const cleanReportId = String(reportId || '').trim();
+
+  if (!cleanUserId || !cleanReportId) {
+    return null;
+  }
+
+  const firstPage = await getUserReports({
+    userId: cleanUserId,
+    pageNumber: 1,
+    pageSize,
+  });
+
+  const firstPageReport = firstPage.items.find(
+    (report) => String(report.reportId || report.id) === cleanReportId
+  );
+
+  if (firstPageReport) {
+    return {
+      pageNumber: 1,
+      report: firstPageReport,
+    };
+  }
+
+  const totalPages = Math.max(1, Number(firstPage.totalPages || 1));
+
+  for (let currentPage = 2; currentPage <= totalPages; currentPage += 1) {
+    const page = await getUserReports({
+      userId: cleanUserId,
+      pageNumber: currentPage,
+      pageSize,
+    });
+
+    const matchedReport = page.items.find(
+      (report) => String(report.reportId || report.id) === cleanReportId
+    );
+
+    if (matchedReport) {
+      return {
+        pageNumber: currentPage,
+        report: matchedReport,
+      };
+    }
+  }
+
+  return null;
 }
 
 export async function searchReports(term = '') {

@@ -86,38 +86,6 @@ function hasExistingAssignment(report = {}) {
   return Boolean(report.assignedCompanyId || getAssignedCompanyName(report));
 }
 
-function canReassignAfterCompanyResponse(report = {}) {
-  if (report.excludedCompanyIds?.length || report.excludedCompanyNames?.length) {
-    return true;
-  }
-
-  const companyResponse = report.companyResponse || {};
-  const responseText = normalizeText([
-    companyResponse.status,
-    companyResponse.statusLabel,
-    companyResponse.reviewStatus,
-    companyResponse.reviewLabel,
-    companyResponse.reason,
-    companyResponse.note,
-    report.statusValue,
-    report.statusLabel,
-    report.status,
-  ].filter(Boolean).join(' '));
-
-  return (
-    responseText.includes('unable') ||
-    responseText.includes('cannot') ||
-    responseText.includes('failed') ||
-    responseText.includes('executionfailed') ||
-    responseText.includes('unabletoexecute') ||
-    responseText.includes('تعذر') ||
-    responseText.includes('متعذر') ||
-    responseText.includes('اعتذر') ||
-    responseText.includes('رفض التنفيذ') ||
-    responseText.includes('غير قادر')
-  );
-}
-
 function isActiveStatus(value) {
   const normalized = normalizeText(value);
 
@@ -172,7 +140,7 @@ function getCompanyAvailability(company = {}) {
   };
 }
 
-function AdminCompanyAssignmentPanel({ report, onAssigned }) {
+function AdminCompanyAssignmentPanel({ report, onAssigned, allowReassignment = false }) {
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -192,7 +160,7 @@ function AdminCompanyAssignmentPanel({ report, onAssigned }) {
 
   const assignedCompanyName = getAssignedCompanyName(report);
   const reportHasExistingAssignment = hasExistingAssignment(report);
-  const canReassign = canReassignAfterCompanyResponse(report);
+  const canReassign = allowReassignment;
   const isAssignmentLocked = reportHasExistingAssignment && !canReassign;
 
   const excludedCompanyIds = useMemo(
@@ -409,7 +377,7 @@ function AdminCompanyAssignmentPanel({ report, onAssigned }) {
           <div>
             <strong>تم تعيين شركة بالفعل لهذا البلاغ.</strong>
             <p>
-              الشركة المعينة حاليًا: {currentCompanyLabel}. لا يمكن تعيين شركة أخرى إلا إذا أرسلت الشركة الحالية اعتذارًا أو تعذر تنفيذ للبلاغ.
+              الشركة المعينة حاليًا: {currentCompanyLabel}. اختيار شركة أخرى لا يُفتح إلا بعد اعتماد الأدمن لقرار إعادة الإسناد.
             </p>
           </div>
         </div>

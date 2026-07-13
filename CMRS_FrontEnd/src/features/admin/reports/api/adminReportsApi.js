@@ -298,7 +298,6 @@ function normalizeReporter(reporter = {}) {
     phone: reporter.phone || '-',
     reportsCount: reporter.reportsCount ?? 0,
     trustScore: reporter.trustScore ?? 0,
-    verified: Boolean(reporter.verified),
   };
 }
 
@@ -585,8 +584,11 @@ function isUnsupportedCompanyReviewAction(error) {
 }
 
 export async function acceptCompanyFix(reportId, payload = {}) {
+  // The deployed backend validates this legacy action case-sensitively.
+  // Send the exact action name expected by the API; lowercase values such as
+  // `approve`, `accept`, and `accept_solution` are rejected as invalid.
   await reviewCompanyResponse(reportId, {
-    action: 'approve',
+    action: 'Approve',
     decision: 'accept_solution',
     submissionId: payload.submissionId,
     adminNote: payload.adminNote,

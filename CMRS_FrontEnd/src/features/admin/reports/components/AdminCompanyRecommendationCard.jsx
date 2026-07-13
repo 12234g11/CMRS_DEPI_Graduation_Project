@@ -1,8 +1,6 @@
 import {
   FiAlertCircle,
   FiBriefcase,
-  FiCheck,
-  FiClock,
   FiMapPin,
 } from 'react-icons/fi';
 
@@ -43,15 +41,6 @@ function AdminCompanyRecommendationCard({ company, availability, isSelected, onS
           {company.workloadLabel}
         </span>
 
-        <span>
-          <FiClock />
-          {company.avgResponseTime}
-        </span>
-
-        <span>
-          <FiCheck />
-          {company.successRate}%
-        </span>
       </div>
 
       <div className="admin-company-capacity">

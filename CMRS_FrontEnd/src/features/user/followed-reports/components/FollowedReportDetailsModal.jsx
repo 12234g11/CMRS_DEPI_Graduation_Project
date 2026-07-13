@@ -126,7 +126,7 @@ function getExecutionStatePresentation({
         icon: 'check',
         title: 'تم قبول البلاغ',
         description: assignmentConfirmed
-          ? 'تم قبول البلاغ وظهرت بيانات تدل على بدء إجراءات الإسناد.'
+          ? 'تم قبول البلاغ وبدأت إجراءات الإسناد.'
           : 'البلاغ مقبول وجاهز للإسناد إلى جهة التنفيذ.',
       };
 
@@ -137,7 +137,7 @@ function getExecutionStatePresentation({
         title: 'تم إسناد البلاغ',
         description: companyName
           ? `تم إسناد البلاغ إلى ${companyName}.`
-          : 'تم إسناد البلاغ بالفعل، لكن اسم الشركة غير متاح ضمن البيانات العامة الراجعة.',
+          : 'تم إسناد البلاغ إلى جهة التنفيذ.',
       };
 
     case 'InProgress':
@@ -147,7 +147,7 @@ function getExecutionStatePresentation({
         title: 'التنفيذ جارٍ الآن',
         description: companyName
           ? `تتولى ${companyName} تنفيذ البلاغ حاليًا.`
-          : 'بدأت جهة التنفيذ العمل على البلاغ، لكن اسم الشركة غير متاح ضمن البيانات العامة الراجعة.',
+          : 'بدأت جهة التنفيذ العمل على البلاغ.',
       };
 
     case 'Resolved':
@@ -157,7 +157,7 @@ function getExecutionStatePresentation({
         title: 'تم حل البلاغ',
         description: companyName
           ? `أنهت ${companyName} تنفيذ البلاغ وتم تسجيله كمحلول.`
-          : 'اكتمل تنفيذ البلاغ وتم تسجيله كمحلول، حتى لو لم تتوفر بيانات اسم الشركة.',
+          : 'اكتمل تنفيذ البلاغ وتم تسجيله كمحلول.',
       };
 
     case 'UnableToExecute':
@@ -195,7 +195,7 @@ function getExecutionStatePresentation({
         tone: 'info',
         icon: 'info',
         title: 'حالة التنفيذ',
-        description: publicUpdate || 'لا توجد تفاصيل تنفيذ إضافية متاحة.',
+        description: publicUpdate || 'يمكن متابعة تطور حالة البلاغ من سجل الحالة.',
       };
   }
 }
@@ -241,6 +241,57 @@ function FollowedReportDetailsModal({
   const hasMultipleImages = images.length > 1;
   const reporter = report.reporterPublicInfo;
   const reporterStats = reporter?.statistics || {};
+  const reporterItems = reporter
+    ? [
+        {
+          key: 'name',
+          icon: <FiUser />,
+          label: 'الاسم المعروض',
+          value: reporter.displayName,
+        },
+        {
+          key: 'city',
+          icon: <FiMapPin />,
+          label: 'المدينة',
+          value: reporter.city,
+        },
+        {
+          key: 'trust',
+          icon: <FiShield />,
+          label: 'درجة الثقة',
+          value: reporter.trustScore,
+        },
+        {
+          key: 'joined',
+          icon: <FiCalendar />,
+          label: 'تاريخ الانضمام',
+          value: reporter.joinedAt ? formatDate(reporter.joinedAt) : null,
+        },
+        {
+          key: 'total',
+          icon: <FiFileText />,
+          label: 'إجمالي البلاغات',
+          value: reporterStats.totalReports,
+        },
+        {
+          key: 'accepted',
+          icon: <FiCheckCircle />,
+          label: 'بلاغات مقبولة',
+          value: reporterStats.acceptedReports,
+        },
+        {
+          key: 'resolved',
+          icon: <FiCheckCircle />,
+          label: 'بلاغات تم حلها',
+          value: reporterStats.resolvedReports,
+        },
+      ].filter(
+        (item) =>
+          item.value !== null &&
+          item.value !== undefined &&
+          String(item.value).trim() !== ''
+      )
+    : [];
   const company = report.assignedCompanyPublicInfo;
   const execution = report.executionInfo;
   const history = Array.isArray(report.statusHistory)
@@ -248,6 +299,8 @@ function FollowedReportDetailsModal({
     : [];
   const statusKey = report.statusKey;
   const companyName = company?.companyName || '';
+  const companySpecialization = company?.specialization || '';
+  const hasCompanyDetails = Boolean(companyName || companySpecialization);
 
   const assignmentConfirmed = Boolean(
     company ||
@@ -433,58 +486,36 @@ function FollowedReportDetailsModal({
               </DetailBlock>
             </div>
 
-            <section className="followed-report-modal__section">
-              <div className="followed-report-modal__section-title">
-                <FiUser />
-                <div>
-                  <strong>بيانات عامة عن صاحب البلاغ</strong>
-                  <span>لا يتم عرض أي بيانات اتصال أو بيانات شخصية خاصة.</span>
+            {reporterItems.length ? (
+              <section className="followed-report-modal__section">
+                <div className="followed-report-modal__section-title">
+                  <FiUser />
+                  <div>
+                    <strong>بيانات صاحب البلاغ</strong>
+                    <span>ملخص عن صاحب البلاغ.</span>
+                  </div>
                 </div>
-              </div>
 
-              {reporter ? (
                 <div className="followed-report-modal__public-info-grid">
-                  <SummaryCard icon={<FiUser />} label="الاسم المعروض">
-                    <strong>{reporter.displayName || 'مستخدم'}</strong>
-                  </SummaryCard>
-
-                  <SummaryCard icon={<FiMapPin />} label="المدينة">
-                    <strong>{reporter.city || 'غير محددة'}</strong>
-                  </SummaryCard>
-
-                  <SummaryCard icon={<FiShield />} label="درجة الثقة">
-                    <strong>{reporter.trustScore ?? 0}</strong>
-                  </SummaryCard>
-
-                  <SummaryCard icon={<FiCalendar />} label="تاريخ الانضمام">
-                    <strong>{formatDate(reporter.joinedAt)}</strong>
-                  </SummaryCard>
-
-                  <SummaryCard icon={<FiFileText />} label="إجمالي البلاغات">
-                    <strong>{reporterStats.totalReports ?? 0}</strong>
-                  </SummaryCard>
-
-                  <SummaryCard icon={<FiCheckCircle />} label="بلاغات مقبولة">
-                    <strong>{reporterStats.acceptedReports ?? 0}</strong>
-                  </SummaryCard>
-
-                  <SummaryCard icon={<FiCheckCircle />} label="بلاغات تم حلها">
-                    <strong>{reporterStats.resolvedReports ?? 0}</strong>
-                  </SummaryCard>
+                  {reporterItems.map((item) => (
+                    <SummaryCard
+                      key={item.key}
+                      icon={item.icon}
+                      label={item.label}
+                    >
+                      <strong>{item.value}</strong>
+                    </SummaryCard>
+                  ))}
                 </div>
-              ) : (
-                <p className="followed-report-modal__empty-note">
-                  لا توجد بيانات عامة متاحة عن صاحب البلاغ.
-                </p>
-              )}
-            </section>
+              </section>
+            ) : null}
 
             <section className="followed-report-modal__section">
               <div className="followed-report-modal__section-title">
                 <FiBriefcase />
                 <div>
                   <strong>جهة التنفيذ</strong>
-                  <span>المعلومات العامة المتاحة عن الشركة وحالة التنفيذ.</span>
+                  <span>حالة التنفيذ والجهة المسند إليها البلاغ.</span>
                 </div>
               </div>
 
@@ -510,24 +541,21 @@ function FollowedReportDetailsModal({
                 </DetailBlock>
               ) : null}
 
-              {company ? (
+              {hasCompanyDetails ? (
                 <div className="followed-report-modal__company-card">
                   <div>
-                    <small>الشركة المسند إليها البلاغ</small>
-                    <strong>{company.companyName || 'اسم الشركة غير متاح'}</strong>
+                    <small>
+                      {companyName
+                        ? 'الشركة المسند إليها البلاغ'
+                        : 'تخصص جهة التنفيذ'}
+                    </small>
+                    <strong>{companyName || companySpecialization}</strong>
                   </div>
-                  <span>{company.specialization || 'التخصص غير محدد'}</span>
+                  {companyName && companySpecialization ? (
+                    <span>{companySpecialization}</span>
+                  ) : null}
                 </div>
-              ) : assignmentConfirmed ? (
-                <p className="followed-report-modal__empty-note followed-report-modal__empty-note--confirmed">
-                  حالة البلاغ وبيانات التنفيذ تؤكدان أنه تم إسناده لجهة تنفيذ،
-                  لكن اسم الشركة وتخصصها غير متاحين في البيانات العامة الحالية.
-                </p>
-              ) : (
-                <p className="followed-report-modal__empty-note">
-                  لم يتم إسناد البلاغ إلى شركة حتى الآن.
-                </p>
-              )}
+              ) : null}
 
               {executionMilestones.length || execution?.publicUpdate ? (
                 <div className="followed-report-modal__execution-grid">
@@ -542,37 +570,34 @@ function FollowedReportDetailsModal({
                   ))}
 
                   {execution?.publicUpdate ? (
-                    <DetailBlock icon={<FiInfo />} label="آخر تحديث معلن">
+                    <DetailBlock icon={<FiInfo />} label="آخر تحديث">
                       <p>{execution.publicUpdate}</p>
                     </DetailBlock>
                   ) : null}
                 </div>
               ) : null}
 
-              {statusKey === 'UnableToExecute' ? (
+              {statusKey === 'UnableToExecute' &&
+              (execution?.publicMessage || execution?.unableToExecuteReason) ? (
                 <DetailBlock
                   icon={<FiXCircle />}
                   label="سبب تعذر التنفيذ"
                   className="followed-report-modal__status-reason"
                 >
                   <p>
-                    {execution?.publicMessage ||
-                      execution?.unableToExecuteReason ||
-                      'تعذر تنفيذ البلاغ بعد مراجعة الجهة المختصة.'}
+                    {execution.publicMessage || execution.unableToExecuteReason}
                   </p>
                 </DetailBlock>
               ) : null}
 
-              {statusKey === 'NeedsCompletion' ? (
+              {statusKey === 'NeedsCompletion' &&
+              execution?.needsCompletionReason ? (
                 <DetailBlock
                   icon={<FiInfo />}
                   label="سبب طلب الاستكمال"
                   className="followed-report-modal__status-reason"
                 >
-                  <p>
-                    {execution?.needsCompletionReason ||
-                      'لم يتم إتاحة تفاصيل عامة إضافية عن المطلوب استكماله.'}
-                  </p>
+                  <p>{execution.needsCompletionReason}</p>
                 </DetailBlock>
               ) : null}
 
@@ -596,7 +621,7 @@ function FollowedReportDetailsModal({
                   <FiActivity />
                   <div>
                     <strong>سجل الحالة العام</strong>
-                    <span>بدون أسماء موظفين أو ملاحظات داخلية.</span>
+                    <span>تطور حالة البلاغ خطوة بخطوة.</span>
                   </div>
                 </div>
 

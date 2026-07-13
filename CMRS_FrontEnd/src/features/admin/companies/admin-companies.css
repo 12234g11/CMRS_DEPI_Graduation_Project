@@ -880,13 +880,69 @@
   accent-color: var(--color-primary);
 }
 
-.admin-company-form-error {
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(239, 124, 124, 0.13);
-  color: #c24a4a;
-  font-size: 0.86rem;
-  font-weight: 900;
+.admin-company-form-alert {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 16px;
+  background: #fef2f2;
+  color: #991b1b;
+  box-shadow: 0 10px 24px rgba(153, 27, 27, 0.08);
+}
+
+.admin-company-form-alert > svg {
+  flex: 0 0 auto;
+  width: 21px;
+  height: 21px;
+  margin-top: 1px;
+}
+
+.admin-company-form-alert > div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-company-form-alert strong {
+  font-size: 0.9rem;
+  font-weight: 950;
+}
+
+.admin-company-form-alert span {
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.7;
+}
+
+.admin-company-form label.has-error input {
+  border-color: #ef4444;
+  background: #fff7f7;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.admin-company-field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 7px;
+  color: #b91c1c;
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1.6;
+}
+
+.admin-company-field-error svg {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+}
+
+.admin-company-form__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 /* No-data state inside table */
@@ -1349,4 +1405,48 @@
 .admin-companies-pagination span {
   color: #475569;
   font-weight: 700;
+}
+
+/* Client-side validation states */
+.admin-company-form label.has-error .admin-report-filter-select__button,
+.admin-company-form-section.has-error {
+  border-color: #ef4444;
+  background: #fff7f7;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.admin-company-form-section.has-error {
+  padding: 14px;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 16px;
+}
+
+.admin-company-form-section.has-error .admin-company-checks--large label {
+  background: #fff;
+}
+
+.admin-company-form input[aria-invalid='true'],
+.admin-company-form textarea[aria-invalid='true'] {
+  border-color: #ef4444;
+  background: #fff7f7;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.admin-company-form input[aria-invalid='true']:focus,
+.admin-company-form textarea[aria-invalid='true']:focus,
+.admin-company-form label.has-error .admin-report-filter-select__button:focus-visible {
+  outline: none;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.13);
+}
+
+.admin-company-field-counter {
+  display: block;
+  margin-top: -2px;
+  color: var(--color-subtitle);
+  font-size: 0.72rem;
+  font-weight: 800;
+  direction: ltr;
+  text-align: right;
 }

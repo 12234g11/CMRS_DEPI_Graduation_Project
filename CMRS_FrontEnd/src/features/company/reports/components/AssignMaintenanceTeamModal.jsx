@@ -3,6 +3,7 @@ import {
   FiAlertCircle,
   FiCheckCircle,
   FiPhone,
+  FiShield,
   FiTool,
   FiUserCheck,
   FiUsers,
@@ -25,6 +26,7 @@ function AssignMaintenanceTeamModal({ report, isOpen, onClose, onAssigned }) {
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -32,6 +34,7 @@ function AssignMaintenanceTeamModal({ report, isOpen, onClose, onAssigned }) {
 
     let isMounted = true;
     setIsLoading(true);
+    setIsConfirming(false);
     setError('');
     setSelectedTeamId(report?.assignedTeam?.id || '');
 
@@ -58,42 +61,74 @@ function AssignMaintenanceTeamModal({ report, isOpen, onClose, onAssigned }) {
     if (!isOpen) return undefined;
 
     function handleEscape(event) {
-      if (event.key === 'Escape' && !isSaving) onClose?.();
+      if (event.key !== 'Escape' || isSaving) return;
+
+      if (isConfirming) {
+        setIsConfirming(false);
+        return;
+      }
+
+      onClose?.();
     }
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, isSaving, onClose]);
+  }, [isConfirming, isOpen, isSaving, onClose]);
 
   const selectedTeam = useMemo(
     () => teams.find((team) => String(team.id) === String(selectedTeamId)),
     [selectedTeamId, teams],
   );
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  const availableTeamsCount = useMemo(
+    () => teams.filter((team) => team.canAssign !== false).length,
+    [teams],
+  );
 
-    if (!selectedTeamId) {
+  function validateSelectedTeam() {
+    if (!selectedTeamId || !selectedTeam) {
       setError('اختر فرقة صيانة أولًا قبل تأكيد التعيين.');
-      return;
+      return false;
     }
 
-    const isConfirmed = window.confirm(
-      `هل تريد تعيين ${selectedTeam?.name || 'فرقة الصيانة المختارة'} لهذا البلاغ؟`,
-    );
+    if (selectedTeam.canAssign === false || selectedTeam.isEnabled === false) {
+      setError(
+        selectedTeam.unavailableReason ||
+          'لا يمكن تعيين البلاغ إلى فريق غير مفعّل أو غير متاح حاليًا.',
+      );
+      return false;
+    }
 
-    if (!isConfirmed) return;
+    return true;
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+
+    if (!validateSelectedTeam()) return;
+
+    setError('');
+    setIsConfirming(true);
+  }
+
+  async function handleConfirmAssignment() {
+    if (!validateSelectedTeam()) {
+      setIsConfirming(false);
+      return;
+    }
 
     setIsSaving(true);
     setError('');
 
     try {
       const updatedReport = await assignMaintenanceTeamToReport(report.id, {
-        technicianId: selectedTeamId,
+        teamId: selectedTeamId,
       });
       onAssigned?.(updatedReport);
+      setIsConfirming(false);
       onClose?.();
     } catch (requestError) {
+      setIsConfirming(false);
       setError(requestError.message || 'تعذر تعيين فرقة الصيانة للبلاغ.');
     } finally {
       setIsSaving(false);
@@ -107,7 +142,7 @@ function AssignMaintenanceTeamModal({ report, isOpen, onClose, onAssigned }) {
       className="company-modal-backdrop"
       role="presentation"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !isSaving) onClose?.();
+        if (event.target === event.currentTarget && !isSaving && !isConfirming) onClose?.();
       }}
     >
       <form
@@ -134,7 +169,7 @@ function AssignMaintenanceTeamModal({ report, isOpen, onClose, onAssigned }) {
           </span>
           <div>
             <h2 id="company-team-modal-title">تعيين فرقة صيانة</h2>
-            <p>اختر الفرقة التي ستتولى تنفيذ البلاغ، ويمكن تغييرها لاحقًا.</p>
+            <p>اختر فرقة مفعّلة ومتاحة لتتولى تنفيذ البلاغ.</p>
           </div>
         </header>
 
@@ -164,7 +199,14 @@ function AssignMaintenanceTeamModal({ report, isOpen, onClose, onAssigned }) {
         {!isLoading && !teams.length ? (
           <div className="company-modal-empty">
             <FiAlertCircle />
-            لا توجد فرق صيانة متاحة في حساب الشركة حاليًا.
+            لا توجد فرق صيانة مسجلة في حساب الشركة حاليًا.
+          </div>
+        ) : null}
+
+        {!isLoading && teams.length && !availableTeamsCount ? (
+          <div className="company-modal-empty company-modal-empty--warning">
+            <FiAlertCircle />
+            لا توجد فرق مفعّلة ومتاحة للتعيين حاليًا. فعّل فريقًا أو انتظر حتى تتوفر سعته.
           </div>
         ) : null}
 
@@ -172,7 +214,7 @@ function AssignMaintenanceTeamModal({ report, isOpen, onClose, onAssigned }) {
           <div className="company-technicians-list" role="radiogroup" aria-label="فرق الصيانة">
             {teams.map((team) => {
               const isSelected = String(team.id) === String(selectedTeamId);
-              const isUnavailable = String(team.availability).toLowerCase() === 'unavailable';
+              const isUnavailable = team.canAssign === false || team.isEnabled === false;
 
               return (
                 <button
@@ -180,12 +222,20 @@ function AssignMaintenanceTeamModal({ report, isOpen, onClose, onAssigned }) {
                   type="button"
                   role="radio"
                   aria-checked={isSelected}
-                  className={`company-technician-card ${isSelected ? 'is-selected' : ''}`}
+                  aria-disabled={isUnavailable}
+                  className={`company-technician-card ${isSelected ? 'is-selected' : ''} ${isUnavailable ? 'is-disabled' : ''}`}
                   onClick={() => {
-                    if (!isUnavailable) {
-                      setSelectedTeamId(team.id);
-                      setError('');
+                    if (isUnavailable) {
+                      setError(
+                        team.unavailableReason ||
+                          'لا يمكن اختيار هذا الفريق لأنه غير مفعّل أو غير متاح حاليًا.',
+                      );
+                      return;
                     }
+
+                    setSelectedTeamId(team.id);
+                    setIsConfirming(false);
+                    setError('');
                   }}
                   disabled={isUnavailable || isSaving}
                 >
@@ -199,10 +249,24 @@ function AssignMaintenanceTeamModal({ report, isOpen, onClose, onAssigned }) {
                       {team.specialization || 'تخصص عام'}
                       {team.leadName ? ` — المسؤول: ${team.leadName}` : ''}
                     </p>
-                    {team.phone ? (
-                      <small>
-                        <FiPhone />
-                        {team.phone}
+                    <span className="company-technician-card__meta">
+                      {team.phone ? (
+                        <small>
+                          <FiPhone />
+                          {team.phone}
+                        </small>
+                      ) : null}
+                      {Number.isFinite(Number(team.activeTasks)) ? (
+                        <small>
+                          <FiTool />
+                          المهام النشطة: {team.activeTasks}/{team.maxCapacity || 5}
+                        </small>
+                      ) : null}
+                    </span>
+                    {isUnavailable && team.unavailableReason ? (
+                      <small className="company-technician-card__reason">
+                        <FiAlertCircle />
+                        {team.unavailableReason}
                       </small>
                     ) : null}
                   </span>
@@ -231,13 +295,89 @@ function AssignMaintenanceTeamModal({ report, isOpen, onClose, onAssigned }) {
           <button
             type="submit"
             className="company-modal-submit-btn"
-            disabled={isSaving || isLoading || !teams.length}
+            disabled={
+              isSaving ||
+              isLoading ||
+              !teams.length ||
+              !selectedTeam ||
+              selectedTeam.canAssign === false
+            }
           >
             <FiCheckCircle />
-            {isSaving ? 'جاري التعيين...' : 'تأكيد التعيين'}
+            مراجعة التعيين
           </button>
         </div>
       </form>
+
+      {isConfirming && selectedTeam ? (
+        <div
+          className="company-team-confirmation-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isSaving) setIsConfirming(false);
+          }}
+        >
+          <section
+            className="company-team-confirmation"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="company-team-confirmation-title"
+            aria-describedby="company-team-confirmation-description"
+          >
+            <span className="company-team-confirmation__icon">
+              <FiShield />
+            </span>
+
+            <h3 id="company-team-confirmation-title">تأكيد تعيين فرقة الصيانة</h3>
+            <p id="company-team-confirmation-description">
+              راجع بيانات الفرقة قبل إرسال التعيين. بعد التأكيد سيظهر البلاغ ضمن مهام الفرقة المختارة.
+            </p>
+
+            <div className="company-team-confirmation__summary">
+              <div>
+                <small>البلاغ</small>
+                <strong>{report.title || report.type}</strong>
+                <span dir="ltr">{report.id}</span>
+              </div>
+
+              <span className="company-team-confirmation__arrow" aria-hidden="true">
+                <FiCheckCircle />
+              </span>
+
+              <div>
+                <small>الفرقة المختارة</small>
+                <strong>{selectedTeam.name}</strong>
+                <span>{selectedTeam.leadName || selectedTeam.specialization || 'فرقة صيانة'}</span>
+              </div>
+            </div>
+
+            <div className="company-team-confirmation__status">
+              <FiCheckCircle />
+              الفريق مفعّل ومتاح للتعيين حاليًا.
+            </div>
+
+            <div className="company-team-confirmation__actions">
+              <button
+                type="button"
+                className="company-team-confirmation__back"
+                onClick={() => setIsConfirming(false)}
+                disabled={isSaving}
+              >
+                الرجوع للاختيار
+              </button>
+              <button
+                type="button"
+                className="company-team-confirmation__confirm"
+                onClick={handleConfirmAssignment}
+                disabled={isSaving}
+              >
+                <FiCheckCircle />
+                {isSaving ? 'جاري التعيين...' : 'نعم، تعيين الفريق'}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -470,12 +470,101 @@ function normalizeCompanyResponse(companyResponse, report = {}) {
 function normalizeTeam(team) {
   if (!team) return null;
 
+  const getFirstDefinedValue = (...values) =>
+    values.find((value) => value !== undefined && value !== null && value !== '');
+
+  const parseBooleanValue = (value) => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+
+    const normalizedValue = compactKey(value);
+    if (['true', '1', 'yes', 'active', 'enabled'].includes(normalizedValue)) return true;
+    if (['false', '0', 'no', 'inactive', 'disabled'].includes(normalizedValue)) return false;
+    return null;
+  };
+
+  const rawStatus = getFirstDefinedValue(
+    team.status,
+    team.teamStatus,
+    team.activationStatus,
+    team.accountStatus,
+  );
+  const normalizedStatus = compactKey(
+    `${rawStatus || ''} ${team.availability || team.availabilityStatus || team.workStatus || ''}`,
+  );
+  const explicitEnabled = parseBooleanValue(
+    getFirstDefinedValue(team.isEnabled, team.enabled, team.isActive, team.active),
+  );
+  const hasDisabledStatus = [
+    'disabled',
+    'inactive',
+    'deactivated',
+    'suspended',
+    'offline',
+    'غيرمفعل',
+    'معطل',
+    'موقوف',
+  ].some((status) => normalizedStatus.includes(status));
+  const isEnabled = hasDisabledStatus ? false : explicitEnabled ?? true;
+
+  const activeTasks = Number(
+    getFirstDefinedValue(team.activeTasks, team.activeReportsCount, team.currentTasks, 0),
+  );
+  const maxCapacity = Number(
+    getFirstDefinedValue(team.maxCapacity, team.capacity, team.maximumCapacity, 5),
+  );
+  const hasCapacityValues = Number.isFinite(activeTasks) && Number.isFinite(maxCapacity);
+  const isAtCapacity = hasCapacityValues && maxCapacity > 0 && activeTasks >= maxCapacity;
+
+  const rawAvailability = getFirstDefinedValue(
+    team.availability,
+    team.availabilityStatus,
+    team.workStatus,
+  );
+  const normalizedAvailability = compactKey(rawAvailability);
+  const unavailableByAvailability = [
+    'unavailable',
+    'offline',
+    'disabled',
+    'inactive',
+  ].includes(normalizedAvailability);
+  const busyByAvailability = normalizedAvailability === 'busy';
+  const canAssign = isEnabled && !isAtCapacity && !unavailableByAvailability && !busyByAvailability;
+
+  const availability = !isEnabled
+    ? 'Offline'
+    : isAtCapacity || busyByAvailability
+      ? 'Busy'
+      : rawAvailability || 'Available';
+
+  const availabilityLabel = !isEnabled
+    ? 'غير مفعّل'
+    : isAtCapacity || busyByAvailability
+      ? 'مشغول'
+      : team.availabilityLabel || (compactKey(availability) === 'available' ? 'متاح' : availability);
+
+  const unavailableReason = !isEnabled
+    ? 'لا يمكن تعيين البلاغ إلى فريق غير مفعّل.'
+    : isAtCapacity || busyByAvailability
+      ? `وصل الفريق إلى الحد الأقصى للبلاغات النشطة${hasCapacityValues ? ` (${activeTasks}/${maxCapacity})` : ''}.`
+      : unavailableByAvailability
+        ? 'الفريق غير متاح للتعيين حاليًا.'
+        : '';
+
   return {
     ...team,
     id: team.id || team.teamId || team.technicianId,
     name: team.name || team.teamName || 'فرقة صيانة',
     leadName: team.leadName || team.teamLeader || team.managerName || '',
     phone: team.phone || team.phoneNumber || '',
+    status: rawStatus || (isEnabled ? 'Active' : 'Disabled'),
+    isEnabled,
+    activeTasks: Number.isFinite(activeTasks) ? activeTasks : 0,
+    maxCapacity: Number.isFinite(maxCapacity) ? maxCapacity : 5,
+    availability,
+    availabilityLabel,
+    canAssign,
+    unavailableReason,
   };
 }
 
@@ -620,7 +709,13 @@ async function request(
     : await response.text();
 
   if (!response.ok) {
+    const validationMessage = responseBody?.errors
+      ? Object.values(responseBody.errors)
+          .flatMap((value) => (Array.isArray(value) ? value : [value]))
+          .find(Boolean)
+      : '';
     const message =
+      validationMessage ||
       responseBody?.message ||
       responseBody?.title ||
       'حدث خطأ أثناء الاتصال بالخادم.';
@@ -702,9 +797,15 @@ export async function getCompanyMaintenanceTeams() {
 }
 
 export async function assignMaintenanceTeamToReport(reportId, payload) {
+  const teamId = payload?.teamId || payload?.TeamId || payload?.technicianId;
+
+  if (!teamId) {
+    throw new Error('معرّف فرقة الصيانة مطلوب لإتمام التعيين.');
+  }
+
   const data = await request(`/api/company/reports/${reportId}/assign-team`, {
     method: 'PATCH',
-    body: { technicianId: payload.technicianId },
+    body: { TeamId: teamId },
   });
 
   return normalizeReport(data);

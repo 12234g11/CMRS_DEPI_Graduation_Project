@@ -98,6 +98,7 @@ function AdminCompanyResponseReviewCard({
   const [userMessage, setUserMessage] = useState('');
   const [isDecisionConfirmed, setIsDecisionConfirmed] = useState(false);
   const [noteError, setNoteError] = useState('');
+  const [actionError, setActionError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [activeAction, setActiveAction] = useState('');
   const [previewIndex, setPreviewIndex] = useState(null);
@@ -116,6 +117,7 @@ function AdminCompanyResponseReviewCard({
     setUserMessage('');
     setIsDecisionConfirmed(false);
     setNoteError('');
+    setActionError('');
   }, [report.id, response?.id, images.length]);
 
   if (!response) {
@@ -230,6 +232,7 @@ function AdminCompanyResponseReviewCard({
     setIsSaving(true);
     setActiveAction(action);
     setNoteError('');
+    setActionError('');
 
     try {
       if (action === 'accept-fix') {
@@ -266,6 +269,18 @@ function AdminCompanyResponseReviewCard({
           decision: 'reassign',
         });
       }
+    } catch (error) {
+      const backendMessage = String(
+        error?.response?.data?.message ||
+          error?.response?.data?.title ||
+          '',
+      ).trim();
+
+      setActionError(
+        backendMessage && backendMessage !== 'Invalid review action.'
+          ? backendMessage
+          : 'تعذر قبول الحل لأن الخادم رفض نوع القرار المرسل. تأكد من تشغيل آخر نسخة من ملفات البلاغات.',
+      );
     } finally {
       setIsSaving(false);
       setActiveAction('');
@@ -632,6 +647,13 @@ function AdminCompanyResponseReviewCard({
               </>
             ) : null}
           </div>
+
+          {actionError ? (
+            <div className="admin-company-response-note-error admin-company-response-action-error" role="alert">
+              <FiAlertCircle />
+              <span>{actionError}</span>
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="admin-company-response-reviewed">

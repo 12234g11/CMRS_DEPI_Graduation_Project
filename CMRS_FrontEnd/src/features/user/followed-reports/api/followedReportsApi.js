@@ -859,6 +859,64 @@ export async function getFollowedReports({
   };
 }
 
+export async function findFollowedReportPage({
+  reportId,
+  pageSize = 10,
+} = {}) {
+  const cleanReportId = String(reportId || '').trim();
+
+  if (!cleanReportId) {
+    return null;
+  }
+
+  const firstPage = await getFollowedReports({
+    pageNumber: 1,
+    pageSize,
+    status: FOLLOWED_REPORT_STATUS_API_VALUES.all,
+    sortBy: 'FollowedAt',
+    sortDirection: 'desc',
+  });
+
+  const firstPageReport = firstPage.items.find(
+    (report) => String(report.reportId || report.id) === cleanReportId
+  );
+
+  if (firstPageReport) {
+    return {
+      pageNumber: 1,
+      report: firstPageReport,
+    };
+  }
+
+  const totalPages = Math.max(
+    1,
+    Number(firstPage.pagination?.totalPages || 1)
+  );
+
+  for (let currentPage = 2; currentPage <= totalPages; currentPage += 1) {
+    const page = await getFollowedReports({
+      pageNumber: currentPage,
+      pageSize,
+      status: FOLLOWED_REPORT_STATUS_API_VALUES.all,
+      sortBy: 'FollowedAt',
+      sortDirection: 'desc',
+    });
+
+    const matchedReport = page.items.find(
+      (report) => String(report.reportId || report.id) === cleanReportId
+    );
+
+    if (matchedReport) {
+      return {
+        pageNumber: currentPage,
+        report: matchedReport,
+      };
+    }
+  }
+
+  return null;
+}
+
 export async function getFollowedReportDetails(reportId) {
   if (!reportId) {
     throw new Error('معرّف البلاغ غير متاح.');

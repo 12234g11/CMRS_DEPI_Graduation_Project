@@ -12,6 +12,8 @@ import {
   FiXCircle,
 } from 'react-icons/fi';
 import ImagePreviewModal from './ImagePreviewModal';
+import StartWorkConfirmationModal from './StartWorkConfirmationModal';
+import CannotFixConfirmationModal from './CannotFixConfirmationModal';
 import {
   isDuplicateImage,
   MAX_REPORT_IMAGES,
@@ -48,6 +50,8 @@ function UpdateReportStatusForm({
   const [errors, setErrors] = useState({});
   const [isSavingAction, setIsSavingAction] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
+  const [isStartConfirmationOpen, setIsStartConfirmationOpen] = useState(false);
+  const [isCannotFixConfirmationOpen, setIsCannotFixConfirmationOpen] = useState(false);
 
   const startFileInputRef = useRef(null);
   const startCameraInputRef = useRef(null);
@@ -150,15 +154,13 @@ function UpdateReportStatusForm({
       return;
     }
 
-    const isConfirmed = window.confirm(
-      isReturnedCannotFix
-        ? 'هل أنت متأكد من استئناف تنفيذ البلاغ بعد رفض طلب التعذر؟ ستتغير الحالة إلى جاري التنفيذ.'
-        : 'هل أنت متأكد من بدء تنفيذ البلاغ؟ ستتغير الحالة إلى جاري التنفيذ، وستُرفع صور المعاينة المضافة كدليل بدء.',
-    );
+    setErrors((currentErrors) => ({ ...currentErrors, submit: '' }));
+    setIsStartConfirmationOpen(true);
+  }
 
-    if (!isConfirmed) return;
-
+  async function confirmStartWork() {
     setIsSavingAction('start');
+    setErrors((currentErrors) => ({ ...currentErrors, submit: '' }));
 
     try {
       await onStartWork?.({
@@ -170,12 +172,14 @@ function UpdateReportStatusForm({
       setStartImages([]);
       setStartNote('');
       setErrors({});
+      setIsStartConfirmationOpen(false);
     } catch (requestError) {
-      setErrors({
+      setErrors((currentErrors) => ({
+        ...currentErrors,
         submit:
           requestError.message ||
           'تعذر بدء تنفيذ البلاغ. راجع الاتصال وحاول مرة أخرى.',
-      });
+      }));
     } finally {
       setIsSavingAction('');
     }
@@ -205,18 +209,18 @@ function UpdateReportStatusForm({
     return !Object.keys(nextErrors).length;
   }
 
-  async function handleCannotFix(event) {
+  function handleCannotFix(event) {
     event.preventDefault();
 
     if (!validateCannotFixForm()) return;
 
-    const isConfirmed = window.confirm(
-      'سيتم إرسال سبب تعذر التنفيذ للأدمن للمراجعة. هل تريد المتابعة؟',
-    );
+    setErrors((currentErrors) => ({ ...currentErrors, submit: '' }));
+    setIsCannotFixConfirmationOpen(true);
+  }
 
-    if (!isConfirmed) return;
-
+  async function confirmCannotFix() {
     setIsSavingAction('cannot-fix');
+    setErrors((currentErrors) => ({ ...currentErrors, submit: '' }));
 
     try {
       await onCannotFix?.({
@@ -231,12 +235,14 @@ function UpdateReportStatusForm({
       setCannotFixImages([]);
       setIsCannotFixConfirmed(false);
       setIsCannotFixOpen(false);
+      setIsCannotFixConfirmationOpen(false);
       setErrors({});
     } catch (requestError) {
-      setErrors({
+      setErrors((currentErrors) => ({
+        ...currentErrors,
         submit:
           requestError.message || 'تعذر إرسال سبب تعذر التنفيذ للأدمن.',
-      });
+      }));
     } finally {
       setIsSavingAction('');
     }
@@ -613,6 +619,41 @@ function UpdateReportStatusForm({
           {errors.submit}
         </p>
       ) : null}
+
+      <StartWorkConfirmationModal
+        isOpen={isStartConfirmationOpen}
+        isLoading={isSavingAction === 'start'}
+        isResume={isReturnedCannotFix}
+        report={report}
+        teamName={report.assignedTeam?.name}
+        note={startNote}
+        imagesCount={startImages.length}
+        errorMessage={isStartConfirmationOpen ? errors.submit : ''}
+        onClose={() => {
+          if (isSavingAction !== 'start') {
+            setIsStartConfirmationOpen(false);
+            clearFieldError('submit');
+          }
+        }}
+        onConfirm={confirmStartWork}
+      />
+
+      <CannotFixConfirmationModal
+        isOpen={isCannotFixConfirmationOpen}
+        isLoading={isSavingAction === 'cannot-fix'}
+        report={report}
+        reason={cannotFixReason}
+        note={cannotFixNote}
+        imagesCount={cannotFixImages.length}
+        errorMessage={isCannotFixConfirmationOpen ? errors.submit : ''}
+        onClose={() => {
+          if (isSavingAction !== 'cannot-fix') {
+            setIsCannotFixConfirmationOpen(false);
+            clearFieldError('submit');
+          }
+        }}
+        onConfirm={confirmCannotFix}
+      />
 
       <ImagePreviewModal
         imageUrl={previewImage?.url}
