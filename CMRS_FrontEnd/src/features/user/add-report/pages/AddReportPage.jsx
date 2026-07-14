@@ -24,7 +24,6 @@ const DEFAULT_LOCATION = {
   governorate: '',
   governorateLabel: '',
   addressLine: '',
-  addressDetails: '',
   previewLabel: '',
   previewGovernorate: '',
 };
@@ -47,6 +46,93 @@ function getReportId(report) {
   return report?.reportId || report?.id || report?.ReportId || report?.Id || '';
 }
 
+function getUserId(user = {}) {
+  return user.id || user.userId || user.UserId || user.sub || '';
+}
+
+function applyCurrentUserOwnership(report, user) {
+  if (!report) return report;
+
+  const ownerUserId = report.ownerUserId || report.OwnerUserId || '';
+  const currentUserId = getUserId(user);
+  const isSameUser = Boolean(
+    ownerUserId &&
+      currentUserId &&
+      String(ownerUserId).toLowerCase() === String(currentUserId).toLowerCase()
+  );
+
+  return {
+    ...report,
+    isOwnedByCurrentUser: Boolean(report.isOwnedByCurrentUser || isSameUser),
+  };
+}
+
+function readResponseValue(source = {}, ...keys) {
+  return keys.reduce((currentValue, key) => {
+    if (currentValue !== undefined && currentValue !== null) {
+      return currentValue;
+    }
+
+    return source?.[key];
+  }, undefined);
+}
+
+function toSafeCount(value, fallback = 0) {
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue)) return fallback;
+
+  return Math.max(0, numberValue);
+}
+
+function toResponseBoolean(value, fallback = false) {
+  if (typeof value === 'boolean') return value;
+  if (value === 1 || value === '1') return true;
+  if (value === 0 || value === '0') return false;
+
+  if (typeof value === 'string') {
+    const normalizedValue = value.trim().toLowerCase();
+
+    if (['true', 'yes'].includes(normalizedValue)) return true;
+    if (['false', 'no'].includes(normalizedValue)) return false;
+  }
+
+  return fallback;
+}
+
+function normalizeVerifyVote(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'boolean') return value ? 1 : -1;
+
+  const numericValue = Number(value);
+
+  if (Number.isFinite(numericValue)) {
+    if (numericValue === 1) return 1;
+    if (numericValue === -1) return -1;
+    return null;
+  }
+
+  return null;
+}
+
+function getVerifyResponseVote(data = {}, fallbackVote = null) {
+  return (
+    normalizeVerifyVote(
+      readResponseValue(
+        data,
+        'currentUserVerifyVote',
+        'CurrentUserVerifyVote',
+        'verifyVote',
+        'VerifyVote',
+        'userVerifyVote',
+        'UserVerifyVote',
+        'userVote',
+        'UserVote'
+      )
+    ) ?? fallbackVote
+  );
+}
+
 function AddReportPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -64,7 +150,12 @@ function AddReportPage() {
     isLoadingCategories,
     categoriesError,
     submitReport,
-    confirmDuplicate,
+    toggleDuplicateFollow,
+    toggleDuplicateVerify,
+    resetDuplicateActionFeedback,
+    activeDuplicateAction,
+    duplicateActionError,
+    duplicateActionMessage,
     isSubmitting,
     submitError,
   } = useAddReport();
@@ -86,7 +177,6 @@ function AddReportPage() {
     const parts = [
       location.governorateLabel || location.previewGovernorate || '',
       location.addressLine || '',
-      location.addressDetails || '',
     ].filter(Boolean);
 
     return parts.join(' - ');
@@ -114,6 +204,7 @@ function AddReportPage() {
     setUploadMessage('');
     setDuplicateReport(null);
     setLastSubmissionPayload(null);
+    resetDuplicateActionFeedback();
   }
 
   function navigateToMyReports(createdReport, successMessage) {
@@ -129,14 +220,27 @@ function AddReportPage() {
   }
 
   function buildSubmissionPayload() {
+    const currentLocation = formValues.location || {};
+    const location = {
+      coordinates: currentLocation.coordinates,
+      confirmedCoordinates: currentLocation.confirmedCoordinates,
+      isConfirmed: currentLocation.isConfirmed,
+      governorate: currentLocation.governorate,
+      governorateLabel: currentLocation.governorateLabel,
+      addressLine: currentLocation.addressLine,
+      previewLabel: currentLocation.previewLabel,
+      previewGovernorate: currentLocation.previewGovernorate,
+    };
+
     return {
       user,
       category: selectedCategory,
       values: {
         ...formValues,
+        location,
         position:
-          formValues.location?.confirmedCoordinates ||
-          formValues.location?.coordinates ||
+          location.confirmedCoordinates ||
+          location.coordinates ||
           formValues.position,
         locationText: locationLabel,
       },
@@ -242,14 +346,21 @@ function AddReportPage() {
 
     setLastSubmissionPayload(submissionPayload);
 
-    const result = await submitReport(submissionPayload, {
-      ignoreDuplicateCheck: false,
-    });
+    let result;
+
+    try {
+      result = await submitReport(submissionPayload, {
+        ignoreDuplicateCheck: false,
+      });
+    } catch {
+      return;
+    }
 
     if (!result) return;
 
     if (result.type === 'duplicate') {
-      setDuplicateReport(result.duplicateReport);
+      resetDuplicateActionFeedback();
+      setDuplicateReport(applyCurrentUserOwnership(result.duplicateReport, user));
       return;
     }
 
@@ -259,28 +370,170 @@ function AddReportPage() {
     }
   }
 
-  async function handleConfirmDuplicate() {
-    if (!duplicateReport?.id) return;
+  async function handleToggleDuplicateFollow() {
+    if (!duplicateReport?.id || duplicateReport.isOwnedByCurrentUser) return;
 
-    const result = await confirmDuplicate(duplicateReport.id);
+    const selectedPosition =
+      lastSubmissionPayload?.values?.position ||
+      lastSubmissionPayload?.values?.location?.confirmedCoordinates ||
+      lastSubmissionPayload?.values?.location?.coordinates ||
+      null;
+
+    const result = await toggleDuplicateFollow({
+      reportId: duplicateReport.id,
+      isFollowed: Boolean(duplicateReport.isFollowedByCurrentUser),
+      currentLatitude: selectedPosition?.lat,
+      currentLongitude: selectedPosition?.lng,
+    });
 
     if (!result) return;
 
-    resetFormAfterSuccess();
+    const data = result.data || {};
 
-    navigateToMyReports(
-      { reportId: duplicateReport.id },
-      result.message ||
-      'تم تأكيد المشكلة بنجاح ويمكنك متابعة حالته من صفحة بلاغاتي.'
+    setDuplicateReport((currentReport) => {
+      if (!currentReport) return currentReport;
+
+      const wasFollowed = Boolean(currentReport.isFollowedByCurrentUser);
+      const nextIsFollowed = toResponseBoolean(
+        readResponseValue(
+          data,
+          'isFollowedByCurrentUser',
+          'IsFollowedByCurrentUser'
+        ),
+        result.requestedIsFollowed
+      );
+      const currentFollowersCount = toSafeCount(currentReport.followersCount);
+      const responseFollowersCount = readResponseValue(
+        data,
+        'followersCount',
+        'FollowersCount'
+      );
+      const nextFollowersCount =
+        responseFollowersCount != null
+          ? toSafeCount(responseFollowersCount, currentFollowersCount)
+          : Math.max(
+              0,
+              currentFollowersCount +
+                (nextIsFollowed === wasFollowed ? 0 : nextIsFollowed ? 1 : -1)
+            );
+
+      return {
+        ...currentReport,
+        followersCount: nextFollowersCount,
+        isFollowedByCurrentUser: nextIsFollowed,
+      };
+    });
+  }
+
+  async function handleToggleDuplicateVerify(vote) {
+    if (!duplicateReport?.id || duplicateReport.isOwnedByCurrentUser) return;
+
+    const normalizedVote = Number(vote) === -1 ? -1 : 1;
+    const previousVote = normalizeVerifyVote(
+      duplicateReport.currentUserVerifyVote
     );
+
+    const result = await toggleDuplicateVerify({
+      reportId: duplicateReport.id,
+      currentVote: previousVote,
+      vote: normalizedVote,
+    });
+
+    if (!result) return;
+
+    const data = result.data || {};
+
+    setDuplicateReport((currentReport) => {
+      if (!currentReport) return currentReport;
+
+      const currentVote = normalizeVerifyVote(
+        currentReport.currentUserVerifyVote
+      );
+      const currentUpvoteCount = toSafeCount(currentReport.upvoteCount);
+      const currentDownvoteCount = toSafeCount(currentReport.downvoteCount);
+      const responseUpvoteCount = readResponseValue(
+        data,
+        'upvoteCount',
+        'UpvoteCount',
+        'validReportCount',
+        'ValidReportCount'
+      );
+      const responseDownvoteCount = readResponseValue(
+        data,
+        'downvoteCount',
+        'DownvoteCount',
+        'invalidReportCount',
+        'InvalidReportCount'
+      );
+
+      let nextUpvoteCount = toSafeCount(
+        responseUpvoteCount,
+        currentUpvoteCount
+      );
+      let nextDownvoteCount = toSafeCount(
+        responseDownvoteCount,
+        currentDownvoteCount
+      );
+
+      if (responseUpvoteCount == null && responseDownvoteCount == null) {
+        nextUpvoteCount = currentUpvoteCount;
+        nextDownvoteCount = currentDownvoteCount;
+
+        if (result.shouldRemoveCurrentVote) {
+          if (currentVote === 1) {
+            nextUpvoteCount = Math.max(0, nextUpvoteCount - 1);
+          }
+          if (currentVote === -1) {
+            nextDownvoteCount = Math.max(0, nextDownvoteCount - 1);
+          }
+        } else if (currentVote !== normalizedVote) {
+          if (currentVote === 1) {
+            nextUpvoteCount = Math.max(0, nextUpvoteCount - 1);
+          }
+          if (currentVote === -1) {
+            nextDownvoteCount = Math.max(0, nextDownvoteCount - 1);
+          }
+
+          if (normalizedVote === 1) nextUpvoteCount += 1;
+          if (normalizedVote === -1) nextDownvoteCount += 1;
+        }
+      }
+
+      const nextIsVerified = toResponseBoolean(
+        readResponseValue(
+          data,
+          'isVerifiedByCurrentUser',
+          'IsVerifiedByCurrentUser'
+        ),
+        !result.shouldRemoveCurrentVote
+      );
+      const nextVote = nextIsVerified
+        ? getVerifyResponseVote(data, normalizedVote)
+        : null;
+
+      return {
+        ...currentReport,
+        upvoteCount: nextUpvoteCount,
+        downvoteCount: nextDownvoteCount,
+        verifyCount: nextUpvoteCount + nextDownvoteCount,
+        isVerifiedByCurrentUser: nextIsVerified,
+        currentUserVerifyVote: nextVote,
+      };
+    });
   }
 
   async function handleCreateAnyway() {
     const submissionPayload = lastSubmissionPayload || buildSubmissionPayload();
 
-    const result = await submitReport(submissionPayload, {
-      ignoreDuplicateCheck: true,
-    });
+    let result;
+
+    try {
+      result = await submitReport(submissionPayload, {
+        ignoreDuplicateCheck: true,
+      });
+    } catch {
+      return;
+    }
 
     if (!result) return;
 
@@ -296,7 +549,8 @@ function AddReportPage() {
     }
 
     if (result.type === 'duplicate') {
-      setDuplicateReport(result.duplicateReport);
+      resetDuplicateActionFeedback();
+      setDuplicateReport(applyCurrentUserOwnership(result.duplicateReport, user));
     }
   }
 
@@ -358,11 +612,16 @@ function AddReportPage() {
           <DuplicateReportModal
             duplicateReport={duplicateReport}
             isSubmitting={isSubmitting}
-            onConfirmDuplicate={handleConfirmDuplicate}
+            activeAction={activeDuplicateAction}
+            actionError={duplicateActionError || submitError}
+            actionMessage={duplicateActionMessage}
+            onToggleFollow={handleToggleDuplicateFollow}
+            onToggleVerify={handleToggleDuplicateVerify}
             onCreateAnyway={handleCreateAnyway}
             onClose={() => {
-              if (!isSubmitting) {
+              if (!isSubmitting && !activeDuplicateAction) {
                 setDuplicateReport(null);
+                resetDuplicateActionFeedback();
               }
             }}
           />,

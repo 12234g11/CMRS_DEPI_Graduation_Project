@@ -1287,3 +1287,16 @@
     width: 100%;
   }
 }
+
+/* Type filtering was removed; keep read-status tabs directly available on mobile. */
+@media (max-width: 768px) {
+  .user-notifications-read-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .user-notifications-read-tab {
+    width: 100%;
+  }
+}

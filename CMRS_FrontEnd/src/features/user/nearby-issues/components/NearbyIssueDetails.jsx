@@ -8,6 +8,7 @@ import {
   FiChevronRight,
   FiEye,
   FiInfo,
+  FiMapPin,
   FiX,
   FiXCircle,
 } from 'react-icons/fi';
@@ -34,7 +35,13 @@ function getImageUrl(image) {
   return image?.fullImageUrl || image?.imageUrl || image?.url || '';
 }
 
-function NearbyIssueImagePreview({ images = [], activeIndex, onClose, onChange }) {
+function NearbyIssueImagePreview({
+  images = [],
+  activeIndex,
+  title = 'صور البلاغ',
+  onClose,
+  onChange,
+}) {
   const activeImage = images[activeIndex];
   const activeImageUrl = getImageUrl(activeImage);
   const hasMultipleImages = images.length > 1;
@@ -95,7 +102,7 @@ function NearbyIssueImagePreview({ images = [], activeIndex, onClose, onChange }
       <div className="nearby-image-preview__dialog">
         <div className="nearby-image-preview__header">
           <div>
-            <strong>صورة البلاغ</strong>
+            <strong>{title}</strong>
             <span>
               الصورة {activeIndex + 1} من {images.length}
             </span>
@@ -125,7 +132,7 @@ function NearbyIssueImagePreview({ images = [], activeIndex, onClose, onChange }
 
           <img
             src={activeImageUrl}
-            alt={`صورة البلاغ ${activeIndex + 1}`}
+            alt={`${title} ${activeIndex + 1}`}
           />
 
           {hasMultipleImages ? (
@@ -146,69 +153,153 @@ function NearbyIssueImagePreview({ images = [], activeIndex, onClose, onChange }
 }
 
 
+function normalizeImageTypeKey(value = '') {
+  return String(value || '')
+    .trim()
+    .replace(/[\s_-]+/g, '')
+    .toLowerCase();
+}
+
+function getImageCollections(images = []) {
+  const normalizedImages = images
+    .filter((image) => Boolean(getImageUrl(image)))
+    .map((image, index) => {
+      const imageType =
+        typeof image === 'string'
+          ? ''
+          : image.imageType || image.ImageType || image.type || image.Type || '';
+      const normalizedType = normalizeImageTypeKey(imageType);
+      const isResolvedImage = [
+        'resolved',
+        'solution',
+        'solved',
+        'after',
+        'afterfix',
+        'afterresolution',
+        'completed',
+        'fixed',
+      ].includes(normalizedType);
+
+      return {
+        ...(typeof image === 'string' ? {} : image),
+        id:
+          typeof image === 'string'
+            ? `${image}-${index}`
+            : image.imageId || image.id || `${getImageUrl(image)}-${index}`,
+        fullImageUrl: getImageUrl(image),
+        imageType,
+        kind: isResolvedImage ? 'resolved' : 'report',
+      };
+    });
+
+  return {
+    allImages: normalizedImages,
+    reportImages: normalizedImages.filter((image) => image.kind !== 'resolved'),
+    resolvedImages: normalizedImages.filter((image) => image.kind === 'resolved'),
+  };
+}
+
+function NearbyIssueImageGallery({
+  title,
+  subtitle,
+  images = [],
+  onOpen,
+}) {
+  if (!images.length) return null;
+
+  return (
+    <section className="nearby-issue-details__media-group">
+      <div className="nearby-issue-details__media-heading">
+        <div>
+          <strong>{title}</strong>
+          <span>{subtitle}</span>
+        </div>
+        <small>{images.length} صورة</small>
+      </div>
+
+      <div className="nearby-issue-details__images">
+        {images.map((image, imageIndex) => {
+          const imageUrl = getImageUrl(image);
+          const imageKey = image.id || image.imageId || `${imageUrl}-${imageIndex}`;
+
+          return (
+            <div className="nearby-issue-details__image-card" key={imageKey}>
+              <img
+                src={imageUrl}
+                alt={`${title} - صورة ${imageIndex + 1}`}
+                loading="lazy"
+              />
+
+              <div className="nearby-issue-details__image-overlay">
+                <button
+                  type="button"
+                  className="nearby-issue-details__image-view-btn"
+                  onClick={() => onOpen?.(images, imageIndex, title)}
+                  aria-label={`عرض ${title} ${imageIndex + 1} بالحجم الكامل`}
+                >
+                  <FiEye aria-hidden="true" />
+                  <span>عرض الصورة كاملة</span>
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+
 function getPublicExecutionOutcome(issue = {}) {
   const execution = issue.executionInfo || {};
   const statusKey = String(issue.statusKey || issue.status || '')
     .trim()
     .toLowerCase()
     .replace(/[\s_-]+/g, '');
-  const decisionType = String(execution.decisionType || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_-]+/g, '');
 
-  if (
-    statusKey.includes('unabletoexecute') ||
-    decisionType.includes('acceptcannotfix') ||
-    decisionType.includes('cannotfixaccepted')
-  ) {
-    return {
-      tone: 'unable',
-      icon: <FiAlertTriangle />,
-      title: execution.decisionLabel || 'تم إغلاق البلاغ لتعذر التنفيذ',
-      message: execution.publicMessage || 'لا توجد بيانات للعرض',
-      reason: execution.unableToExecuteReason || 'لا توجد بيانات للعرض',
-      meta: execution.unableToExecuteAt
-        ? `تاريخ القرار: ${formatDate(execution.unableToExecuteAt)}`
-        : 'تاريخ القرار: لا توجد بيانات للعرض',
-    };
+  if (!statusKey.includes('unabletoexecute')) {
+    return null;
   }
 
-  if (statusKey.includes('pendingadminapproval')) {
-    return {
-      tone: 'pending',
-      icon: <FiInfo />,
-      title: 'بانتظار مراجعة الإدارة',
-      message:
-        'تراجع الإدارة رد جهة التنفيذ قبل اعتماد القرار النهائي.',
-    };
-  }
+  const userMessage = String(
+    issue.userMessage ||
+      issue.UserMessage ||
+      execution.publicMessage ||
+      execution.userMessage ||
+      ''
+  ).trim();
 
-  return null;
+  return {
+    tone: 'unable',
+    icon: <FiAlertTriangle />,
+    title: 'سبب التعذر',
+    message: userMessage || 'لا يوجد سبب تعذر للعرض',
+  };
 }
 
 function NearbyIssueDetails({
   issue,
   currentLocation = null,
   onRequestDirections,
+  onShowIssueOnMap,
   onClearSelection,
   onToggleFollow,
   onToggleVerify,
   activeAction = '',
   inline = false,
 }) {
-  const [previewImageIndex, setPreviewImageIndex] = useState(null);
+  const [previewState, setPreviewState] = useState(null);
 
-  const reportImages = useMemo(
+  const { allImages, reportImages, resolvedImages } = useMemo(
     () =>
-      (Array.isArray(issue?.reportImages) ? issue.reportImages : []).filter(
-        (image) => Boolean(getImageUrl(image))
+      getImageCollections(
+        Array.isArray(issue?.reportImages) ? issue.reportImages : []
       ),
     [issue?.reportImages]
   );
 
   useEffect(() => {
-    setPreviewImageIndex(null);
+    setPreviewState(null);
   }, [issue?.reportId, issue?.id]);
 
   if (!issue) return null;
@@ -277,10 +368,6 @@ function NearbyIssueDetails({
           <div>
             <strong>{executionOutcome.title}</strong>
             <p>{executionOutcome.message}</p>
-            {executionOutcome.reason ? (
-              <small>سبب التعذر: {executionOutcome.reason}</small>
-            ) : null}
-            {executionOutcome.meta ? <small>{executionOutcome.meta}</small> : null}
           </div>
         </section>
       ) : null}
@@ -324,44 +411,38 @@ function NearbyIssueDetails({
         <strong>{issue.address || 'لم يتم تحديد العنوان'}</strong>
       </div>
 
-      {reportImages.length ? (
+      {allImages.length ? (
         <div className="nearby-issue-details__media">
-          <div className="nearby-issue-details__media-heading">
-            <strong>صور البلاغ</strong>
-            <span>مرّر على الصورة لمعاينتها أو افتحها بالحجم الكامل</span>
-          </div>
+          {resolvedImages.length ? (
+            <>
+              <NearbyIssueImageGallery
+                title="صور البلاغ قبل الحل"
+                subtitle="الصور المرفوعة عند إنشاء البلاغ وقبل تنفيذ الحل."
+                images={reportImages}
+                onOpen={(images, activeIndex, title) =>
+                  setPreviewState({ images, activeIndex, title })
+                }
+              />
 
-          <div className="nearby-issue-details__images">
-            {reportImages.map((image, imageIndex) => {
-              const imageUrl = getImageUrl(image);
-              const imageKey =
-                typeof image === 'string'
-                  ? `${image}-${imageIndex}`
-                  : image.imageId || image.id || `${imageUrl}-${imageIndex}`;
-
-              return (
-                <div className="nearby-issue-details__image-card" key={imageKey}>
-                  <img
-                    src={imageUrl}
-                    alt={`${issue.title} - صورة ${imageIndex + 1}`}
-                    loading="lazy"
-                  />
-
-                  <div className="nearby-issue-details__image-overlay">
-                    <button
-                      type="button"
-                      className="nearby-issue-details__image-view-btn"
-                      onClick={() => setPreviewImageIndex(imageIndex)}
-                      aria-label={`عرض صورة البلاغ ${imageIndex + 1} بالحجم الكامل`}
-                    >
-                      <FiEye aria-hidden="true" />
-                      <span>عرض الصورة كاملة</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+              <NearbyIssueImageGallery
+                title="صور البلاغ بعد الحل"
+                subtitle="الصور المرفوعة لتوضيح نتيجة التنفيذ بعد معالجة المشكلة."
+                images={resolvedImages}
+                onOpen={(images, activeIndex, title) =>
+                  setPreviewState({ images, activeIndex, title })
+                }
+              />
+            </>
+          ) : (
+            <NearbyIssueImageGallery
+              title="صور البلاغ"
+              subtitle="مرّر على الصورة لمعاينتها أو افتحها بالحجم الكامل."
+              images={reportImages.length ? reportImages : allImages}
+              onOpen={(images, activeIndex, title) =>
+                setPreviewState({ images, activeIndex, title })
+              }
+            />
+          )}
         </div>
       ) : null}
 
@@ -448,6 +529,15 @@ function NearbyIssueDetails({
           عرض أقصر طريق من موقعك الحالي
         </button>
 
+        <button
+          type="button"
+          className="nearby-issue-details__map-btn"
+          onClick={() => onShowIssueOnMap?.(issue)}
+        >
+          <FiMapPin aria-hidden="true" />
+          عرض البلاغ على الخريطة
+        </button>
+
         {!hasCurrentLocation && (
           <p className="nearby-issue-details__helper-text">
             فعّل موقعك الحالي من زر الخريطة ليتم حساب المسار والمسافة الدقيقة.
@@ -463,12 +553,18 @@ function NearbyIssueDetails({
         </button>
       </div>
 
-      {previewImageIndex !== null ? (
+      {previewState ? (
         <NearbyIssueImagePreview
-          images={reportImages}
-          activeIndex={previewImageIndex}
-          onClose={() => setPreviewImageIndex(null)}
-          onChange={setPreviewImageIndex}
+          images={previewState.images}
+          activeIndex={previewState.activeIndex}
+          title={previewState.title}
+          onClose={() => setPreviewState(null)}
+          onChange={(activeIndex) =>
+            setPreviewState((currentState) => ({
+              ...currentState,
+              activeIndex,
+            }))
+          }
         />
       ) : null}
     </div>

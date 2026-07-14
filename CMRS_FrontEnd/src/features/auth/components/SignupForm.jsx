@@ -5,6 +5,7 @@ import { FiChevronDown, FiCheck, FiHome } from 'react-icons/fi';
 import { ROUTES } from '../../../shared/navigation';
 import PasswordInput from './PasswordInput';
 import { registerUser } from '../api/authApi';
+import GoogleAuthSection from './GoogleAuthSection';
 
 const GOVERNORATE_OPTIONS = [
   { value: 'القاهرة', label: 'القاهرة' },
@@ -153,8 +154,7 @@ function SignupForm() {
       className="signup-form"
       variants={containerVariants}
       initial="hidden"
-      whileInView="visible"
-      viewport={{ once: false, amount: 0.12 }}
+      animate="visible"
     >
       <motion.header className="signup-form__header" variants={itemVariants}>
         <h1 className="signup-form__title">انضم إلينا</h1>
@@ -338,6 +338,10 @@ function SignupForm() {
           </Link>
         </motion.p>
       </motion.form>
+
+      <motion.div variants={itemVariants}>
+        <GoogleAuthSection dividerText="أو تابع باستخدام Google" />
+      </motion.div>
     </motion.div>
   );
 }

@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FiArrowLeft,
   FiChevronLeft,
@@ -16,8 +16,8 @@ import PageHeader from '../../../../shared/components/ui/PageHeader';
 import { ROUTES } from '../../../../shared/navigation';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import ReportsMap from '../../../map/components/ReportsMap';
-import UserDashboardReportDetailsModal from '../../dashboard/components/UserDashboardReportDetailsModal';
-import UserMapSelectedReportCard from '../../dashboard/components/UserMapSelectedReportCard';
+import UserReportDetailsModal from '../components/UserReportDetailsModal';
+import UserMapSelectedReportCard from '../components/UserMapSelectedReportCard';
 import RecentReportsTable from '../components/RecentReportsTable';
 import UserReportsFilters from '../components/UserReportsFilters';
 import UserReportsMapLegend from '../components/UserReportsMapLegend';
@@ -36,6 +36,21 @@ import '../user-reports.css';
 
 function getCurrentUserId(user = {}) {
   return user?.id || user?.userId || user?.UserId || user?.sub || '';
+}
+
+function isImmediatePageReload() {
+  if (typeof window === 'undefined' || typeof performance === 'undefined') {
+    return false;
+  }
+
+  const navigationEntry = performance.getEntriesByType?.('navigation')?.[0];
+  const isReload =
+    navigationEntry?.type === 'reload' || performance.navigation?.type === 1;
+
+  // The navigation entry keeps its type for the whole document lifetime.
+  // Limiting this check to the initial load prevents a later SPA navigation
+  // from being mistaken for the original browser refresh.
+  return isReload && performance.now() < 10000;
 }
 
 function getNavigationReportId(location = {}) {
@@ -267,10 +282,6 @@ function toMapReport(report = {}) {
     coverImage: report.coverImage || report.image || report.images?.[0] || '',
     images: report.imageUrls || report.images || [],
 
-    executionInfo: report.executionInfo || {},
-    publicDecision:
-      report.publicDecision || report.executionInfo?.publicDecision || null,
-
     position,
   };
 }
@@ -317,8 +328,6 @@ function focusStateToMapReport(focusMapReport = {}) {
       createdAt: focusMapReport.date,
       coverImage: focusMapReport.coverImage,
       images: focusMapReport.images || [],
-      executionInfo: focusMapReport.executionInfo || {},
-      publicDecision: focusMapReport.publicDecision || null,
       position: focusMapReport.position,
     },
 
@@ -334,8 +343,6 @@ function focusStateToMapReport(focusMapReport = {}) {
     date: focusMapReport.date || focusMapReport.createdAt,
     coverImage: focusMapReport.coverImage || '',
     images: focusMapReport.images || [],
-    executionInfo: focusMapReport.executionInfo || {},
-    publicDecision: focusMapReport.publicDecision || null,
     position: focusMapReport.position,
   };
 }
@@ -389,10 +396,15 @@ function ReportsPaginationControls({ pagination, onPageChange, isLoading = false
 function MyReportsPage() {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const userId = getCurrentUserId(user);
   const mapSectionRef = useRef(null);
+  const tableSectionRef = useRef(null);
   const selectedReportCardRef = useRef(null);
+  const previousRouteReportIdRef = useRef(null);
+  const ignoreReloadSelectionRef = useRef(isImmediatePageReload());
+  const reloadLocationKeyRef = useRef(location.key);
 
   const [pageNumber, setPageNumber] = useState(1);
   const [clientPageNumber, setClientPageNumber] = useState(1);
@@ -412,7 +424,7 @@ function MyReportsPage() {
   const {
     reports,
     pagination,
-    dashboardStats,
+    reportStats,
     isLoading,
     isStatsLoading,
     errorMessage,
@@ -427,18 +439,36 @@ function MyReportsPage() {
   const [detailsMapReport, setDetailsMapReport] = useState(null);
   const [routeReportId, setRouteReportId] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
+  const [directionsPromptReport, setDirectionsPromptReport] = useState(null);
+  const [pendingRouteReport, setPendingRouteReport] = useState(null);
+  const [showLocationControlHint, setShowLocationControlHint] = useState(false);
+  const [mapRenderKey, setMapRenderKey] = useState(0);
+  const [mapHeight, setMapHeight] = useState(() => {
+    if (typeof window === 'undefined') return 560;
+    if (window.innerWidth <= 480) return 300;
+    if (window.innerWidth <= 640) return 330;
+    return 560;
+  });
   const [hiddenMapReportIds, setHiddenMapReportIds] = useState(() => new Set());
 
-  const [highlightedReportId, setHighlightedReportId] = useState(
-    location.state?.createdReportId ||
+  const [highlightedReportId, setHighlightedReportId] = useState(() => {
+    if (ignoreReloadSelectionRef.current) return null;
+
+    return (
+      location.state?.createdReportId ||
       getNavigationReportId(location) ||
       null
-  );
+    );
+  });
 
   const [notificationFocusReportId, setNotificationFocusReportId] = useState(
-    isNotificationNavigation(location)
-      ? getNavigationReportId(location) || null
-      : null
+    () => {
+      if (ignoreReloadSelectionRef.current) return null;
+
+      return isNotificationNavigation(location)
+        ? getNavigationReportId(location) || null
+        : null;
+    }
   );
   const [notificationFocusResults, setNotificationFocusResults] = useState([]);
   const [isNotificationFocusLoading, setIsNotificationFocusLoading] =
@@ -447,10 +477,32 @@ function MyReportsPage() {
     useState('');
 
   const successMessage = location.state?.successMessage || '';
-  const focusMapReport = location.state?.focusMapReport || null;
+  // Do not auto-select any map report when the page opens or reloads.
+  const focusMapReport = null;
 
   const isSearchActive = Boolean(searchQuery.trim());
   const isStatusActive = statusFilter !== REPORT_STATUS_API_VALUES.all;
+
+  useEffect(() => {
+    function updateMapHeight() {
+      if (window.innerWidth <= 480) {
+        setMapHeight(300);
+        return;
+      }
+
+      if (window.innerWidth <= 640) {
+        setMapHeight(330);
+        return;
+      }
+
+      setMapHeight(560);
+    }
+
+    updateMapHeight();
+    window.addEventListener('resize', updateMapHeight);
+
+    return () => window.removeEventListener('resize', updateMapHeight);
+  }, []);
 
   useEffect(() => {
     if (!isSearchActive) {
@@ -557,9 +609,82 @@ function MyReportsPage() {
       nextNavigationReportId ||
       null;
 
+    // A browser refresh preserves React Router's history state. Ignore that
+    // persisted id on the refreshed page so no table row is selected by itself.
+    if (
+      ignoreReloadSelectionRef.current &&
+      location.key === reloadLocationKeyRef.current
+    ) {
+      return;
+    }
+
+    // Navigation state is transient. Only apply it when it actually contains
+    // a report id; after it is consumed, replacing the history entry must not
+    // clear the active highlight during the current visit.
+    if (!nextHighlightedReportId) return;
+
     setHighlightedReportId(nextHighlightedReportId);
     setNotificationFocusReportId(nextNotificationReportId);
-  }, [location.search, location.state]);
+  }, [location.key, location.search, location.state]);
+
+  useEffect(() => {
+    const currentState = location.state || {};
+    const searchParams = new URLSearchParams(location.search || '');
+
+    const transientStateKeys = [
+      'createdReportId',
+      'notificationReportId',
+      'selectedReportId',
+      'highlightReportId',
+      'reportId',
+      'fromNotification',
+      'fromNotifications',
+    ];
+
+    const hasTransientState = transientStateKeys.some(
+      (key) => currentState[key] !== undefined
+    );
+    const hasNotificationSource = currentState.source === 'notification';
+    const hasTransientSearch =
+      searchParams.has('reportId') ||
+      searchParams.get('source') === 'notification';
+
+    if (!hasTransientState && !hasNotificationSource && !hasTransientSearch) {
+      return;
+    }
+
+    const nextState = { ...currentState };
+    transientStateKeys.forEach((key) => delete nextState[key]);
+
+    if (nextState.source === 'notification') {
+      delete nextState.source;
+    }
+
+    searchParams.delete('reportId');
+    if (searchParams.get('source') === 'notification') {
+      searchParams.delete('source');
+    }
+
+    const nextSearch = searchParams.toString();
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : '',
+        hash: location.hash,
+      },
+      {
+        replace: true,
+        state: Object.keys(nextState).length ? nextState : null,
+      }
+    );
+  }, [
+    location.hash,
+    location.pathname,
+    location.search,
+    location.state,
+    navigate,
+  ]);
 
   useEffect(() => {
     if (!notificationFocusReportId) {
@@ -627,16 +752,18 @@ function MyReportsPage() {
     if (!highlightedReportId) return undefined;
 
     const timer = window.setTimeout(() => {
-      document
-        .querySelector(`[data-report-row-id="${highlightedReportId}"]`)
-        ?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
-    }, 200);
+      scrollToReportRow(highlightedReportId);
+    }, 160);
 
     return () => window.clearTimeout(timer);
-  }, [highlightedReportId, reports]);
+  }, [
+    highlightedReportId,
+    reports,
+    searchResults,
+    statusResults,
+    notificationFocusResults,
+    clientPageNumber,
+  ]);
 
   const isNotificationFocusActive = Boolean(notificationFocusReportId);
 
@@ -731,6 +858,18 @@ function MyReportsPage() {
   }, [mapReports, routeReportId]);
 
   useEffect(() => {
+    const previousRouteReportId = previousRouteReportIdRef.current;
+
+    if (previousRouteReportId && !routeReportId) {
+      // Recreate the map after ending a route so no invisible routing layer
+      // remains above the report markers and intercepts their clicks.
+      setMapRenderKey((currentKey) => currentKey + 1);
+    }
+
+    previousRouteReportIdRef.current = routeReportId;
+  }, [routeReportId]);
+
+  useEffect(() => {
     const markerId = focusMapReport?.markerId;
 
     if (!markerId) return;
@@ -784,6 +923,98 @@ function MyReportsPage() {
     return () => window.clearTimeout(timer);
   }, [selectedMapReport]);
 
+
+  useEffect(() => {
+    if (!detailsMapReport) return undefined;
+
+    const showDetailsReportOnMap = () => {
+      const report = detailsMapReport;
+
+      setHiddenMapReportIds((currentIds) => {
+        if (!currentIds.has(String(report.id))) return currentIds;
+
+        const nextIds = new Set(currentIds);
+        nextIds.delete(String(report.id));
+        return nextIds;
+      });
+
+      setRouteReportId(null);
+      setActiveMarkerId(report.id);
+      setSelectedMapReport(report);
+      setDetailsMapReport(null);
+
+      window.setTimeout(() => {
+        mapSectionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }, 120);
+    };
+
+    const prepareDetailsModalActions = () => {
+      document.querySelectorAll('[role="dialog"]').forEach((dialog) => {
+        const actionElements = Array.from(dialog.querySelectorAll('button, a'));
+        const routeButton = actionElements.find((element) => {
+          const buttonText = String(element.textContent || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+          return buttonText.includes('أقصر مسافة');
+        });
+        const reportPageButton = actionElements.find((element) => {
+          const buttonText = String(element.textContent || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+          return buttonText === 'صفحة البلاغ';
+        });
+
+        if (!routeButton && !reportPageButton) return;
+
+        if (reportPageButton) {
+          reportPageButton.style.display = 'none';
+          reportPageButton.setAttribute('aria-hidden', 'true');
+        }
+
+        if (dialog.querySelector('[data-details-map-button="true"]')) return;
+
+        const actionsContainer = routeButton?.parentElement || reportPageButton?.parentElement;
+        if (!actionsContainer) return;
+
+        const mapButton = document.createElement('button');
+        mapButton.type = 'button';
+        mapButton.dataset.detailsMapButton = 'true';
+        mapButton.className = `${routeButton?.className || ''} user-reports-details-map-button`.trim();
+        mapButton.setAttribute('aria-label', 'عرض المشكلة على الخريطة');
+        mapButton.innerHTML = `
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"></path>
+            <circle cx="12" cy="10" r="2.5"></circle>
+          </svg>
+          <span>عرض المشكلة على الخريطة</span>
+        `;
+        mapButton.addEventListener('click', showDetailsReportOnMap);
+
+        actionsContainer.appendChild(mapButton);
+      });
+    };
+
+    const frameId = window.requestAnimationFrame(prepareDetailsModalActions);
+    const observer = new MutationObserver(prepareDetailsModalActions);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      observer.disconnect();
+      document
+        .querySelectorAll('[data-details-map-button="true"]')
+        .forEach((button) => {
+          button.removeEventListener('click', showDetailsReportOnMap);
+          button.remove();
+        });
+    };
+  }, [detailsMapReport]);
+
   const emptyMessage =
     isLoading ||
     isSearching ||
@@ -799,11 +1030,66 @@ function MyReportsPage() {
             ? 'لا توجد بلاغات مطابقة للحالة المختارة.'
             : 'لم تقم بإضافة أي بلاغ حتى الآن.';
 
+  function getReportRowElement(reportId) {
+    const rows = tableSectionRef.current?.querySelectorAll(
+      '[data-report-row-id]'
+    );
+
+    return (
+      Array.from(rows || []).find(
+        (row) => String(row.dataset.reportRowId) === String(reportId)
+      ) || null
+    );
+  }
+
+  function scrollToReportRow(reportId, attempt = 0) {
+    if (!reportId) return;
+
+    const row = getReportRowElement(reportId);
+
+    if (row) {
+      row.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest',
+      });
+      return;
+    }
+
+    if (attempt < 8) {
+      window.setTimeout(() => scrollToReportRow(reportId, attempt + 1), 90);
+    }
+  }
+
+  function resetRouteInteraction({ forceMapReset = false } = {}) {
+    const routeWasActive = Boolean(routeReportId);
+
+    setRouteReportId(null);
+    setPendingRouteReport(null);
+    setDirectionsPromptReport(null);
+    setShowLocationControlHint(false);
+
+    // Ending an active route is handled by the routeReportId effect above.
+    // Pending-location mode has no route id, so it needs an immediate reset.
+    if (forceMapReset && !routeWasActive) {
+      setMapRenderKey((currentKey) => currentKey + 1);
+    }
+  }
+
   function clearMapSelection() {
     setActiveMarkerId(null);
     setSelectedMapReport(null);
     setDetailsMapReport(null);
-    setRouteReportId(null);
+    setHighlightedReportId(null);
+    resetRouteInteraction();
+  }
+
+  function handleCloseDetailsModal() {
+    setDetailsMapReport(null);
+
+    if (routeReportId || pendingRouteReport || showLocationControlHint) {
+      resetRouteInteraction({ forceMapReset: true });
+    }
   }
 
   function clearNotificationFocus() {
@@ -880,6 +1166,7 @@ function MyReportsPage() {
 
     if (String(selectedMapReport?.id) === reportId) {
       setSelectedMapReport(null);
+      setHighlightedReportId(null);
     }
 
     if (String(detailsMapReport?.id) === reportId) {
@@ -891,6 +1178,7 @@ function MyReportsPage() {
     if (!report?.id) return;
 
     const reportId = String(report.id);
+    setHighlightedReportId(null);
 
     setHiddenMapReportIds((currentIds) => {
       if (!currentIds.has(reportId)) return currentIds;
@@ -914,13 +1202,23 @@ function MyReportsPage() {
   function handleMarkerSelect(marker) {
     if (!marker?.id) return;
 
+    setHighlightedReportId(null);
+
     const report = mapReports.find(
       (item) =>
         String(item.id) === String(marker.id) ||
         String(item.id) === String(marker.reportId)
     );
 
-    setRouteReportId(null);
+    const isChangingReport =
+      !selectedMapReport || String(selectedMapReport.id) !== String(report?.id);
+
+    if (routeReportId || pendingRouteReport || showLocationControlHint) {
+      resetRouteInteraction({ forceMapReset: isChangingReport });
+    } else {
+      setRouteReportId(null);
+    }
+
     setActiveMarkerId(marker.id);
     setSelectedMapReport(report || null);
   }
@@ -928,34 +1226,99 @@ function MyReportsPage() {
   function handleRequestDirections(report) {
     if (!report?.id) return;
 
-    if (!currentLocation?.lat || !currentLocation?.lng) {
-      window.alert(
-        'حدد موقعك الحالي من زر الخريطة أولًا، ثم اضغط أقصر مسافة.'
-      );
-      return;
-    }
+    setDirectionsPromptReport(report);
+  }
 
+  function closeDirectionsPrompt() {
+    setDirectionsPromptReport(null);
+  }
+
+  function showRouteOnMap(report, locationPoint) {
+    if (!report?.id || !locationPoint?.lat || !locationPoint?.lng) return;
+
+    setCurrentLocation(locationPoint);
     setSelectedMapReport(report);
     setActiveMarkerId(report.id);
     setRouteReportId(report.id);
+    setDetailsMapReport(null);
+    setDirectionsPromptReport(null);
+    setPendingRouteReport(null);
+    setShowLocationControlHint(false);
+
+    window.setTimeout(() => {
+      mapSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 120);
   }
+
+  function handleGoToMapForLocation() {
+    const report = directionsPromptReport;
+    if (!report?.id) return;
+
+    setDetailsMapReport(null);
+    setDirectionsPromptReport(null);
+    setSelectedMapReport(report);
+    setActiveMarkerId(report.id);
+    setRouteReportId(null);
+
+    if (
+      Number.isFinite(Number(currentLocation?.lat)) &&
+      Number.isFinite(Number(currentLocation?.lng))
+    ) {
+      showRouteOnMap(report, {
+        lat: Number(currentLocation.lat),
+        lng: Number(currentLocation.lng),
+      });
+      return;
+    }
+
+    setPendingRouteReport(report);
+    setShowLocationControlHint(true);
+
+    window.setTimeout(() => {
+      mapSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 100);
+  }
+
+  function handleCurrentLocationChange(locationPoint) {
+    const normalizedLocation = {
+      lat: Number(locationPoint?.lat),
+      lng: Number(locationPoint?.lng),
+    };
+
+    if (
+      !Number.isFinite(normalizedLocation.lat) ||
+      !Number.isFinite(normalizedLocation.lng)
+    ) {
+      return;
+    }
+
+    setCurrentLocation(normalizedLocation);
+
+    if (pendingRouteReport?.id) {
+      showRouteOnMap(pendingRouteReport, normalizedLocation);
+    }
+  }
+
 
   function handleGoToReport(report) {
     if (!report) return;
 
     const reportId = report.originalId || getReportId(report.rawReport);
+    if (!reportId) return;
 
     setHighlightedReportId(reportId);
 
-    window.setTimeout(() => {
-      document
-        .querySelector(`[data-report-row-id="${reportId}"]`)
-        ?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
-    }, 80);
+    window.requestAnimationFrame(() => {
+      scrollToReportRow(reportId);
+    });
   }
+
 
   function renderPopupContent(marker) {
     const report = mapReports.find(
@@ -965,13 +1328,13 @@ function MyReportsPage() {
     if (!report) return null;
 
     return (
-      <div className="user-dashboard-map-popup">
+      <div className="user-reports-map-popup">
         <strong>{report.title}</strong>
 
-        <div className="user-dashboard-map-popup__meta">
+        <div className="user-reports-map-popup__meta">
           <span>{report.typeLabel}</span>
           <span
-            className={`user-dashboard-map-popup__status user-dashboard-map-popup__status--${report.statusTone}`}
+            className={`user-reports-map-popup__status user-reports-map-popup__status--${report.statusTone}`}
           >
             {report.statusLabel}
           </span>
@@ -982,7 +1345,7 @@ function MyReportsPage() {
           {report.area || report.address || 'لم يتم تحديد الموقع'}
         </small>
 
-        <div className="user-dashboard-map-popup__actions">
+        <div className="user-reports-map-popup__actions">
           <button
             type="button"
             onClick={() => {
@@ -1002,7 +1365,7 @@ function MyReportsPage() {
           {canToggleMapReportVisibility(report) ? (
             <button
               type="button"
-              className="user-dashboard-map-popup__visibility-btn"
+              className="user-reports-map-popup__visibility-btn"
               onClick={() => hideMapReport(report)}
             >
               <FiEyeOff />
@@ -1015,7 +1378,7 @@ function MyReportsPage() {
   }
 
   return (
-    <div className="dashboard-page user-dashboard-page user-reports-page">
+    <div className="dashboard-page user-reports-layout user-reports-page">
       <PageHeader
         title="بلاغاتي"
         subtitle={`متابعة بلاغاتك والإحصائيات والخريطة والجدول من مكان واحد${
@@ -1070,7 +1433,7 @@ function MyReportsPage() {
         </div>
       ) : null}
 
-      <UserReportsStats stats={dashboardStats} isLoading={isStatsLoading} />
+      <UserReportsStats stats={reportStats} isLoading={isStatsLoading} />
 
       <UserReportsFilters
         totalReports={tablePagination.totalCount}
@@ -1084,8 +1447,8 @@ function MyReportsPage() {
         isSearching={isLoading || isSearching || isStatusLoading}
       />
 
-      <section ref={mapSectionRef} className="user-dashboard-map-card">
-        <header className="user-dashboard-map-card__header">
+      <section ref={mapSectionRef} className="user-reports-map-card">
+        <header className="user-reports-map-card__header">
           <div>
             <h2>خريطة بلاغاتي</h2>
             <p>
@@ -1093,7 +1456,7 @@ function MyReportsPage() {
             </p>
           </div>
 
-          <div className="user-dashboard-map-card__actions">
+          <div className="user-reports-map-card__actions">
             <span className="dashboard-chip">
               {mapMarkers.length} من {allMapReports.length} بلاغ على الخريطة
             </span>
@@ -1137,15 +1500,35 @@ function MyReportsPage() {
           </div>
         ) : null}
 
-        <div className="user-dashboard-map-wrapper">
+        <div
+          className={`user-reports-map-wrapper ${
+            showLocationControlHint ? 'is-awaiting-current-location' : ''
+          }`}
+        >
+          {showLocationControlHint ? (
+            <div className="user-reports-current-location-guide" dir="rtl">
+              <span className="user-reports-current-location-guide__icon" aria-hidden="true">
+                <FiMapPin />
+              </span>
+              <div>
+                <strong>اضغط زر موقعك الحالي</strong>
+                <p>
+                  استخدم الأيقونة الدائرية الموجودة أعلى يسار الخريطة، وبعد تحديد
+                  موقعك سيظهر أقصر مسار تلقائيًا.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
           <ReportsMap
+            key={`my-reports-map-${mapRenderKey}`}
             markers={mapMarkers}
-            userLocation={user?.location}
+            userLocation={currentLocation || user?.location}
             activeMarkerId={activeMarkerId}
             onMarkerSelect={handleMarkerSelect}
-            onCurrentLocationChange={setCurrentLocation}
+            onCurrentLocationChange={handleCurrentLocationChange}
             routeDestination={routeDestination}
-            height={560}
+            height={mapHeight}
             renderPopupContent={renderPopupContent}
           />
 
@@ -1166,15 +1549,11 @@ function MyReportsPage() {
 
           <div
             ref={selectedReportCardRef}
-            className="user-dashboard-selected-report-card-slot"
+            className="user-reports-selected-report-card-slot"
           >
             <UserMapSelectedReportCard
               report={selectedMapReport}
-              onClose={() => {
-                setSelectedMapReport(null);
-                setActiveMarkerId(null);
-                setRouteReportId(null);
-              }}
+              onClose={clearMapSelection}
               onOpenDetails={setDetailsMapReport}
               onGoToReport={handleGoToReport}
               onRequestDirections={handleRequestDirections}
@@ -1217,49 +1596,119 @@ function MyReportsPage() {
         </div>
       </section>
 
-      <DashboardSectionCard
-        title={
-          isNotificationFocusActive
-            ? 'البلاغ المرتبط بالإشعار'
-            : isSearchActive
-              ? 'نتائج البحث'
-              : isStatusActive
-                ? 'نتائج الفلترة'
-                : 'جدول البلاغات'
-        }
-        subtitle={
-          isNotificationFocusActive
-            ? 'Notification Report'
-            : isSearchActive
-              ? 'Search Results'
-              : isStatusActive
-                ? 'Filter Results'
-                : 'My Reports Table'
-        }
-      >
-        <RecentReportsTable
-          reports={displayedReports}
-          highlightedReportId={highlightedReportId}
-          emptyMessage={emptyMessage}
-          pagination={tablePagination}
-          onPageChange={handlePageChange}
-          isLoading={
-            isLoading ||
-            isSearching ||
-            isStatusLoading ||
-            isNotificationFocusLoading
+      <div ref={tableSectionRef} className="user-reports-table-section">
+        <DashboardSectionCard
+          title={
+            isNotificationFocusActive
+              ? 'البلاغ المرتبط بالإشعار'
+              : isSearchActive
+                ? 'نتائج البحث'
+                : isStatusActive
+                  ? 'نتائج الفلترة'
+                  : 'جدول البلاغات'
           }
-        />
-      </DashboardSectionCard>
+          subtitle={
+            isNotificationFocusActive
+              ? 'Notification Report'
+              : isSearchActive
+                ? 'Search Results'
+                : isStatusActive
+                  ? 'Filter Results'
+                  : 'My Reports Table'
+          }
+        >
+          <RecentReportsTable
+            reports={displayedReports}
+            highlightedReportId={highlightedReportId}
+            emptyMessage={emptyMessage}
+            pagination={tablePagination}
+            onPageChange={handlePageChange}
+            isLoading={
+              isLoading ||
+              isSearching ||
+              isStatusLoading ||
+              isNotificationFocusLoading
+            }
+          />
+        </DashboardSectionCard>
+      </div>
 
       {detailsMapReport
         ? createPortal(
-            <UserDashboardReportDetailsModal
+            <UserReportDetailsModal
               report={detailsMapReport}
-              onClose={() => setDetailsMapReport(null)}
-              onGoToReport={handleGoToReport}
+              onClose={handleCloseDetailsModal}
               onRequestDirections={handleRequestDirections}
             />,
+            document.body
+          )
+        : null}
+
+      {directionsPromptReport
+        ? createPortal(
+            <div
+              className="user-reports-location-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="user-reports-location-modal-title"
+              dir="rtl"
+            >
+              <button
+                type="button"
+                className="user-reports-location-modal__backdrop"
+                onClick={closeDirectionsPrompt}
+                aria-label="إغلاق نافذة تفعيل الموقع"
+              />
+
+              <section className="user-reports-location-modal__panel">
+                <span className="user-reports-location-modal__icon" aria-hidden="true">
+                  <FiMapPin />
+                </span>
+
+                <div className="user-reports-location-modal__content">
+                  <strong id="user-reports-location-modal-title">
+                    فعّل موقعك من الخريطة لعرض أقصر مسافة
+                  </strong>
+                  <p>
+                    لحساب أقصر مسار إلى البلاغ
+                    <b> {directionsPromptReport.title}</b>، انتقل إلى الخريطة ثم
+                    اضغط زر موقعك الحالي الموجود أعلى يسارها.
+                  </p>
+                </div>
+
+                <div className="user-reports-location-modal__control-guide">
+                  <span aria-hidden="true">
+                    <FiMapPin />
+                  </span>
+                  <div>
+                    <strong>كيف ستتعرف على الزر؟</strong>
+                    <p>
+                      هو الزر الدائري الذي يحتوي على أيقونة تحديد الموقع بجوار
+                      أدوات التكبير والتصغير. سنوضحه لك فوق الخريطة.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="user-reports-location-modal__actions">
+                  <button
+                    type="button"
+                    className="user-reports-location-modal__confirm"
+                    onClick={handleGoToMapForLocation}
+                  >
+                    <FiMapPin />
+                    الذهاب للخريطة وتفعيل الموقع
+                  </button>
+
+                  <button
+                    type="button"
+                    className="user-reports-location-modal__cancel"
+                    onClick={closeDirectionsPrompt}
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </section>
+            </div>,
             document.body
           )
         : null}

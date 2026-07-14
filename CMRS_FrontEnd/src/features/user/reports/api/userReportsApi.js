@@ -20,7 +20,7 @@ export const REPORT_STATUS_LABELS = {
   [REPORT_STATUS_API_VALUES.rejected]: 'مرفوض',
   [REPORT_STATUS_API_VALUES.assigned]: 'تم التعيين',
   [REPORT_STATUS_API_VALUES.inProgress]: 'جاري التنفيذ',
-  [REPORT_STATUS_API_VALUES.pendingAdminApproval]: 'بانتظار مراجعة الأدمن',
+  [REPORT_STATUS_API_VALUES.pendingAdminApproval]: 'بانتظار اعتماد الأدمن',
   [REPORT_STATUS_API_VALUES.needsCompletion]: 'مطلوب استكمال',
   [REPORT_STATUS_API_VALUES.unableToExecute]: 'متعذر التنفيذ',
   [REPORT_STATUS_API_VALUES.resolved]: 'تم الحل',
@@ -35,7 +35,7 @@ export const REPORT_STATUS_FILTER_OPTIONS = [
   { value: REPORT_STATUS_API_VALUES.inProgress, label: 'جاري التنفيذ' },
   {
     value: REPORT_STATUS_API_VALUES.pendingAdminApproval,
-    label: 'بانتظار مراجعة الأدمن',
+    label: 'بانتظار اعتماد الأدمن',
   },
   { value: REPORT_STATUS_API_VALUES.needsCompletion, label: 'مطلوب استكمال' },
   { value: REPORT_STATUS_API_VALUES.unableToExecute, label: 'متعذر التنفيذ' },
@@ -84,6 +84,20 @@ export const IN_PROGRESS_INCLUDED_STATUSES = [
     label: 'مطلوب استكمال',
   },
 ];
+
+const ISSUE_CATEGORY_META = {
+  '1': { label: 'الطرق والرصف', subtitleAr: 'مشكلات الحفر والرصف والتلفيات', subtitleEn: 'Roads & Paving', tone: 'orange' },
+  '2': { label: 'الإنارة والكهرباء', subtitleAr: 'أعطال الإنارة والكهرباء العامة', subtitleEn: 'Lighting & Electricity', tone: 'amber' },
+  '3': { label: 'النظافة والتجميل', subtitleAr: 'مخلفات ونظافة وتشوهات بصرية', subtitleEn: 'Cleanliness & Beautification', tone: 'mint' },
+  '4': { label: 'مياه الشرب', subtitleAr: 'انقطاعات وتسربات المياه', subtitleEn: 'Water Supply', tone: 'sky' },
+  '5': { label: 'المرور والإشارات', subtitleAr: 'إشارات مرورية وتنظيم الحركة', subtitleEn: 'Traffic & Signals', tone: 'rose' },
+  '6': { label: 'الحدائق والتشجير', subtitleAr: 'مسطحات خضراء وأشجار وحدائق', subtitleEn: 'Parks & Landscaping', tone: 'emerald' },
+  '7': { label: 'المباني والمنشآت', subtitleAr: 'تلفيات بالمرافق والمنشآت العامة', subtitleEn: 'Facilities & Buildings', tone: 'violet' },
+  '8': { label: 'السلامة والطوارئ', subtitleAr: 'مخاطر عاجلة أو حرائق', subtitleEn: 'Safety & Emergencies', tone: 'red' },
+  '9': { label: 'الصرف الصحي', subtitleAr: 'طفح أو انسداد بشبكات الصرف', subtitleEn: 'Sewage & Drainage', tone: 'blue' },
+  '10': { label: 'أخرى', subtitleAr: 'نوع مشكلة عام', subtitleEn: 'Other', tone: 'slate' },
+  other: { label: 'أخرى', subtitleAr: 'نوع مشكلة عام', subtitleEn: 'Other', tone: 'slate' },
+};
 
 function normalizeStatusValue(status = '') {
   return String(status || '')
@@ -509,119 +523,143 @@ function cleanPublicText(value) {
 }
 
 function preparePublicExecutionInfo(report = {}, statusKey = '') {
-  const publicDecision =
-    report.publicDecision ||
-    report.PublicDecision ||
+  const source =
     report.publicExecutionInfo ||
     report.PublicExecutionInfo ||
-    report.executionInfo?.publicDecision ||
-    report.ExecutionInfo?.PublicDecision ||
+    report.executionInfo ||
+    report.ExecutionInfo ||
     report.adminDecision ||
     report.AdminDecision ||
     {};
-  const executionSource = report.executionInfo || report.ExecutionInfo || {};
+
+  const reassignment =
+    source.reassignment ||
+    source.Reassignment ||
+    report.reassignment ||
+    report.Reassignment ||
+    {};
 
   const decisionType = cleanPublicText(
-    publicDecision.decisionType ||
-      publicDecision.DecisionType ||
-      executionSource.decisionType ||
-      executionSource.DecisionType ||
+    source.decisionType ||
+      source.DecisionType ||
+      source.adminDecisionType ||
+      source.AdminDecisionType ||
       report.adminDecisionType ||
       report.AdminDecisionType,
   );
+
+  const publicMessage = cleanPublicText(
+    source.userMessage ||
+      source.UserMessage ||
+      source.publicMessage ||
+      source.PublicMessage ||
+      source.messageToUser ||
+      source.MessageToUser ||
+      report.userMessage ||
+      report.UserMessage ||
+      report.publicMessage ||
+      report.PublicMessage ||
+      report.adminUserMessage ||
+      report.AdminUserMessage,
+  );
+
+  const explicitUserMessage = publicMessage;
+
+  const unableToExecuteReason = cleanPublicText(
+    source.unableToExecuteReason ||
+      source.UnableToExecuteReason ||
+      source.publicUnableToExecuteReason ||
+      source.PublicUnableToExecuteReason ||
+      report.unableToExecuteReason ||
+      report.UnableToExecuteReason ||
+      report.publicUnableToExecuteReason ||
+      report.PublicUnableToExecuteReason,
+  );
+
+  const needsCompletionMessage = cleanPublicText(
+    source.needsCompletionMessage ||
+      source.NeedsCompletionMessage ||
+      source.publicUpdate ||
+      source.PublicUpdate ||
+      report.needsCompletionMessage ||
+      report.NeedsCompletionMessage,
+  );
+
+  const previousCompanyName = cleanPublicText(
+    reassignment.previousCompanyName ||
+      reassignment.PreviousCompanyName ||
+      source.previousCompanyName ||
+      source.PreviousCompanyName ||
+      report.previousAssignedCompanyName ||
+      report.PreviousAssignedCompanyName,
+  );
+
+  const currentCompanyName = cleanPublicText(
+    reassignment.currentCompanyName ||
+      reassignment.CurrentCompanyName ||
+      reassignment.newCompanyName ||
+      reassignment.NewCompanyName ||
+      source.currentCompanyName ||
+      source.CurrentCompanyName ||
+      report.assignedCompanyName ||
+      report.AssignedCompanyName ||
+      report.concernedCompanyName ||
+      report.ConcernedCompanyName,
+  );
+
   const normalizedDecision = normalizeStatusValue(decisionType);
-  const isUnableDecision =
-    statusKey === REPORT_STATUS_API_VALUES.unableToExecute ||
-    normalizedDecision.includes('acceptcannotfix') ||
-    normalizedDecision.includes('cannotfixaccepted');
+  const wasReassigned = Boolean(
+    reassignment.wasReassigned ??
+      reassignment.WasReassigned ??
+      source.wasReassigned ??
+      source.WasReassigned ??
+      report.wasReassigned ??
+      report.WasReassigned ??
+      normalizedDecision.includes('reassign'),
+  );
 
-  const publicMessage = isUnableDecision
-    ? cleanPublicText(
-        publicDecision.message ||
-          publicDecision.Message ||
-          publicDecision.publicUserMessage ||
-          publicDecision.PublicUserMessage ||
-          publicDecision.userMessage ||
-          publicDecision.UserMessage ||
-          publicDecision.publicMessage ||
-          publicDecision.PublicMessage ||
-          executionSource.publicUpdate ||
-          executionSource.PublicUpdate ||
-          executionSource.publicMessage ||
-          executionSource.PublicMessage ||
-          report.publicMessage ||
-          report.PublicMessage ||
-          report.userMessage ||
-          report.UserMessage,
-      )
-    : '';
-
-  const unableToExecuteReason = isUnableDecision
-    ? cleanPublicText(
-        publicDecision.unableToExecuteReason ||
-          publicDecision.UnableToExecuteReason ||
-          publicDecision.publicUnableReason ||
-          publicDecision.PublicUnableReason ||
-          publicDecision.publicUnableToExecuteReason ||
-          publicDecision.PublicUnableToExecuteReason ||
-          executionSource.unableToExecuteReason ||
-          executionSource.UnableToExecuteReason ||
-          report.unableToExecuteReason ||
-          report.UnableToExecuteReason,
-      )
-    : '';
-
-  const decidedAt =
-    publicDecision.decidedAt ||
-    publicDecision.DecidedAt ||
-    executionSource.unableToExecuteAt ||
-    executionSource.UnableToExecuteAt ||
-    report.unableToExecuteAt ||
-    report.UnableToExecuteAt ||
-    null;
-
-  const normalizedPublicDecision = isUnableDecision
-    ? {
-        decisionType: decisionType || 'accept_cannot_fix',
-        decisionLabel: cleanPublicText(
-          publicDecision.decisionLabel ||
-            publicDecision.DecisionLabel ||
-            'تم إغلاق البلاغ لتعذر التنفيذ',
-        ),
-        message: publicMessage,
-        unableToExecuteReason,
-        decidedAt,
-        isFinal: Boolean(publicDecision.isFinal ?? publicDecision.IsFinal ?? true),
-      }
-    : null;
-
-  return {
-    decisionType: normalizedPublicDecision?.decisionType || '',
-    decisionLabel: normalizedPublicDecision?.decisionLabel || '',
+  const result = {
+    decisionType,
     publicMessage,
+    explicitUserMessage,
+    hasExplicitUserMessage: Boolean(explicitUserMessage),
     unableToExecuteReason,
-    publicDecision: normalizedPublicDecision,
-    isFinal: normalizedPublicDecision?.isFinal || false,
-    unableToExecuteAt: decidedAt,
+    needsCompletionMessage,
     pendingReviewType: cleanPublicText(
-      executionSource.pendingReviewType ||
-        executionSource.PendingReviewType ||
+      source.pendingReviewType ||
+        source.PendingReviewType ||
         report.pendingReviewType ||
         report.PendingReviewType,
     ),
-    // Reassignment and completion instructions are internal and must never be
-    // exposed as admin messages to users.
-    wasReassigned: false,
-    previousCompanyName: '',
-    needsCompletionMessage: '',
-    currentCompanyName: cleanPublicText(
-      report.assignedCompanyName ||
-        report.AssignedCompanyName ||
-        report.concernedCompanyName ||
-        report.ConcernedCompanyName,
-    ),
-    reassignedAt: null,
+    wasReassigned,
+    previousCompanyName,
+    currentCompanyName,
+    reassignedAt:
+      reassignment.reassignedAt ||
+      reassignment.ReassignedAt ||
+      source.reassignedAt ||
+      source.ReassignedAt ||
+      report.reassignedAt ||
+      report.ReassignedAt ||
+      null,
+    unableToExecuteAt:
+      source.unableToExecuteAt ||
+      source.UnableToExecuteAt ||
+      report.unableToExecuteAt ||
+      report.UnableToExecuteAt ||
+      null,
   };
+
+  if (
+    statusKey === REPORT_STATUS_API_VALUES.unableToExecute &&
+    !result.publicMessage
+  ) {
+    result.publicMessage =
+      result.unableToExecuteReason ||
+      'تعذر تنفيذ البلاغ بعد مراجعة الجهة المختصة.';
+  }
+
+  return result;
 }
 
 export function prepareReportForUi(report = {}) {
@@ -642,6 +680,15 @@ export function prepareReportForUi(report = {}) {
   const statusKey = getReportStatusKey(rawStatus);
   const counters = getReportCounters(report);
   const executionInfo = preparePublicExecutionInfo(report, statusKey);
+  const issueCategoryId = String(
+    report.issueCategoryId ||
+      report.IssueCategoryId ||
+      report.categoryId ||
+      report.CategoryId ||
+      ''
+  ).trim();
+  const issueCategoryMeta =
+    ISSUE_CATEGORY_META[issueCategoryId] || ISSUE_CATEGORY_META.other;
 
   return {
     ...report,
@@ -684,6 +731,10 @@ export function prepareReportForUi(report = {}) {
       report.StatusReason ||
       '',
 
+    issueCategoryId,
+
+    categoryId: issueCategoryId || report.categoryId || report.CategoryId || '',
+
     categoryLabel:
       report.issueCategoryName ||
       report.IssueCategoryName ||
@@ -691,7 +742,7 @@ export function prepareReportForUi(report = {}) {
       report.CategoryLabel ||
       report.categoryName ||
       report.CategoryName ||
-      'أخرى',
+      issueCategoryMeta.label,
 
     issueCategoryName:
       report.issueCategoryName ||
@@ -700,7 +751,24 @@ export function prepareReportForUi(report = {}) {
       report.CategoryLabel ||
       report.categoryName ||
       report.CategoryName ||
-      'أخرى',
+      issueCategoryMeta.label,
+
+    issueCategoryDescription:
+      report.issueCategoryDescription ||
+      report.IssueCategoryDescription ||
+      report.categoryDescription ||
+      report.CategoryDescription ||
+      issueCategoryMeta.subtitleAr,
+
+    categorySubtitle:
+      report.categorySubtitle ||
+      report.CategorySubtitle ||
+      report.issueCategoryDescription ||
+      report.IssueCategoryDescription ||
+      issueCategoryMeta.subtitleEn,
+
+    categoryTone:
+      report.categoryTone || report.CategoryTone || issueCategoryMeta.tone,
 
     status: rawStatus || statusKey,
     statusKey,
@@ -717,9 +785,10 @@ export function prepareReportForUi(report = {}) {
       getStatusTone(statusKey),
 
     executionInfo,
-    publicDecision: executionInfo.publicDecision,
     pendingReviewType: executionInfo.pendingReviewType,
     userMessage: executionInfo.publicMessage,
+    explicitUserMessage: executionInfo.explicitUserMessage,
+    hasExplicitUserMessage: executionInfo.hasExplicitUserMessage,
     assignedCompanyName: executionInfo.currentCompanyName,
 
     ownerUserId:

@@ -1,3 +1,0 @@
-- The reviewed card now prioritizes `companyResponse.adminNote` over stale company-message fields.
-- The exact `adminNote` returned by AcceptFix/RequestCompletion is merged into the refreshed report immediately.
-- No other request payloads or report flows were changed.

@@ -33,7 +33,14 @@ function DashboardHeader({
       <div className="dashboard-header__end">
         <div className="dashboard-header__user">
           <span>مرحبًا</span>
-          <strong>{user?.name || 'مستخدم النظام'}</strong>
+          <strong>
+            {user?.fullName ||
+              user?.name ||
+              user?.userName ||
+              user?.username ||
+              user?.companyName ||
+              'مستخدم النظام'}
+          </strong>
         </div>
 
         {action && (

@@ -177,39 +177,6 @@ function normalizeNotification(notification = {}) {
   };
 }
 
-function normalizeTypeCounts(typeCounts, notifications, totalCount) {
-  const counts = {
-    all: toSafeNumber(totalCount, notifications.length),
-    [COMPANY_NOTIFICATION_TYPES.REPORT_ASSIGNED]: 0,
-    [COMPANY_NOTIFICATION_TYPES.SOLUTION_ACCEPTED]: 0,
-    [COMPANY_NOTIFICATION_TYPES.CANNOT_FIX_ACCEPTED]: 0,
-    [COMPANY_NOTIFICATION_TYPES.COMPLETION_REQUESTED]: 0,
-  };
-
-  if (Array.isArray(typeCounts)) {
-    typeCounts.forEach((item) => {
-      const type = normalizeType(item?.type ?? item?.value);
-      if (!type) return;
-      counts[type] = toSafeNumber(item?.count, counts[type] || 0);
-    });
-  } else if (typeCounts && typeof typeCounts === 'object') {
-    Object.entries(typeCounts).forEach(([type, count]) => {
-      const normalizedType = normalizeType(type);
-      counts[normalizedType] = toSafeNumber(count, counts[normalizedType] || 0);
-    });
-  }
-
-  if (!typeCounts) {
-    notifications.forEach((notification) => {
-      if (notification.type !== 'all') {
-        counts[notification.type] = (counts[notification.type] || 0) + 1;
-      }
-    });
-  }
-
-  return counts;
-}
-
 function normalizeNotificationsPayload(payload) {
   const data = payload?.data ?? payload ?? {};
   const rawItems = data.items ?? data.notifications ?? [];
@@ -230,22 +197,16 @@ function normalizeNotificationsPayload(payload) {
       notifications.filter((notification) => !notification.isRead).length,
     ),
     filteredCount: toSafeNumber(data.filteredCount, notifications.length),
-    typeCounts: normalizeTypeCounts(
-      data.typeCounts,
-      notifications,
-      totalCount,
-    ),
     message: payload?.message || '',
   };
 }
 
 export async function getCompanyNotificationsData({
-  type = 'all',
   readStatus = COMPANY_NOTIFICATION_READ_FILTERS.ALL,
   signal,
 } = {}) {
   const params = new URLSearchParams({
-    type,
+    type: 'all',
     readStatus,
   });
 

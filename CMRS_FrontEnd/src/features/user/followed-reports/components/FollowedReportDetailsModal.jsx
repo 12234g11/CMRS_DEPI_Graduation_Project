@@ -188,41 +188,206 @@ function ExecutionStateIcon({ type }) {
   return <FiInfo />;
 }
 
+function normalizeImageTypeKey(value = '') {
+  return String(value || '')
+    .trim()
+    .replace(/[\s_-]+/g, '')
+    .toLowerCase();
+}
+
+function getReportImageCollections(report = {}) {
+  const normalizedImages = Array.isArray(report?.reportImages)
+    ? report.reportImages
+        .map((image, index) => {
+          const imageType =
+            image.imageType || image.ImageType || image.type || image.Type || 'report';
+          const normalizedType = normalizeImageTypeKey(imageType);
+          const isResolvedImage = [
+            'resolved',
+            'solution',
+            'solved',
+            'after',
+            'afterfix',
+            'afterresolution',
+            'completed',
+            'fixed',
+          ].includes(normalizedType);
+
+          return {
+            ...image,
+            id:
+              image.imageId ||
+              image.id ||
+              image.fullImageUrl ||
+              image.imageUrl ||
+              `${index}`,
+            url: image.fullImageUrl || image.imageUrl || image.url || '',
+            imageType,
+            kind: isResolvedImage ? 'resolved' : 'report',
+          };
+        })
+        .filter((image) => image.url)
+    : [];
+
+  if (!normalizedImages.length && report?.coverImage) {
+    return {
+      allImages: [{ id: report.coverImage, url: report.coverImage, kind: 'report' }],
+      reportImages: [{ id: report.coverImage, url: report.coverImage, kind: 'report' }],
+      resolvedImages: [],
+    };
+  }
+
+  return {
+    allImages: normalizedImages,
+    reportImages: normalizedImages.filter((image) => image.kind !== 'resolved'),
+    resolvedImages: normalizedImages.filter((image) => image.kind === 'resolved'),
+  };
+}
+
+function ReportImageGallery({
+  title,
+  subtitle,
+  images = [],
+  emptyText,
+  onOpenViewer,
+}) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const hasImages = images.length > 0;
+  const safeIndex = hasImages ? Math.min(activeIndex, images.length - 1) : 0;
+  const activeImage = hasImages ? images[safeIndex] : null;
+  const hasMultipleImages = images.length > 1;
+
+  function showPreviousImage(event) {
+    event?.stopPropagation?.();
+    if (!hasImages) return;
+    setActiveIndex((currentIndex) =>
+      currentIndex <= 0 ? images.length - 1 : currentIndex - 1
+    );
+  }
+
+  function showNextImage(event) {
+    event?.stopPropagation?.();
+    if (!hasImages) return;
+    setActiveIndex((currentIndex) =>
+      currentIndex >= images.length - 1 ? 0 : currentIndex + 1
+    );
+  }
+
+  return (
+    <section className="followed-report-modal__gallery-section">
+      <div className="followed-report-modal__gallery-header">
+        <div>
+          <strong>{title}</strong>
+          {subtitle ? <span>{subtitle}</span> : null}
+        </div>
+
+        {hasImages ? (
+          <span className="followed-report-modal__gallery-chip">{images.length} صورة</span>
+        ) : null}
+      </div>
+
+      <div className="user-report-modal__image-box followed-report-modal__image-box">
+        {activeImage ? (
+          <>
+            <div
+              className="user-report-modal__image-main"
+              role="button"
+              tabIndex={0}
+              onClick={() => onOpenViewer?.(images, safeIndex, title)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onOpenViewer?.(images, safeIndex, title);
+                }
+              }}
+              aria-label={`عرض ${title} بالحجم الكامل`}
+            >
+              <img src={activeImage.url} alt={`${title} ${safeIndex + 1}`} />
+              <span className="user-report-modal__image-hint">
+                <FiEye />
+                مرر للمعاينة واضغط لعرض الصورة كاملة
+              </span>
+            </div>
+
+            {hasMultipleImages ? (
+              <>
+                <button
+                  type="button"
+                  className="user-report-modal__image-nav user-report-modal__image-nav--prev"
+                  onClick={showPreviousImage}
+                  aria-label="الصورة السابقة"
+                >
+                  <FiChevronLeft />
+                </button>
+                <button
+                  type="button"
+                  className="user-report-modal__image-nav user-report-modal__image-nav--next"
+                  onClick={showNextImage}
+                  aria-label="الصورة التالية"
+                >
+                  <FiChevronRight />
+                </button>
+              </>
+            ) : null}
+
+            <span className="user-report-modal__image-count">
+              صورة {safeIndex + 1} من {images.length}
+            </span>
+
+            {hasMultipleImages ? (
+              <div className="user-report-modal__thumbs">
+                {images.map((image, index) => (
+                  <button
+                    key={image.id || `${title}-${index}`}
+                    type="button"
+                    className={`user-report-modal__thumb ${
+                      index === safeIndex ? 'is-active' : ''
+                    }`}
+                    onClick={() => setActiveIndex(index)}
+                    aria-label={`عرض الصورة ${index + 1}`}
+                  >
+                    <img src={image.url} alt="" />
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <div className="user-report-modal__image-placeholder followed-report-modal__image-placeholder">
+            <FiImage />
+            <span>{emptyText}</span>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function FollowedReportDetailsModal({
   report,
   onClose,
   onUnfollow,
   onToggleVerify,
+  onShowOnMap,
   isUnfollowing = false,
   isVerifyUpLoading = false,
   isVerifyDownLoading = false,
   actionMessage = '',
   actionError = '',
 }) {
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [imageViewerState, setImageViewerState] = useState({
+    isOpen: false,
+    images: [],
+    index: 0,
+    title: '',
+  });
 
-  const images = useMemo(() => {
-    const normalizedImages = Array.isArray(report?.reportImages)
-      ? report.reportImages
-          .map((image) => ({
-            id: image.imageId || image.id || image.fullImageUrl,
-            url: image.fullImageUrl || image.imageUrl || image.url || '',
-          }))
-          .filter((image) => image.url)
-      : [];
-
-    if (normalizedImages.length) return normalizedImages;
-
-    return report?.coverImage
-      ? [{ id: report.coverImage, url: report.coverImage }]
-      : [];
-  }, [report]);
+  const { allImages, reportImages, resolvedImages } = useMemo(
+    () => getReportImageCollections(report),
+    [report]
+  );
 
   if (!report) return null;
-
-  const activeImage = images[activeImageIndex] || images[0] || null;
-  const hasMultipleImages = images.length > 1;
   const currentVerifyVote = Number(report.currentUserVerifyVote || 0);
   const isPositiveVerified =
     report.isVerifiedByCurrentUser && currentVerifyVote !== -1;
@@ -283,107 +448,54 @@ function FollowedReportDetailsModal({
           String(item.value).trim() !== ''
       )
     : [];
-  const company = report.assignedCompanyPublicInfo;
   const execution = report.executionInfo;
-  const history = Array.isArray(report.statusHistory)
-    ? report.statusHistory
-    : [];
   const statusKey = report.statusKey;
-  const companyName = company?.companyName || '';
-  const companySpecialization = company?.specialization || '';
-  const hasCompanyDetails = Boolean(companyName || companySpecialization);
-
-  const assignmentConfirmed = Boolean(
-    company ||
-      execution?.assignedAt ||
-      execution?.executionStartedAt ||
-      ASSIGNMENT_CONFIRMED_STATUSES.has(statusKey) ||
-      history.some((item) =>
-        ASSIGNMENT_CONFIRMED_STATUSES.has(item?.statusKey)
-      )
+  const canShowOnMap = Boolean(
+    report.position?.lat &&
+      report.position?.lng
   );
 
-  const executionState = getExecutionStatePresentation({
-    statusKey,
-    companyName,
-    assignmentConfirmed,
-    publicUpdate: execution?.publicUpdate,
-    publicMessage: execution?.publicMessage,
-    unableToExecuteReason: execution?.unableToExecuteReason,
-  });
+  const viewerImages = imageViewerState.images || [];
+  const safeViewerIndex = viewerImages.length
+    ? Math.min(imageViewerState.index, viewerImages.length - 1)
+    : 0;
+  const viewerImage = viewerImages[safeViewerIndex] || null;
+  const viewerHasMultipleImages = viewerImages.length > 1;
 
-  const assignedAt =
-    execution?.assignedAt || getHistoryStatusDate(history, 'Assigned');
-  const executionStartedAt =
-    execution?.executionStartedAt || getHistoryStatusDate(history, 'InProgress');
-  const resolvedAt =
-    execution?.resolvedAt || getHistoryStatusDate(history, 'Resolved');
-  const currentStatusAt =
-    execution?.currentStatusChangedAt ||
-    getHistoryStatusDate(history, statusKey) ||
-    report.updatedAt;
+  function openImageViewer(imagesList = [], index = 0, sectionTitle = report.title) {
+    if (!imagesList.length) return;
 
-  const executionMilestones = [
-    assignedAt
-      ? {
-          key: 'assigned',
-          label: 'تاريخ التعيين',
-          value: assignedAt,
-          icon: <FiCalendar />,
-        }
-      : null,
-    executionStartedAt
-      ? {
-          key: 'started',
-          label: 'بدء التنفيذ',
-          value: executionStartedAt,
-          icon: <FiActivity />,
-        }
-      : null,
-    resolvedAt
-      ? {
-          key: 'resolved',
-          label: 'تاريخ الحل',
-          value: resolvedAt,
-          icon: <FiCheckCircle />,
-        }
-      : null,
-    statusKey === 'UnableToExecute' && currentStatusAt
-      ? {
-          key: 'unable',
-          label: 'تاريخ التعذر',
-          value: execution?.unableToExecuteAt || currentStatusAt,
-          icon: <FiXCircle />,
-        }
-      : null,
-    statusKey === 'NeedsCompletion' && currentStatusAt
-      ? {
-          key: 'completion',
-          label: 'تاريخ طلب الاستكمال',
-          value: execution?.needsCompletionAt || currentStatusAt,
-          icon: <FiInfo />,
-        }
-      : null,
-    statusKey === 'PendingAdminApproval' && currentStatusAt
-      ? {
-          key: 'admin-review',
-          label: 'بدء مراجعة الأدمن',
-          value: execution?.pendingAdminApprovalAt || currentStatusAt,
-          icon: <FiShield />,
-        }
-      : null,
-  ].filter(Boolean);
+    setImageViewerState({
+      isOpen: true,
+      images: imagesList,
+      index,
+      title: sectionTitle,
+    });
+  }
+
+  function closeImageViewer() {
+    setImageViewerState((currentState) => ({
+      ...currentState,
+      isOpen: false,
+    }));
+  }
 
   function showPreviousImage() {
-    setActiveImageIndex((currentIndex) =>
-      currentIndex <= 0 ? images.length - 1 : currentIndex - 1
-    );
+    if (!viewerImages.length) return;
+    setImageViewerState((currentState) => ({
+      ...currentState,
+      index:
+        currentState.index <= 0 ? viewerImages.length - 1 : currentState.index - 1,
+    }));
   }
 
   function showNextImage() {
-    setActiveImageIndex((currentIndex) =>
-      currentIndex >= images.length - 1 ? 0 : currentIndex + 1
-    );
+    if (!viewerImages.length) return;
+    setImageViewerState((currentState) => ({
+      ...currentState,
+      index:
+        currentState.index >= viewerImages.length - 1 ? 0 : currentState.index + 1,
+    }));
   }
 
   return (
@@ -489,200 +601,51 @@ function FollowedReportDetailsModal({
               </section>
             ) : null}
 
-            <section className="followed-report-modal__section">
-              <div className="followed-report-modal__section-title">
-                <FiBriefcase />
-                <div>
-                  <strong>جهة التنفيذ</strong>
-                  <span>حالة التنفيذ والجهة المسند إليها البلاغ.</span>
-                </div>
-              </div>
-
-              <div
-                className={`followed-report-modal__execution-state is-${executionState.tone}`}
+            {statusKey === 'UnableToExecute' ? (
+              <DetailBlock
+                icon={<FiXCircle />}
+                label="سبب التعذر"
+                className="followed-report-modal__status-reason followed-report-modal__status-reason--unable"
               >
-                <span className="followed-report-modal__execution-state-icon">
-                  <ExecutionStateIcon type={executionState.icon} />
-                </span>
-                <div>
-                  <strong>{executionState.title}</strong>
-                  <p>{executionState.description}</p>
-                </div>
-              </div>
-
-              {hasCompanyDetails ? (
-                <div className="followed-report-modal__company-card">
-                  <div>
-                    <small>
-                      {companyName
-                        ? 'الشركة المسند إليها البلاغ'
-                        : 'تخصص جهة التنفيذ'}
-                    </small>
-                    <strong>{companyName || companySpecialization}</strong>
-                  </div>
-                  {companyName && companySpecialization ? (
-                    <span>{companySpecialization}</span>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {executionMilestones.length || execution?.publicUpdate ? (
-                <div className="followed-report-modal__execution-grid">
-                  {executionMilestones.map((milestone) => (
-                    <SummaryCard
-                      key={milestone.key}
-                      icon={milestone.icon}
-                      label={milestone.label}
-                    >
-                      <strong>{formatDate(milestone.value, true)}</strong>
-                    </SummaryCard>
-                  ))}
-
-                  {execution?.publicUpdate &&
-                  !['UnableToExecute', 'NeedsCompletion'].includes(statusKey) ? (
-                    <DetailBlock icon={<FiInfo />} label="آخر تحديث">
-                      <p>{execution.publicUpdate}</p>
-                    </DetailBlock>
-                  ) : null}
-                </div>
-              ) : null}
-              {statusKey === 'UnableToExecute' ? (
-                <>
-                  <DetailBlock
-                    icon={<FiShield />}
-                    label="رسالة الإدارة للمستخدمين"
-                    className="followed-report-modal__status-reason"
-                  >
-                    <p>{execution?.publicMessage || 'لا توجد بيانات للعرض'}</p>
-                  </DetailBlock>
-
-                  <DetailBlock
-                    icon={<FiXCircle />}
-                    label="سبب تعذر التنفيذ"
-                    className="followed-report-modal__status-reason"
-                  >
-                    <p>
-                      {execution?.unableToExecuteReason || 'لا توجد بيانات للعرض'}
-                    </p>
-                  </DetailBlock>
-                </>
-              ) : null}
-
-              {statusKey === 'PendingAdminApproval' ? (
-                <DetailBlock
-                  icon={<FiShield />}
-                  label="مراجعة الأدمن"
-                  className="followed-report-modal__status-reason"
-                >
-                  <p>
-                    البلاغ بانتظار مراجعة الأدمن واعتماد الإجراء النهائي، ولن
-                    يتم اعتباره محلولًا نهائيًا قبل انتهاء المراجعة.
-                  </p>
-                </DetailBlock>
-              ) : null}
-            </section>
-
-            {history.length ? (
-              <section className="followed-report-modal__section">
-                <div className="followed-report-modal__section-title">
-                  <FiActivity />
-                  <div>
-                    <strong>سجل الحالة العام</strong>
-                    <span>تطور حالة البلاغ خطوة بخطوة.</span>
-                  </div>
-                </div>
-
-                <div className="followed-report-modal__timeline">
-                  {history.map((item, index) => (
-                    <div
-                      key={`${item.statusKey}-${item.changedAt || index}`}
-                      className="followed-report-modal__timeline-item"
-                    >
-                      <i aria-hidden="true" />
-                      <div>
-                        <strong>{item.statusLabel}</strong>
-                        <span>{formatDate(item.changedAt, true)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
+                <p>{execution?.publicMessage || 'لم يتم ارسال اي سبب للتعذر'}</p>
+              </DetailBlock>
             ) : null}
+
           </div>
 
           <div className="user-report-modal__media followed-report-modal__media">
-            <div className="user-report-modal__image-box">
-              {activeImage ? (
-                <>
-                  <div
-                    className="user-report-modal__image-main"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setIsImageViewerOpen(true)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        setIsImageViewerOpen(true);
-                      }
-                    }}
-                    aria-label="عرض الصورة بالحجم الكامل"
-                  >
-                    <img src={activeImage.url} alt={report.title} />
-                    <span className="user-report-modal__image-hint">
-                      <FiEye />
-                      مرر على الصورة للمعاينة واضغط لعرضها كاملة
-                    </span>
-                  </div>
+            <div className="followed-report-modal__gallery-list">
+              <ReportImageGallery
+                title={resolvedImages.length ? 'صور البلاغ الأصلية' : 'صور البلاغ'}
+                subtitle={
+                  resolvedImages.length
+                    ? 'الصور المرفوعة عند إنشاء البلاغ.'
+                    : 'استعرض صور البلاغ مع إمكانية التقليب والتكبير.'
+                }
+                images={
+                  resolvedImages.length
+                    ? reportImages
+                    : reportImages.length
+                      ? reportImages
+                      : allImages
+                }
+                emptyText={
+                  resolvedImages.length
+                    ? 'لا توجد صور أصلية للبلاغ'
+                    : 'لا توجد صور لهذا البلاغ'
+                }
+                onOpenViewer={openImageViewer}
+              />
 
-                  {hasMultipleImages ? (
-                    <>
-                      <button
-                        type="button"
-                        className="user-report-modal__image-nav user-report-modal__image-nav--prev"
-                        onClick={showPreviousImage}
-                        aria-label="الصورة السابقة"
-                      >
-                        <FiChevronLeft />
-                      </button>
-                      <button
-                        type="button"
-                        className="user-report-modal__image-nav user-report-modal__image-nav--next"
-                        onClick={showNextImage}
-                        aria-label="الصورة التالية"
-                      >
-                        <FiChevronRight />
-                      </button>
-                    </>
-                  ) : null}
-
-                  <span className="user-report-modal__image-count">
-                    صورة {activeImageIndex + 1} من {images.length}
-                  </span>
-
-                  {hasMultipleImages ? (
-                    <div className="user-report-modal__thumbs">
-                      {images.map((image, index) => (
-                        <button
-                          key={image.id}
-                          type="button"
-                          className={`user-report-modal__thumb ${
-                            index === activeImageIndex ? 'is-active' : ''
-                          }`}
-                          onClick={() => setActiveImageIndex(index)}
-                          aria-label={`عرض الصورة ${index + 1}`}
-                        >
-                          <img src={image.url} alt="" />
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-                <div className="user-report-modal__image-placeholder">
-                  <FiImage />
-                  <span>لا توجد صور لهذا البلاغ</span>
-                </div>
-              )}
+              {resolvedImages.length ? (
+                <ReportImageGallery
+                  title="صور بعد الحل"
+                  subtitle="صور توضح نتيجة التنفيذ بعد معالجة المشكلة."
+                  images={resolvedImages}
+                  emptyText="لا توجد صور مرفوعة بعد الحل"
+                  onOpenViewer={openImageViewer}
+                />
+              ) : null}
             </div>
 
             <div className="user-report-modal__summary-grid">
@@ -695,6 +658,23 @@ function FollowedReportDetailsModal({
               <SummaryCard icon={<FiCalendar />} label="آخر تحديث">
                 <strong>{formatDate(report.updatedAt, true)}</strong>
               </SummaryCard>
+            </div>
+
+            <div className="followed-report-modal__map-action-wrap">
+              <button
+                type="button"
+                className="followed-report-modal__map-action"
+                onClick={() => onShowOnMap?.(report)}
+                disabled={!canShowOnMap}
+                title={
+                  canShowOnMap
+                    ? 'إغلاق التفاصيل وعرض موقع البلاغ على الخريطة'
+                    : 'لا توجد إحداثيات متاحة لهذا البلاغ'
+                }
+              >
+                <FiMapPin />
+                <span>عرض البلاغ على الخريطة</span>
+              </button>
             </div>
 
             <div className="followed-report-modal__engagement-actions">
@@ -794,13 +774,13 @@ function FollowedReportDetailsModal({
         </div>
       </article>
 
-      {isImageViewerOpen && activeImage
+      {imageViewerState.isOpen && viewerImage
         ? createPortal(
             <div className="user-report-image-viewer" role="dialog" aria-modal="true">
               <button
                 type="button"
                 className="user-report-image-viewer__backdrop"
-                onClick={() => setIsImageViewerOpen(false)}
+                onClick={closeImageViewer}
                 aria-label="إغلاق عرض الصورة"
               />
 
@@ -808,13 +788,13 @@ function FollowedReportDetailsModal({
                 <button
                   type="button"
                   className="user-report-image-viewer__close"
-                  onClick={() => setIsImageViewerOpen(false)}
+                  onClick={closeImageViewer}
                   aria-label="إغلاق"
                 >
                   <FiX />
                 </button>
 
-                {hasMultipleImages ? (
+                {viewerHasMultipleImages ? (
                   <button
                     type="button"
                     className="user-report-image-viewer__nav user-report-image-viewer__nav--prev"
@@ -825,9 +805,9 @@ function FollowedReportDetailsModal({
                   </button>
                 ) : null}
 
-                <img src={activeImage.url} alt={report.title} />
+                <img src={viewerImage.url} alt={imageViewerState.title || report.title} />
 
-                {hasMultipleImages ? (
+                {viewerHasMultipleImages ? (
                   <button
                     type="button"
                     className="user-report-image-viewer__nav user-report-image-viewer__nav--next"
@@ -839,9 +819,9 @@ function FollowedReportDetailsModal({
                 ) : null}
 
                 <div className="user-report-image-viewer__footer">
-                  <strong>{report.title}</strong>
+                  <strong>{imageViewerState.title || report.title}</strong>
                   <span>
-                    صورة {activeImageIndex + 1} من {images.length}
+                    صورة {safeViewerIndex + 1} من {viewerImages.length}
                   </span>
                 </div>
               </div>

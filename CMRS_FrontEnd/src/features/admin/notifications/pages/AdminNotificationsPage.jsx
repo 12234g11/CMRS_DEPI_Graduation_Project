@@ -1,18 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  FiCheck,
-  FiChevronDown,
-  FiFilter,
-  FiRefreshCcw,
-  FiX,
-} from 'react-icons/fi';
+import { FiCheck, FiRefreshCcw } from 'react-icons/fi';
 import PageHeader from '../../../../shared/components/ui/PageHeader';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import AdminNotificationsList from '../components/AdminNotificationsList';
 import {
   ADMIN_NOTIFICATION_READ_STATUS,
-  ADMIN_NOTIFICATION_TYPE,
   deleteAdminNotification,
   getAdminNotifications,
   getUnreadAdminNotificationsCount,
@@ -22,82 +15,10 @@ import {
 import '../../../user/notifications/user-notifications.css';
 import '../admin-notifications.css';
 
-const ADMIN_NOTIFICATION_TYPE_FILTERS = [
-  {
-    value: ADMIN_NOTIFICATION_TYPE.ALL,
-    label: 'كل الأنواع',
-    description: 'عرض جميع إشعارات الأدمن',
-  },
-  {
-    value: ADMIN_NOTIFICATION_TYPE.NEW_REPORT_IN_GOVERNORATE,
-    label: 'بلاغ جديد داخل المحافظة',
-    description: 'عند إرسال بلاغ داخل محافظة الأدمن',
-  },
-  {
-    value: ADMIN_NOTIFICATION_TYPE.COMPANY_STARTED_EXECUTION,
-    label: 'بدأ التنفيذ',
-    description: 'عند بدء الشركة العمل على البلاغ',
-  },
-  {
-    value: ADMIN_NOTIFICATION_TYPE.COMPANY_REQUESTED_CLOSURE,
-    label: 'طلب إغلاق البلاغ',
-    description: 'عند طلب الشركة اعتماد الحل النهائي',
-  },
-  {
-    value: ADMIN_NOTIFICATION_TYPE.COMPANY_EXECUTION_FAILED,
-    label: 'تعذر التنفيذ',
-    description: 'عند إبلاغ الشركة بتعذر تنفيذ البلاغ',
-  },
-];
-
-const READ_FILTERS = [
-  {
-    value: ADMIN_NOTIFICATION_READ_STATUS.ALL,
-    label: 'كل الإشعارات',
-  },
-  {
-    value: ADMIN_NOTIFICATION_READ_STATUS.UNREAD,
-    label: 'غير مقروءة',
-  },
-];
-
 const PAGE_SIZE = 10;
 
 function resolveAdminId(user) {
   return user?.id || user?.adminId || user?.userId || user?.UserId || user?.sub || '';
-}
-
-function getTypeCount({
-  typeCounts = [],
-  type,
-  activeTypeFilter,
-  totalCount = 0,
-  notificationsCount = 0,
-}) {
-  const normalizedType = String(type || '').toLowerCase();
-  const normalizedActiveType = String(activeTypeFilter || '').toLowerCase();
-
-  if (normalizedType === String(ADMIN_NOTIFICATION_TYPE.ALL).toLowerCase()) {
-    const allCount = typeCounts.find(
-      (item) => String(item.type || '').toLowerCase() === 'all'
-    );
-
-    return allCount ? allCount.count : totalCount;
-  }
-
-  const foundType = typeCounts.find(
-    (item) => String(item.type || '').toLowerCase() === normalizedType
-  );
-
-  if (foundType) {
-    return foundType.count;
-  }
-
-  if (normalizedType === normalizedActiveType) {
-    return totalCount || notificationsCount;
-  }
-
-  return 0;
 }
 
 function AdminNotificationsPage() {
@@ -106,9 +27,6 @@ function AdminNotificationsPage() {
   const adminId = resolveAdminId(user);
 
   const [notifications, setNotifications] = useState([]);
-  const [activeTypeFilter, setActiveTypeFilter] = useState(
-    ADMIN_NOTIFICATION_TYPE.ALL
-  );
   const [activeReadFilter, setActiveReadFilter] = useState(
     ADMIN_NOTIFICATION_READ_STATUS.ALL
   );
@@ -123,40 +41,17 @@ function AdminNotificationsPage() {
     hasPreviousPage: false,
   });
 
-  const [typeCounts, setTypeCounts] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-
-  const selectedTypeFilter = useMemo(
-    () =>
-      ADMIN_NOTIFICATION_TYPE_FILTERS.find(
-        (filter) => filter.value === activeTypeFilter
-      ) || ADMIN_NOTIFICATION_TYPE_FILTERS[0],
-    [activeTypeFilter]
-  );
 
   const currentPageUnreadCount = useMemo(
     () => notifications.filter((notification) => !notification.isRead).length,
     [notifications]
   );
 
-  const allTabCount = useMemo(() => {
-    const activeTypeCount = getTypeCount({
-      typeCounts,
-      type: activeTypeFilter,
-      activeTypeFilter,
-      totalCount: pagination.totalCount,
-      notificationsCount: notifications.length,
-    });
-
-    return activeReadFilter === ADMIN_NOTIFICATION_READ_STATUS.UNREAD
-      ? activeTypeCount || pagination.totalCount
-      : pagination.totalCount;
-  }, [activeReadFilter, activeTypeFilter, notifications.length, pagination.totalCount, typeCounts]);
+  const allTabCount = pagination.totalCount;
 
   const unreadTabCount = useMemo(() => {
     if (activeReadFilter === ADMIN_NOTIFICATION_READ_STATUS.UNREAD) {
@@ -171,7 +66,6 @@ function AdminNotificationsPage() {
       if (!adminId) {
         setNotifications([]);
         setUnreadCount(0);
-        setTypeCounts([]);
         setPagination({
           pageNumber: 1,
           pageSize: PAGE_SIZE,
@@ -195,7 +89,6 @@ function AdminNotificationsPage() {
         const [notificationsResponse, nextUnreadCount] = await Promise.all([
           getAdminNotifications({
             adminId,
-            type: activeTypeFilter,
             readStatus: activeReadFilter,
             pageNumber,
             pageSize: PAGE_SIZE,
@@ -211,7 +104,6 @@ function AdminNotificationsPage() {
             : nextNotifications
         );
         setUnreadCount(notificationsResponse.unreadCount || nextUnreadCount || 0);
-        setTypeCounts(notificationsResponse.typeCounts || []);
 
         setPagination({
           pageNumber: notificationsResponse.pageNumber || pageNumber,
@@ -230,19 +122,12 @@ function AdminNotificationsPage() {
         }
       }
     },
-    [activeReadFilter, activeTypeFilter, adminId, pageNumber]
+    [activeReadFilter, adminId, pageNumber]
   );
 
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
-
-  function handleTypeFilterChange(nextFilter) {
-    setActiveTypeFilter(nextFilter);
-    setPageNumber(1);
-    setIsDesktopFilterOpen(false);
-    setIsMobileFilterOpen(false);
-  }
 
   function handleReadFilterChange(nextFilter) {
     setActiveReadFilter(nextFilter);
@@ -276,6 +161,7 @@ function AdminNotificationsPage() {
 
       await markAllAdminNotificationsAsRead(adminId);
       setActiveReadFilter(ADMIN_NOTIFICATION_READ_STATUS.ALL);
+      setPageNumber(1);
       await refreshAfterAction();
     } catch (error) {
       setErrorMessage(
@@ -377,71 +263,6 @@ function AdminNotificationsPage() {
             </button>
           </div>
 
-          <div className="user-notifications-filter-dropdown">
-            <button
-              type="button"
-              className="user-notifications-filter-dropdown__button"
-              onClick={() => setIsDesktopFilterOpen((current) => !current)}
-              aria-expanded={isDesktopFilterOpen}
-              aria-label="فلترة إشعارات الأدمن حسب النوع"
-            >
-              <span className="user-notifications-filter-dropdown__icon">
-                <FiFilter />
-              </span>
-
-              <span className="user-notifications-filter-dropdown__text">
-                <small>فلترة حسب النوع</small>
-                <strong>{selectedTypeFilter.label}</strong>
-              </span>
-
-              <FiChevronDown className="user-notifications-filter-dropdown__arrow" />
-            </button>
-
-            {isDesktopFilterOpen ? (
-              <div className="user-notifications-filter-dropdown__menu">
-                {ADMIN_NOTIFICATION_TYPE_FILTERS.map((filter) => {
-                  const isActive = activeTypeFilter === filter.value;
-                  const count = getTypeCount({
-                    typeCounts,
-                    type: filter.value,
-                    activeTypeFilter,
-                    totalCount: pagination.totalCount,
-                    notificationsCount: notifications.length,
-                  });
-
-                  return (
-                    <button
-                      key={filter.value}
-                      type="button"
-                      className={`user-notifications-filter-dropdown__item ${
-                        isActive ? 'is-active' : ''
-                      }`}
-                      onClick={() => handleTypeFilterChange(filter.value)}
-                    >
-                      <span>
-                        <strong>{filter.label}</strong>
-                        <small>{filter.description}</small>
-                      </span>
-
-                      <em>{count}</em>
-
-                      {isActive ? <FiCheck /> : null}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-          </div>
-
-          <button
-            type="button"
-            className="user-notifications-mobile-filter-btn"
-            onClick={() => setIsMobileFilterOpen(true)}
-          >
-            <FiFilter />
-            <span>فلترة الإشعارات</span>
-          </button>
-
           <div className="user-notifications-toolbar__actions">
             <button
               type="button"
@@ -476,16 +297,12 @@ function AdminNotificationsPage() {
               emptyTitle={
                 activeReadFilter === ADMIN_NOTIFICATION_READ_STATUS.UNREAD
                   ? 'لا توجد إشعارات غير مقروءة'
-                  : activeTypeFilter !== ADMIN_NOTIFICATION_TYPE.ALL
-                    ? 'لا توجد إشعارات من هذا النوع'
-                    : 'لا توجد إشعارات'
+                  : 'لا توجد إشعارات'
               }
               emptyMessage={
                 activeReadFilter === ADMIN_NOTIFICATION_READ_STATUS.UNREAD
                   ? 'كل إشعارات الأدمن الحالية مقروءة.'
-                  : activeTypeFilter !== ADMIN_NOTIFICATION_TYPE.ALL
-                    ? 'جرّب اختيار نوع إشعار آخر.'
-                    : 'عند وصول بلاغات أو تحديثات جديدة ستظهر هنا مباشرة.'
+                  : 'عند وصول بلاغات أو تحديثات جديدة ستظهر هنا مباشرة.'
               }
             />
 
@@ -515,106 +332,6 @@ function AdminNotificationsPage() {
           </>
         )}
       </section>
-
-      {isMobileFilterOpen ? (
-        <div
-          className="user-notifications-filter-sheet"
-          role="dialog"
-          aria-modal="true"
-          aria-label="فلترة إشعارات الأدمن"
-        >
-          <button
-            type="button"
-            className="user-notifications-filter-sheet__backdrop"
-            onClick={() => setIsMobileFilterOpen(false)}
-            aria-label="إغلاق الفلترة"
-          />
-
-          <div className="user-notifications-filter-sheet__content">
-            <div className="user-notifications-filter-sheet__handle" />
-
-            <div className="user-notifications-filter-sheet__header">
-              <div>
-                <h3>فلترة إشعارات الأدمن</h3>
-                <p>اختر حالة القراءة ونوع الإشعار</p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsMobileFilterOpen(false)}
-                aria-label="إغلاق"
-              >
-                <FiX />
-              </button>
-            </div>
-
-            <div className="user-notifications-filter-sheet__group">
-              <h4>حالة القراءة</h4>
-
-              <div className="user-notifications-filter-sheet__read-options">
-                {READ_FILTERS.map((filter) => {
-                  const isActive = activeReadFilter === filter.value;
-                  const count =
-                    filter.value === ADMIN_NOTIFICATION_READ_STATUS.UNREAD
-                      ? unreadTabCount
-                      : allTabCount;
-
-                  return (
-                    <button
-                      key={filter.value}
-                      type="button"
-                      className={`user-notifications-read-tab ${
-                        isActive ? 'is-active' : ''
-                      }`}
-                      onClick={() => handleReadFilterChange(filter.value)}
-                    >
-                      <span>{filter.label}</span>
-                      <strong>{count}</strong>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="user-notifications-filter-sheet__group">
-              <h4>نوع الإشعار</h4>
-
-              <div className="user-notifications-filter-sheet__options">
-                {ADMIN_NOTIFICATION_TYPE_FILTERS.map((filter) => {
-                  const isActive = activeTypeFilter === filter.value;
-                  const count = getTypeCount({
-                    typeCounts,
-                    type: filter.value,
-                    activeTypeFilter,
-                    totalCount: pagination.totalCount,
-                    notificationsCount: notifications.length,
-                  });
-
-                  return (
-                    <button
-                      key={filter.value}
-                      type="button"
-                      className={`user-notifications-filter-sheet__option ${
-                        isActive ? 'is-active' : ''
-                      }`}
-                      onClick={() => handleTypeFilterChange(filter.value)}
-                    >
-                      <span>
-                        <strong>{filter.label}</strong>
-                        <small>{filter.description}</small>
-                      </span>
-
-                      <em>{count}</em>
-
-                      {isActive ? <FiCheck /> : null}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

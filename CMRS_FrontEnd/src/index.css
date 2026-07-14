@@ -6,7 +6,6 @@
 @import './features/landing/landing.css';
 @import './features/auth/auth.css';
 @import './features/map/map.css';
-@import './features/user/dashboard/user-dashboard.css';
 @import './features/user/add-report/add-report.css';
 @import './features/user/reports/user-reports.css';
 @import './features/user/nearby-issues/nearby-issues.css';

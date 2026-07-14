@@ -4,7 +4,7 @@ import {
   getUserReportStats,
 } from '../api/userReportsApi';
 
-const EMPTY_DASHBOARD_STATS = {
+const EMPTY_REPORT_STATS = {
   totalReports: 0,
   statusCards: [],
 };
@@ -45,7 +45,7 @@ export function useUserReports(userId, pageNumberOrOptions = 1) {
   const { pageNumber = 1, pageSize = 10 } = options;
 
   const [reports, setReports] = useState([]);
-  const [dashboardStats, setDashboardStats] = useState(EMPTY_DASHBOARD_STATS);
+  const [reportStats, setReportStats] = useState(EMPTY_REPORT_STATS);
 
   const [pagination, setPagination] = useState({
     totalCount: 0,
@@ -105,7 +105,7 @@ export function useUserReports(userId, pageNumberOrOptions = 1) {
 
   const loadStats = useCallback(async () => {
     if (!userId) {
-      setDashboardStats(EMPTY_DASHBOARD_STATS);
+      setReportStats(EMPTY_REPORT_STATS);
       setStatsErrorMessage('');
       return;
     }
@@ -115,9 +115,9 @@ export function useUserReports(userId, pageNumberOrOptions = 1) {
       setStatsErrorMessage('');
 
       const stats = await getUserReportStats();
-      setDashboardStats(stats || EMPTY_DASHBOARD_STATS);
+      setReportStats(stats || EMPTY_REPORT_STATS);
     } catch (error) {
-      setDashboardStats(EMPTY_DASHBOARD_STATS);
+      setReportStats(EMPTY_REPORT_STATS);
       setStatsErrorMessage(
         error?.message || 'تعذر تحميل إحصائيات البلاغات حاليًا.'
       );
@@ -149,7 +149,7 @@ export function useUserReports(userId, pageNumberOrOptions = 1) {
   return {
     reports,
     recentReports,
-    dashboardStats,
+    reportStats,
     mapMarkers,
     pagination,
     isLoading,

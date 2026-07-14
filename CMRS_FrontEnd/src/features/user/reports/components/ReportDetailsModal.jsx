@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
 import {
   FiAlertTriangle,
   FiCalendar,
@@ -12,44 +11,33 @@ import {
   FiImage,
   FiInfo,
   FiMapPin,
-  FiStar,
   FiUser,
   FiUsers,
   FiX,
   FiXCircle,
 } from 'react-icons/fi';
 
-import { ROUTES } from '../../../../shared/navigation';
 import ReportStatusBadge from './ReportStatusBadge';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
-const categorySymbols = {
-  '1': '⚑',
-  '2': 'ϟ',
-  '3': '♻',
-  '4': '◌',
-  '5': '🚦',
-  '6': '♣',
-  '7': '◇',
-  '8': '🔥',
-  '9': '⌁',
-  '10': '🛠',
-  other: '?',
+const ISSUE_CATEGORY_META = {
+  '1': { label: 'الطرق والرصف', subtitle: 'Roads & Paving', tone: 'orange', icon: '⚑' },
+  '2': { label: 'الإنارة والكهرباء', subtitle: 'Lighting & Electricity', tone: 'amber', icon: 'ϟ' },
+  '3': { label: 'النظافة والتجميل', subtitle: 'Cleanliness & Beautification', tone: 'mint', icon: '♻' },
+  '4': { label: 'مياه الشرب', subtitle: 'Water Supply', tone: 'sky', icon: '◌' },
+  '5': { label: 'المرور والإشارات', subtitle: 'Traffic & Signals', tone: 'rose', icon: '🚦' },
+  '6': { label: 'الحدائق والتشجير', subtitle: 'Parks & Landscaping', tone: 'emerald', icon: '♣' },
+  '7': { label: 'المباني والمنشآت', subtitle: 'Facilities & Buildings', tone: 'violet', icon: '◇' },
+  '8': { label: 'السلامة والطوارئ', subtitle: 'Safety & Emergencies', tone: 'red', icon: '🔥' },
+  '9': { label: 'الصرف الصحي', subtitle: 'Sewage & Drainage', tone: 'blue', icon: '⌁' },
+  '10': { label: 'أخرى', subtitle: 'Other', tone: 'slate', icon: '🛠' },
+  other: { label: 'أخرى', subtitle: 'Other', tone: 'slate', icon: '?' },
 };
 
-const categoryTonesById = {
-  '1': 'orange',
-  '2': 'amber',
-  '3': 'mint',
-  '4': 'sky',
-  '5': 'rose',
-  '6': 'emerald',
-  '7': 'violet',
-  '8': 'red',
-  '9': 'blue',
-  '10': 'slate',
-};
+function getIssueCategoryMeta(categoryId = '') {
+  return ISSUE_CATEGORY_META[String(categoryId || '').trim()] || ISSUE_CATEGORY_META.other;
+}
 
 function normalizeAssetUrl(url = '') {
   if (!url) return '';
@@ -85,9 +73,11 @@ function getReportImages(report = {}) {
   if (Array.isArray(report.reportImages) && report.reportImages.length) {
     return report.reportImages
       .map((image) => ({
+        ...image,
         id: image.imageId || image.id || image.imageUrl,
         url: normalizeAssetUrl(image.imageUrl || image.url || ''),
         uploadedAt: image.uploadedAt || '',
+        imageType: image.imageType || image.ImageType || image.type || image.Type || 'report',
       }))
       .filter((image) => image.url);
   }
@@ -104,9 +94,11 @@ function getReportImages(report = {}) {
         }
 
         return {
+          ...image,
           id: image.imageId || image.id || image.imageUrl || image.url || index,
           url: normalizeAssetUrl(image.imageUrl || image.url || ''),
           uploadedAt: image.uploadedAt || '',
+          imageType: image.imageType || image.ImageType || image.type || image.Type || 'report',
         };
       })
       .filter((image) => image.url);
@@ -123,6 +115,48 @@ function getReportImages(report = {}) {
         },
       ]
     : [];
+}
+
+
+function normalizeImageTypeKey(value = '') {
+  return String(value || '')
+    .trim()
+    .replace(/[\s_-]+/g, '')
+    .toLowerCase();
+}
+
+function getReportImageCollections(report = {}) {
+  const allImages = getReportImages(report).map((image, index) => {
+    const imageType = image.imageType || image.ImageType || image.type || image.Type || 'report';
+    const normalizedType = normalizeImageTypeKey(imageType);
+    const isResolvedImage = [
+      'resolved',
+      'solution',
+      'solved',
+      'after',
+      'afterfix',
+      'afterresolution',
+      'completed',
+      'fixed',
+    ].includes(normalizedType);
+
+    return {
+      ...image,
+      id: image.id || image.imageId || image.imageUrl || `${index}`,
+      imageType,
+      normalizedType,
+      kind: isResolvedImage ? 'resolved' : 'report',
+    };
+  });
+
+  const resolvedImages = allImages.filter((image) => image.kind === 'resolved');
+  const reportImages = allImages.filter((image) => image.kind !== 'resolved');
+
+  return {
+    allImages,
+    reportImages,
+    resolvedImages,
+  };
 }
 
 function getReportPosition(report = {}) {
@@ -362,12 +396,28 @@ function getExecutionOutcomePresentation(report = {}) {
     return {
       tone: 'unable',
       icon: <FiXCircle />,
-      title: execution.decisionLabel || 'تم إغلاق البلاغ لتعذر التنفيذ',
-      message: execution.publicMessage || 'لا توجد بيانات للعرض',
-      reason: execution.unableToExecuteReason || 'لا توجد بيانات للعرض',
+      title: 'تعذر تنفيذ البلاغ',
+      message:
+        execution.publicMessage ||
+        execution.unableToExecuteReason ||
+        'تعذر تنفيذ البلاغ بعد مراجعة الجهة المختصة.',
       meta: execution.unableToExecuteAt
         ? `تاريخ القرار: ${formatReportDate(execution.unableToExecuteAt)}`
-        : 'تاريخ القرار: لا توجد بيانات للعرض',
+        : '',
+    };
+  }
+
+  if (execution.wasReassigned || decisionType.includes('reassign')) {
+    return {
+      tone: 'reassigned',
+      icon: <FiUsers />,
+      title: 'تم تحويل البلاغ إلى جهة تنفيذ أخرى',
+      message:
+        execution.publicMessage ||
+        'تعذر على الجهة السابقة تنفيذ البلاغ، وتم إسناده إلى جهة أخرى لاستكمال العمل.',
+      meta: execution.currentCompanyName
+        ? `الجهة الحالية: ${execution.currentCompanyName}`
+        : '',
     };
   }
 
@@ -377,6 +427,7 @@ function getExecutionOutcomePresentation(report = {}) {
       icon: <FiInfo />,
       title: 'الرد قيد مراجعة الإدارة',
       message:
+        execution.publicMessage ||
         'تراجع الإدارة رد جهة التنفيذ قبل اعتماد القرار النهائي وإبلاغك بالنتيجة.',
       meta: '',
     };
@@ -388,7 +439,9 @@ function getExecutionOutcomePresentation(report = {}) {
       icon: <FiAlertTriangle />,
       title: 'جهة التنفيذ تستكمل العمل',
       message:
-        'تستكمل جهة التنفيذ العمل على البلاغ قبل اعتماد النتيجة النهائية.',
+        execution.publicMessage ||
+        execution.needsCompletionMessage ||
+        'طلبت الإدارة استكمال بعض الأعمال قبل اعتماد النتيجة النهائية.',
       meta: '',
     };
   }
@@ -422,13 +475,148 @@ function SummaryCard({ icon, label, children }) {
   );
 }
 
+
+function ReportImageGallery({
+  title,
+  subtitle,
+  images = [],
+  emptyText,
+  onOpenViewer,
+}) {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const hasImages = images.length > 0;
+  const safeIndex = hasImages ? Math.min(activeIndex, images.length - 1) : 0;
+  const activeImage = hasImages ? images[safeIndex] : null;
+  const hasMultipleImages = images.length > 1;
+
+  function showPreviousImage(event) {
+    event?.stopPropagation?.();
+    if (!hasImages) return;
+
+    setActiveIndex((currentIndex) =>
+      currentIndex === 0 ? images.length - 1 : currentIndex - 1
+    );
+  }
+
+  function showNextImage(event) {
+    event?.stopPropagation?.();
+    if (!hasImages) return;
+
+    setActiveIndex((currentIndex) =>
+      currentIndex === images.length - 1 ? 0 : currentIndex + 1
+    );
+  }
+
+  return (
+    <section className="user-report-modal__gallery-section">
+      <div className="user-report-modal__gallery-header">
+        <div>
+          <strong>{title}</strong>
+          {subtitle ? <span>{subtitle}</span> : null}
+        </div>
+
+        {hasImages ? (
+          <span className="user-report-modal__gallery-chip">
+            {images.length} صورة
+          </span>
+        ) : null}
+      </div>
+
+      <div className="user-report-modal__image-box user-report-modal__image-box--sectioned">
+        {hasImages && activeImage ? (
+          <>
+            <div
+              className="user-report-modal__image-main"
+              role="button"
+              tabIndex={0}
+              onClick={() => onOpenViewer?.(images, safeIndex, title)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onOpenViewer?.(images, safeIndex, title);
+                }
+              }}
+              aria-label={`عرض ${title} بالحجم الكامل`}
+            >
+              <img src={activeImage.url} alt={`${title} ${safeIndex + 1}`} />
+
+              <span className="user-report-modal__image-hint">
+                <FiEye />
+                اضغط لعرض الصورة كاملة
+              </span>
+            </div>
+
+            {hasMultipleImages ? (
+              <>
+                <button
+                  type="button"
+                  className="user-report-modal__image-nav user-report-modal__image-nav--prev"
+                  onClick={showPreviousImage}
+                  aria-label="الصورة السابقة"
+                >
+                  <FiChevronLeft />
+                </button>
+
+                <button
+                  type="button"
+                  className="user-report-modal__image-nav user-report-modal__image-nav--next"
+                  onClick={showNextImage}
+                  aria-label="الصورة التالية"
+                >
+                  <FiChevronRight />
+                </button>
+              </>
+            ) : null}
+
+            <span className="user-report-modal__image-count">
+              صورة {safeIndex + 1} من {images.length}
+            </span>
+
+            {hasMultipleImages ? (
+              <div className="user-report-modal__thumbs">
+                {images.map((image, index) => (
+                  <button
+                    key={image.id || `${title}-${index}`}
+                    type="button"
+                    className={`user-report-modal__thumb ${
+                      index === safeIndex ? 'is-active' : ''
+                    }`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setActiveIndex(index);
+                    }}
+                    aria-label={`عرض الصورة ${index + 1}`}
+                  >
+                    <img src={image.url} alt={`صورة ${index + 1}`} />
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <div className="user-report-modal__image-placeholder user-report-modal__image-placeholder--soft">
+            <FiImage />
+            <span>{emptyText}</span>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function ReportDetailsModal({ report, onClose }) {
-  const navigate = useNavigate();
+  const [imageViewerState, setImageViewerState] = useState({
+    isOpen: false,
+    images: [],
+    index: 0,
+    title: '',
+  });
 
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-
-  const images = useMemo(() => getReportImages(report), [report]);
+  const { allImages, reportImages, resolvedImages } = useMemo(
+    () => getReportImageCollections(report),
+    [report]
+  );
 
   if (!report) return null;
 
@@ -437,36 +625,27 @@ function ReportDetailsModal({ report, onClose }) {
   const description = report.description || 'لا يوجد وصف متاح لهذا البلاغ.';
 
   const location = getLocationText(report);
-  const position = getReportPosition(report);
-
-  const categoryId = String(report.issueCategoryId || report.categoryId || '');
+  const categoryId = String(
+    report.issueCategoryId || report.categoryId || report.IssueCategoryId || ''
+  );
+  const categoryMeta = getIssueCategoryMeta(categoryId);
 
   const categoryLabel =
     report.issueCategoryName ||
     report.categoryLabel ||
     report.categoryName ||
     report.issue ||
-    'أخرى';
+    categoryMeta.label;
 
   const categorySubtitle =
     report.issueCategoryDescription ||
     report.categorySubtitle ||
     report.categoryDescription ||
-    'Other';
+    categoryMeta.subtitle;
 
-  const categoryTone =
-    report.categoryTone ||
-    categoryTonesById[categoryId] ||
-    report.statusTone ||
-    'warning';
+  const categoryTone = report.categoryTone || categoryMeta.tone;
+  const categoryIcon = categoryMeta.icon;
 
-  const categoryIcon = categorySymbols[categoryId] || categorySymbols.other;
-
-  const activeImage = images[activeImageIndex] || null;
-  const hasImages = images.length > 0;
-  const hasMultipleImages = images.length > 1;
-
-  const rating = report.ratingCount ?? report.rating ?? 0;
   const {
     followersCount,
     truthfulVerificationCount,
@@ -479,77 +658,69 @@ function ReportDetailsModal({ report, onClose }) {
   const isRejected = isRejectedReport(report);
   const rejectionReason = getRejectionReason(report);
   const executionOutcome = getExecutionOutcomePresentation(report);
+  const isUnableToExecute = String(report.statusKey || report.status || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '')
+    .includes('unabletoexecute');
+  const unableUserMessage = isUnableToExecute
+    ? String(
+        report.explicitUserMessage ||
+          report.rawUserMessage ||
+          report.executionInfo?.explicitUserMessage ||
+          ''
+      ).trim()
+    : '';
 
-  const canShowOnMap = Boolean(position?.lat && position?.lng);
+  const viewerImages = imageViewerState.images || [];
+  const safeViewerIndex = viewerImages.length
+    ? Math.min(imageViewerState.index, viewerImages.length - 1)
+    : 0;
+  const viewerImage = viewerImages[safeViewerIndex] || null;
+  const viewerHasMultipleImages = viewerImages.length > 1;
 
-  const mapButtonDisabledReason = 'لا توجد إحداثيات متاحة لهذا البلاغ';
+  function openImageViewer(imagesList = [], index = 0, sectionTitle = title) {
+    if (!imagesList.length) return;
 
-  function showPreviousImage(event) {
-    event?.stopPropagation?.();
-
-    if (!hasImages) return;
-
-    setActiveImageIndex((currentIndex) =>
-      currentIndex === 0 ? images.length - 1 : currentIndex - 1
-    );
-  }
-
-  function showNextImage(event) {
-    event?.stopPropagation?.();
-
-    if (!hasImages) return;
-
-    setActiveImageIndex((currentIndex) =>
-      currentIndex === images.length - 1 ? 0 : currentIndex + 1
-    );
-  }
-
-  function openImageViewer() {
-    if (!activeImage) return;
-
-    setIsImageViewerOpen(true);
+    setImageViewerState({
+      isOpen: true,
+      images: imagesList,
+      index,
+      title: sectionTitle,
+    });
   }
 
   function closeImageViewer() {
-    setIsImageViewerOpen(false);
+    setImageViewerState((currentState) => ({
+      ...currentState,
+      isOpen: false,
+    }));
   }
 
-  function handleShowOnMap() {
-    if (!position?.lat || !position?.lng) {
-      window.alert('لا توجد إحداثيات متاحة لهذا البلاغ لعرضه على الخريطة.');
-      return;
-    }
+  function showPreviousImage() {
+    if (!viewerImages.length) return;
 
-    onClose?.();
-
-    navigate(ROUTES.MY_REPORTS, {
-      state: {
-        focusMapReport: {
-          reportId,
-          originalId: reportId,
-          markerId: `mine-${reportId}`,
-          source: 'mine',
-
-          title,
-          typeLabel: categoryLabel,
-          area: typeof report.area === 'string' ? report.area : report.area?.city,
-          address: location,
-          description,
-
-          reportNumber,
-          statusLabel: report.statusLabel,
-          statusTone: report.statusTone,
-          tone: report.statusTone,
-
-          date: report.createdAt || report.date,
-          coverImage: activeImage?.url || report.coverImage,
-          images: images.map((image) => image.url),
-
-          position,
-        },
-      },
-    });
+    setImageViewerState((currentState) => ({
+      ...currentState,
+      index:
+        currentState.index === 0
+          ? viewerImages.length - 1
+          : currentState.index - 1,
+    }));
   }
+
+  function showNextImage() {
+    if (!viewerImages.length) return;
+
+    setImageViewerState((currentState) => ({
+      ...currentState,
+      index:
+        currentState.index === viewerImages.length - 1
+          ? 0
+          : currentState.index + 1,
+    }));
+  }
+
 
   return (
     <div className="user-report-modal" role="dialog" aria-modal="true">
@@ -588,7 +759,7 @@ function ReportDetailsModal({ report, onClose }) {
               <strong>{location}</strong>
             </DetailBlock>
 
-            {executionOutcome ? (
+            {executionOutcome && !isUnableToExecute ? (
               <section
                 className={`user-report-modal__execution-outcome is-${executionOutcome.tone}`}
               >
@@ -598,12 +769,19 @@ function ReportDetailsModal({ report, onClose }) {
                 <div>
                   <strong>{executionOutcome.title}</strong>
                   <p>{executionOutcome.message}</p>
-                  {executionOutcome.reason ? (
-                    <small>سبب التعذر: {executionOutcome.reason}</small>
-                  ) : null}
                   {executionOutcome.meta ? <small>{executionOutcome.meta}</small> : null}
                 </div>
               </section>
+            ) : null}
+
+            {isUnableToExecute && unableUserMessage ? (
+              <DetailBlock
+                icon={<FiXCircle />}
+                label="سبب التعذر"
+                className="user-report-modal__detail-card--unable-message"
+              >
+                <p>{unableUserMessage}</p>
+              </DetailBlock>
             ) : null}
 
             {isRejected ? (
@@ -644,93 +822,34 @@ function ReportDetailsModal({ report, onClose }) {
                 <strong>{priorityLabel}</strong>
               </DetailBlock>
 
-              <DetailBlock icon={<FiUsers />} label="عدد المتابعين">
-                <strong>{followersCount}</strong>
-              </DetailBlock>
             </div>
           </div>
-
           <div className="user-report-modal__media">
-            <div className="user-report-modal__image-box">
-              {hasImages ? (
-                <>
-                  <div
-                    className="user-report-modal__image-main"
-                    role="button"
-                    tabIndex={0}
-                    onClick={openImageViewer}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        openImageViewer();
-                      }
-                    }}
-                    aria-label="عرض الصورة بالحجم الكامل"
-                  >
-                    <img src={activeImage.url} alt={title} />
+            <div className="user-report-modal__gallery-list">
+              <ReportImageGallery
+                title={resolvedImages.length ? 'صور البلاغ الأصلية' : 'صور البلاغ'}
+                subtitle={
+                  resolvedImages.length
+                    ? 'الصور المرفوعة وقت إنشاء البلاغ.'
+                    : 'استعرض صور البلاغ مع إمكانية التكبير والتنقل بينها.'
+                }
+                images={reportImages.length ? reportImages : allImages}
+                emptyText="لا توجد صور أصلية للبلاغ."
+                onOpenViewer={openImageViewer}
+              />
 
-                    <span className="user-report-modal__image-hint">
-                      <FiEye />
-                      اضغط لعرض الصورة كاملة
-                    </span>
-                  </div>
-
-                  {hasMultipleImages ? (
-                    <>
-                      <button
-                        type="button"
-                        className="user-report-modal__image-nav user-report-modal__image-nav--prev"
-                        onClick={showPreviousImage}
-                        aria-label="الصورة السابقة"
-                      >
-                        <FiChevronLeft />
-                      </button>
-
-                      <button
-                        type="button"
-                        className="user-report-modal__image-nav user-report-modal__image-nav--next"
-                        onClick={showNextImage}
-                        aria-label="الصورة التالية"
-                      >
-                        <FiChevronRight />
-                      </button>
-                    </>
-                  ) : null}
-
-                  <span className="user-report-modal__image-count">
-                    صورة {activeImageIndex + 1} من {images.length}
-                  </span>
-
-                  {hasMultipleImages ? (
-                    <div className="user-report-modal__thumbs">
-                      {images.map((image, index) => (
-                        <button
-                          key={image.id}
-                          type="button"
-                          className={`user-report-modal__thumb ${
-                            index === activeImageIndex ? 'is-active' : ''
-                          }`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setActiveImageIndex(index);
-                          }}
-                          aria-label={`عرض الصورة ${index + 1}`}
-                        >
-                          <img src={image.url} alt={`صورة ${index + 1}`} />
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-                <div className="user-report-modal__image-placeholder">
-                  <FiImage />
-                  <span>لا توجد صورة للبلاغ</span>
-                </div>
-              )}
+              {resolvedImages.length ? (
+                <ReportImageGallery
+                  title="صور بعد الحل"
+                  subtitle="الصور المرفوعة لإثبات معالجة المشكلة."
+                  images={resolvedImages}
+                  emptyText="لا توجد صور مرفوعة بعد الحل."
+                  onOpenViewer={openImageViewer}
+                />
+              ) : null}
             </div>
 
-            <div className="user-report-modal__summary-grid">
+            <div className="user-report-modal__summary-grid user-report-modal__summary-grid--compact">
               <SummaryCard icon={<FiCalendar />} label="التاريخ">
                 <strong>{formatReportDate(report.createdAt || report.date)}</strong>
               </SummaryCard>
@@ -740,10 +859,12 @@ function ReportDetailsModal({ report, onClose }) {
                   {report.statusLabel || 'قيد المراجعة'}
                 </ReportStatusBadge>
               </SummaryCard>
-
             </div>
 
-            <div className="user-report-modal__engagement-grid" aria-label="إحصائيات متابعة وتوثيق البلاغ">
+            <div
+              className="user-report-modal__engagement-grid"
+              aria-label="إحصائيات متابعة وتوثيق البلاغ"
+            >
               <SummaryCard icon={<FiUsers />} label="المتابعات">
                 <strong>{followersCount}</strong>
               </SummaryCard>
@@ -756,24 +877,11 @@ function ReportDetailsModal({ report, onClose }) {
                 <strong>{falseVerificationCount}</strong>
               </SummaryCard>
             </div>
-
-            <div className="user-report-modal__map-action-wrap">
-              <button
-                type="button"
-                className="user-report-modal__map-action-btn"
-                onClick={handleShowOnMap}
-                disabled={!canShowOnMap}
-                title={canShowOnMap ? undefined : mapButtonDisabledReason}
-              >
-                <FiMapPin />
-                <span>عرض المشكلة على الخريطة</span>
-              </button>
-            </div>
           </div>
         </div>
       </article>
 
-      {isImageViewerOpen && activeImage
+      {imageViewerState.isOpen && viewerImage
         ? createPortal(
             <div
               className="user-report-image-viewer"
@@ -797,7 +905,7 @@ function ReportDetailsModal({ report, onClose }) {
                   <FiX />
                 </button>
 
-                {hasMultipleImages ? (
+                {viewerHasMultipleImages ? (
                   <button
                     type="button"
                     className="user-report-image-viewer__nav user-report-image-viewer__nav--prev"
@@ -808,9 +916,9 @@ function ReportDetailsModal({ report, onClose }) {
                   </button>
                 ) : null}
 
-                <img src={activeImage.url} alt={title} />
+                <img src={viewerImage.url} alt={imageViewerState.title || title} />
 
-                {hasMultipleImages ? (
+                {viewerHasMultipleImages ? (
                   <button
                     type="button"
                     className="user-report-image-viewer__nav user-report-image-viewer__nav--next"
@@ -822,9 +930,9 @@ function ReportDetailsModal({ report, onClose }) {
                 ) : null}
 
                 <div className="user-report-image-viewer__footer">
-                  <strong>{title}</strong>
+                  <strong>{imageViewerState.title || title}</strong>
                   <span>
-                    صورة {activeImageIndex + 1} من {images.length}
+                    صورة {safeViewerIndex + 1} من {viewerImages.length}
                   </span>
                 </div>
               </div>

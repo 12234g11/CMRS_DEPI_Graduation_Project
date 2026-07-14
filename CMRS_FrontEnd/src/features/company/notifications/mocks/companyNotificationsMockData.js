@@ -6,31 +6,6 @@ export const COMPANY_NOTIFICATION_TYPES = {
   SYSTEM: 'system',
 };
 
-// The company page intentionally exposes only the three requested type filters,
-// in addition to the default "all types" option.
-export const companyNotificationFilterOptions = [
-  {
-    value: 'all',
-    label: 'كل الأنواع',
-    description: 'عرض جميع إشعارات الشركة',
-  },
-  {
-    value: COMPANY_NOTIFICATION_TYPES.REPORT_ASSIGNED,
-    label: 'بلاغات مسندة',
-    description: 'البلاغات الجديدة التي تم إسنادها للشركة',
-  },
-  {
-    value: COMPANY_NOTIFICATION_TYPES.SOLUTION_ACCEPTED,
-    label: 'حلول مقبولة',
-    description: 'الحلول التي وافق عليها الأدمن',
-  },
-  {
-    value: COMPANY_NOTIFICATION_TYPES.NEEDS_COMPLETION,
-    label: 'مطلوب استكمال',
-    description: 'الحلول التي تحتاج استكمالًا أو تعديلًا',
-  },
-];
-
 export const companyNotifications = [
   {
     id: 'notif-1',

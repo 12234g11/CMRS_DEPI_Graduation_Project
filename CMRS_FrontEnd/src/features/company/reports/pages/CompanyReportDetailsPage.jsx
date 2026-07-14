@@ -22,6 +22,7 @@ import {
   FiXCircle,
 } from 'react-icons/fi';
 import PageHeader from '../../../../shared/components/ui/PageHeader';
+import ReportsMap from '../../../map/components/ReportsMap';
 import { ROUTES } from '../../../../shared/navigation';
 import {
   getCompanyReportById,
@@ -93,6 +94,47 @@ function getMeaningfulAdminNote(note) {
   }
 
   return normalizedNote;
+}
+
+function getReportPosition(report) {
+  const latitude = Number(
+    report?.position?.lat ??
+      report?.position?.latitude ??
+      report?.latitude ??
+      report?.lat,
+  );
+  const longitude = Number(
+    report?.position?.lng ??
+      report?.position?.lon ??
+      report?.position?.longitude ??
+      report?.longitude ??
+      report?.lng ??
+      report?.lon,
+  );
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+
+  return { lat: latitude, lng: longitude };
+}
+
+function buildReportDetailsMapMarker(report) {
+  if (!report) return null;
+
+  const position = getReportPosition(report);
+
+  if (!position) return null;
+
+  return {
+    id: `company-report-details-map-${report.id}`,
+    reportId: report.id,
+    title: report.title || report.type || 'بلاغ',
+    subtitle: report.location,
+    area: report.location,
+    statusLabel: report.status,
+    tone: report.statusTone || 'info',
+    address: report.location,
+    position,
+  };
 }
 
 function CompanyReportDetailsPage() {
@@ -200,6 +242,10 @@ function CompanyReportDetailsPage() {
   const adminReviewPresentation = useMemo(
     () => getAdminReviewPresentation(effectiveAdminReview, report?.companyResponse),
     [effectiveAdminReview, report?.companyResponse],
+  );
+  const reportMapMarker = useMemo(
+    () => buildReportDetailsMapMarker(report),
+    [report],
   );
 
   async function handleStartWork(payload = {}) {
@@ -358,6 +404,48 @@ function CompanyReportDetailsPage() {
           />
         </section>
       </div>
+
+      <section className="company-reports-map-card company-report-details-map-card">
+        <header className="company-reports-map-card__header">
+          <div>
+            <h2>موقع البلاغ على الخريطة</h2>
+            <p>يظهر البلاغ الحالي فقط، ولون العلامة مطابق لحالته في خريطة البلاغات.</p>
+          </div>
+
+          <span
+            className={`company-report-status company-report-status--${report.statusTone}`}
+          >
+            {report.status}
+          </span>
+        </header>
+
+        <div className="company-reports-map-wrapper company-report-details-map-wrapper">
+          {reportMapMarker ? (
+            <ReportsMap
+              markers={[reportMapMarker]}
+              activeMarkerId={reportMapMarker.id}
+              onMarkerSelect={() => {}}
+              height={420}
+              showCurrentLocationControl={false}
+              showMarkerPopups={false}
+            />
+          ) : (
+            <div className="company-reports-map-empty company-report-details-map-empty">
+              <FiMapPin />
+              <strong>إحداثيات البلاغ غير متاحة</strong>
+              <span>سيظهر موقع البلاغ هنا بمجرد رجوع خط العرض وخط الطول من الخادم.</span>
+            </div>
+          )}
+        </div>
+
+        <div className="company-report-details-map-location">
+          <FiMapPin />
+          <div>
+            <span>العنوان المسجل</span>
+            <strong>{report.location || 'الموقع غير متوفر'}</strong>
+          </div>
+        </div>
+      </section>
 
       <section className="company-report-details-card company-report-workflow-card">
         <header className="company-report-section-header">

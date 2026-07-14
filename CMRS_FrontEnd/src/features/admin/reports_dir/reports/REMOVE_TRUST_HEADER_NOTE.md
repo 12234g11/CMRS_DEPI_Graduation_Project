@@ -1,1 +1,0 @@
-Removed the redundant top row from the reporter trust card (badge, shield icon, and duplicate status), while keeping the trust score and status in a cleaner compact layout.

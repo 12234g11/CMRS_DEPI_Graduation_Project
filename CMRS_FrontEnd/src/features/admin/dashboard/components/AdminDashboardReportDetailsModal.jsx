@@ -289,16 +289,6 @@ function AdminDashboardReportDetailsModal({
               </div>
             </div>
 
-            <div className="admin-dashboard-report-info-item">
-              <FiStar />
-
-              <div>
-                <span>التقييم المجتمعي</span>
-                <strong>
-                  {report.rating} / {report.votesCount} تصويت
-                </strong>
-              </div>
-            </div>
 
             <div className="admin-dashboard-report-info-item">
               <FiUser />

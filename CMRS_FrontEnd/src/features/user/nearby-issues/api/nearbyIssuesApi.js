@@ -346,6 +346,8 @@ function getReportImages(report = {}) {
         ...image,
         imageUrl,
         fullImageUrl: resolveAssetUrl(imageUrl),
+        imageType:
+          image.imageType || image.ImageType || image.type || image.Type || '',
       };
     })
     .filter((image) => image.fullImageUrl);
@@ -520,8 +522,12 @@ function preparePublicExecutionInfo(report = {}, statusKey = '') {
           executionSource.PublicUpdate ||
           executionSource.publicMessage ||
           executionSource.PublicMessage ||
+          executionSource.userMessage ||
+          executionSource.UserMessage ||
           report.publicMessage ||
-          report.PublicMessage,
+          report.PublicMessage ||
+          report.userMessage ||
+          report.UserMessage,
       )
     : '';
   const unableToExecuteReason = isUnableDecision

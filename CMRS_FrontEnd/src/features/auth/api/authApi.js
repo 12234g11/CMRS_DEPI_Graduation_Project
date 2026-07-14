@@ -4,6 +4,12 @@ export function loginUser(payload) {
   return post('/api/Authentication/Login', payload);
 }
 
+export function googleLoginUser(idToken) {
+  return post('/api/Authentication/google-login', {
+    idToken,
+  });
+}
+
 export function registerUser(payload) {
   return post('/api/Authentication/register', {
     name: payload.fullName,

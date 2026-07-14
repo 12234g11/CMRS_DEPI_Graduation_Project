@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FiAlertCircle, FiCheckCircle, FiSearch, FiX } from 'react-icons/fi';
 import {
   assignCompanyToReport,
@@ -151,6 +152,19 @@ function AdminCompanyAssignmentPanel({ report, onAssigned, allowReassignment = f
   const [isAssigning, setIsAssigning] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [validationMessage, setValidationMessage] = useState('');
+
+  useEffect(() => {
+    if (!isConfirmOpen || typeof document === 'undefined') {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isConfirmOpen]);
 
   const reportCategoryId = useMemo(() => getReportCategoryId(report), [report]);
   const reportCategoryLabel = useMemo(
@@ -522,98 +536,101 @@ function AdminCompanyAssignmentPanel({ report, onAssigned, allowReassignment = f
         </>
       ) : null}
 
-      {isConfirmOpen && selectedCompany ? (
-        <div className="admin-assignment-modal-backdrop" role="presentation">
-          <form
-            className="admin-assignment-modal"
-            role="dialog"
-            aria-modal="true"
-            onSubmit={handleConfirmAssign}
-          >
-            <button
-              type="button"
-              className="admin-assignment-modal__close"
-              onClick={handleCloseConfirmModal}
-              aria-label="إغلاق"
-            >
-              <FiX />
-            </button>
+      {isConfirmOpen && selectedCompany && typeof document !== 'undefined'
+        ? createPortal(
+            <div className="admin-assignment-modal-backdrop" role="presentation">
+              <form
+                className="admin-assignment-modal"
+                role="dialog"
+                aria-modal="true"
+                onSubmit={handleConfirmAssign}
+              >
+                <button
+                  type="button"
+                  className="admin-assignment-modal__close"
+                  onClick={handleCloseConfirmModal}
+                  aria-label="إغلاق"
+                >
+                  <FiX />
+                </button>
 
-            <header className="admin-assignment-modal__header">
-              <div className="admin-assignment-modal__icon">
-                <FiCheckCircle />
-              </div>
+                <header className="admin-assignment-modal__header">
+                  <div className="admin-assignment-modal__icon">
+                    <FiCheckCircle />
+                  </div>
 
-              <h3>تأكيد تعيين الشركة</h3>
-            </header>
+                  <h3>تأكيد تعيين الشركة</h3>
+                </header>
 
-            <div className="admin-assignment-modal__body">
-              <div className="admin-assignment-confirm-info">
-                <p>
-                  <span>البلاغ</span>
-                  <strong>
-                    #{report.id} - {report.type}
-                  </strong>
-                </p>
+                <div className="admin-assignment-modal__body">
+                  <div className="admin-assignment-confirm-info">
+                    <p>
+                      <span>البلاغ</span>
+                      <strong>
+                        #{report.id} - {report.type}
+                      </strong>
+                    </p>
 
-                <p>
-                  <span>الشركة</span>
-                  <strong>{selectedCompany.name}</strong>
-                </p>
+                    <p>
+                      <span>الشركة</span>
+                      <strong>{selectedCompany.name}</strong>
+                    </p>
 
-                <p>
-                  <span>طريقة الاختيار</span>
-                  <strong>اختيار يدوي من الشركات المتاحة</strong>
-                </p>
-              </div>
+                    <p>
+                      <span>طريقة الاختيار</span>
+                      <strong>اختيار يدوي من الشركات المتاحة</strong>
+                    </p>
+                  </div>
 
-              {canReassign ? (
-                <div className="admin-assignment-reassignment-note">
-                  <strong>ما الذي سيحدث بعد التأكيد؟</strong>
-                  <p>
-                    ستصل رسالة إعادة الإسناد إلى الشركة الجديدة مع البلاغ، وسيُحذف البلاغ
-                    نهائيًا من قائمة وتفاصيل الشركة القديمة، ولن تُرسل أي رسالة للمستخدمين.
-                  </p>
-                  <p>
-                    <b>الرسالة المرسلة للشركة الجديدة:</b>{' '}
-                    {reassignmentCompanyMessage || 'لا توجد بيانات للعرض'}
-                  </p>
+                  {canReassign ? (
+                    <div className="admin-assignment-reassignment-note">
+                      <strong>ما الذي سيحدث بعد التأكيد؟</strong>
+                      <p>
+                        ستصل رسالة إعادة الإسناد إلى الشركة الجديدة مع البلاغ، وسيُحذف البلاغ
+                        نهائيًا من قائمة وتفاصيل الشركة القديمة، ولن تُرسل أي رسالة للمستخدمين.
+                      </p>
+                      <p>
+                        <b>الرسالة المرسلة للشركة الجديدة:</b>{' '}
+                        {reassignmentCompanyMessage || 'لا توجد بيانات للعرض'}
+                      </p>
+                    </div>
+                  ) : (
+                    <label className="admin-assignment-note">
+                      <span>ملاحظات للأدمن / تعليمات للشركة</span>
+
+                      <textarea
+                        value={adminNote}
+                        onChange={(event) => setAdminNote(event.target.value)}
+                        placeholder="اكتب أي تعليمات أو ملاحظات مطلوبة للشركة..."
+                        rows={4}
+                      />
+                    </label>
+                  )}
                 </div>
-              ) : (
-                <label className="admin-assignment-note">
-                  <span>ملاحظات للأدمن / تعليمات للشركة</span>
 
-                  <textarea
-                    value={adminNote}
-                    onChange={(event) => setAdminNote(event.target.value)}
-                    placeholder="اكتب أي تعليمات أو ملاحظات مطلوبة للشركة..."
-                    rows={4}
-                  />
-                </label>
-              )}
-            </div>
+                <footer className="admin-assignment-modal__actions">
+                  <button
+                    type="button"
+                    className="admin-assignment-cancel-btn"
+                    onClick={handleCloseConfirmModal}
+                    disabled={isAssigning}
+                  >
+                    إلغاء
+                  </button>
 
-            <footer className="admin-assignment-modal__actions">
-              <button
-                type="button"
-                className="admin-assignment-cancel-btn"
-                onClick={handleCloseConfirmModal}
-                disabled={isAssigning}
-              >
-                إلغاء
-              </button>
-
-              <button
-                type="submit"
-                className="admin-assignment-submit-btn"
-                disabled={isAssigning}
-              >
-                {isAssigning ? 'جاري التعيين...' : 'تأكيد التعيين'}
-              </button>
-            </footer>
-          </form>
-        </div>
-      ) : null}
+                  <button
+                    type="submit"
+                    className="admin-assignment-submit-btn"
+                    disabled={isAssigning}
+                  >
+                    {isAssigning ? 'جاري التعيين...' : 'تأكيد التعيين'}
+                  </button>
+                </footer>
+              </form>
+            </div>,
+            document.body,
+          )
+        : null}
     </section>
   );
 }

@@ -19,7 +19,6 @@ const DEFAULT_LOCATION = {
   governorate: '',
   governorateLabel: '',
   addressLine: '',
-  addressDetails: '',
   previewLabel: '',
   previewGovernorate: '',
 };
@@ -182,7 +181,6 @@ function LocationStep({
         locationText: [
           nextLocation.governorateLabel || nextLocation.previewGovernorate || '',
           nextLocation.addressLine || '',
-          nextLocation.addressDetails || '',
         ]
           .filter(Boolean)
           .join(' - '),
@@ -215,7 +213,7 @@ function LocationStep({
   function handleFieldChange(event) {
     const { name, value } = event.target;
 
-    if (isLocationConfirmed && name !== 'addressDetails') {
+    if (isLocationConfirmed) {
       return;
     }
 
@@ -245,7 +243,6 @@ function LocationStep({
         locationText: [
           nextLocation.governorateLabel || nextLocation.previewGovernorate || '',
           nextLocation.addressLine || '',
-          nextLocation.addressDetails || '',
         ]
           .filter(Boolean)
           .join(' - '),
@@ -392,26 +389,6 @@ function LocationStep({
             ) : null}
           </div>
 
-          <div className="form-field">
-            <label htmlFor="addressDetails" className="form-field__label">
-              <span className="form-field__label-text">
-                تفاصيل إضافية للعنوان
-              </span>
-
-              <span className="form-field__optional">اختياري</span>
-            </label>
-
-            <input
-              id="addressDetails"
-              name="addressDetails"
-              type="text"
-              className="input"
-              placeholder="مثال: أمام الصيدلية - بجوار الكوبري - الدور الأرضي"
-              value={location.addressDetails}
-              onChange={handleFieldChange}
-            />
-          </div>
-
           <div
             className={`add-report-location-form-card__notice ${isOutsideAllowedGovernorates ? 'is-error' : ''
               }`}
@@ -421,7 +398,7 @@ function LocationStep({
                 ' و '
               )}. برجاء اختيار موقع داخل المحافظات المدعومة.`
               : isLocationConfirmed
-                ? 'تم تثبيت موقع المشكلة والعنوان الأساسي. يمكنك إضافة أو تعديل التفاصيل الإضافية، ولتغيير الموقع أو العنوان الأساسي اضغط إلغاء تحديد المشكلة أولًا.'
+                ? 'تم تثبيت موقع المشكلة والعنوان الأساسي. لتغيير الموقع أو العنوان اضغط إلغاء تحديد المشكلة أولًا.'
                 : 'حرّك الخريطة حتى يصل المؤشر إلى المكان المطلوب، ثم اضغط زر تأكيد الموقع لحفظه.'}
           </div>
 
@@ -432,7 +409,6 @@ function LocationStep({
             disabled={
               !location.isConfirmed &&
               !location.addressLine &&
-              !location.addressDetails &&
               !location.governorate
             }
           >

@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { FiCheck, FiChevronDown, FiFilter, FiMapPin, FiX } from 'react-icons/fi';
@@ -429,6 +430,10 @@ function NearbyIssuesPage() {
     NEARBY_REPORT_STATUS_API_VALUES.all
   );
   const [currentLocation, setCurrentLocation] = useState(null);
+  const [isLocationIntroOpen, setIsLocationIntroOpen] = useState(
+    () => !location.state?.forceEnableCurrentLocation
+  );
+  const [showLocationControlHint, setShowLocationControlHint] = useState(false);
   const [selectedIssueId, setSelectedIssueId] = useState(
     location.state?.selectedIssueId ||
       location.state?.highlightIssueId ||
@@ -449,6 +454,64 @@ function NearbyIssuesPage() {
   const [pendingUnfollowIssue, setPendingUnfollowIssue] = useState(null);
   const [isRequestingCurrentLocation, setIsRequestingCurrentLocation] =
     useState(false);
+  const [mapHeight, setMapHeight] = useState(() => {
+    if (typeof window === 'undefined') return 420;
+    if (window.innerWidth <= 480) return 330;
+    if (window.innerWidth <= 768) return 360;
+    return 420;
+  });
+
+  useEffect(() => {
+    function updateMapHeight() {
+      if (window.innerWidth <= 480) {
+        setMapHeight(330);
+        return;
+      }
+
+      if (window.innerWidth <= 768) {
+        setMapHeight(360);
+        return;
+      }
+
+      setMapHeight(420);
+    }
+
+    updateMapHeight();
+    window.addEventListener('resize', updateMapHeight);
+
+    return () => window.removeEventListener('resize', updateMapHeight);
+  }, []);
+
+  useEffect(() => {
+    const hasCurrentLocation =
+      Number.isFinite(Number(currentLocation?.lat)) &&
+      Number.isFinite(Number(currentLocation?.lng));
+
+    if (!hasCurrentLocation) return;
+
+    setIsLocationIntroOpen(false);
+    setShowLocationControlHint(false);
+  }, [currentLocation]);
+
+  useEffect(() => {
+    if (!isLocationIntroOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    function handleEscape(event) {
+      if (event.key === 'Escape') {
+        setIsLocationIntroOpen(false);
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isLocationIntroOpen]);
 
   const {
     issues: apiNearbyIssues,
@@ -648,21 +711,99 @@ function NearbyIssuesPage() {
     setIsFilterSheetOpen(false);
   }
 
-  function handleSelectIssue(issue) {
+  function scrollToIssueDetails(issueId) {
+    window.setTimeout(() => {
+      const issueElement = document.querySelector(
+        `[data-nearby-issue-id="${issueId}"]`
+      );
+
+      if (issueElement) {
+        issueElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+        return;
+      }
+
+      listCardRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 140);
+  }
+
+  function handleSelectIssue(
+    issue,
+    { forceOpen = false, scrollToDetails = false } = {}
+  ) {
     if (!issue?.id) return;
 
     setHighlightedIssueId(null);
     setRouteIssueId(null);
 
-    setSelectedIssueId((currentId) =>
-      String(currentId) === String(issue.id) ? null : issue.id
-    );
+    if (forceOpen) {
+      setSelectedIssueId(issue.id);
+    } else {
+      setSelectedIssueId((currentId) =>
+        String(currentId) === String(issue.id) ? null : issue.id
+      );
+    }
+
+    if (scrollToDetails) {
+      scrollToIssueDetails(issue.id);
+    }
   }
 
   function handleClearSelection() {
     setHighlightedIssueId(null);
     setSelectedIssueId(null);
     setRouteIssueId(null);
+  }
+
+  function scrollToMap() {
+    window.setTimeout(() => {
+      mapCardRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 80);
+  }
+
+  function handleShowIssueOnMap(issue) {
+    if (!issue?.id) return;
+
+    setHighlightedIssueId(null);
+    setSelectedIssueId(issue.id);
+    setRouteIssueId(null);
+    scrollToMap();
+  }
+
+  function closeLocationIntro() {
+    setIsLocationIntroOpen(false);
+  }
+
+  function handleGoToMapForLocation() {
+    setIsLocationIntroOpen(false);
+    setShowLocationControlHint(true);
+    scrollToMap();
+  }
+
+  function handleCurrentLocationChange(locationPoint) {
+    const normalizedLocation = {
+      lat: Number(locationPoint?.lat),
+      lng: Number(locationPoint?.lng),
+    };
+
+    if (
+      !Number.isFinite(normalizedLocation.lat) ||
+      !Number.isFinite(normalizedLocation.lng)
+    ) {
+      return;
+    }
+
+    setCurrentLocation(normalizedLocation);
+    setShowLocationControlHint(false);
+    setIsLocationIntroOpen(false);
   }
 
   function handleRequestDirections(issue) {
@@ -677,6 +818,7 @@ function NearbyIssuesPage() {
 
     setSelectedIssueId(issue.id);
     setRouteIssueId(issue.id);
+    scrollToMap();
   }
 
   async function performFollowAction(issue, shouldUnfollow) {
@@ -961,17 +1103,48 @@ function NearbyIssuesPage() {
       ) : null}
 
       <div className="dashboard-content-grid">
-        <div ref={mapCardRef}>
+        <div ref={mapCardRef} className="nearby-page__map-card">
           <DashboardSectionCard title="الخريطة" subtitle="Reports Map">
-            <ReportsMap
-              markers={mapMarkers}
-              height={420}
-              userLocation={currentLocation}
-              activeMarkerId={selectedIssueId}
-              onMarkerSelect={handleSelectIssue}
-              onCurrentLocationChange={setCurrentLocation}
-              routeDestination={routeIssue}
-            />
+            <div
+              className={`nearby-location-map-wrapper ${
+                showLocationControlHint
+                  ? 'nearby-location-map-wrapper--awaiting-location'
+                  : ''
+              }`}
+            >
+              {showLocationControlHint && !currentLocation ? (
+                <div className="nearby-current-location-guide" dir="rtl">
+                  <span
+                    className="nearby-current-location-guide__icon"
+                    aria-hidden="true"
+                  >
+                    <FiMapPin />
+                  </span>
+                  <div>
+                    <strong>اضغط زر موقعك الحالي</strong>
+                    <p>
+                      استخدم الأيقونة الدائرية الموجودة أعلى يسار الخريطة،
+                      وبعد السماح بالموقع ستظهر لك البلاغات القريبة.
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+
+              <ReportsMap
+                markers={mapMarkers}
+                height={mapHeight}
+                userLocation={currentLocation}
+                activeMarkerId={selectedIssueId}
+                onMarkerSelect={(issue) =>
+                  handleSelectIssue(issue, {
+                    forceOpen: true,
+                    scrollToDetails: true,
+                  })
+                }
+                onCurrentLocationChange={handleCurrentLocationChange}
+                routeDestination={routeIssue}
+              />
+            </div>
           </DashboardSectionCard>
         </div>
 
@@ -992,6 +1165,7 @@ function NearbyIssuesPage() {
             onSelectIssue={handleSelectIssue}
             currentLocation={currentLocation}
             onRequestDirections={handleRequestDirections}
+            onShowIssueOnMap={handleShowIssueOnMap}
             onClearSelection={handleClearSelection}
             onToggleFollow={handleToggleFollow}
             onToggleVerify={handleToggleVerify}
@@ -1002,6 +1176,77 @@ function NearbyIssuesPage() {
           </DashboardSectionCard>
         </div>
       </div>
+
+      {isLocationIntroOpen && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className="nearby-location-intro-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="nearby-location-intro-title"
+              dir="rtl"
+            >
+              <button
+                type="button"
+                className="nearby-location-intro-modal__backdrop"
+                onClick={closeLocationIntro}
+                aria-label="إغلاق نافذة تفعيل الموقع"
+              />
+
+              <section className="nearby-location-intro-modal__panel">
+                <span
+                  className="nearby-location-intro-modal__icon"
+                  aria-hidden="true"
+                >
+                  <FiMapPin />
+                </span>
+
+                <div className="nearby-location-intro-modal__content">
+                  <strong id="nearby-location-intro-title">
+                    فعّل موقعك لعرض المشاكل القريبة منك
+                  </strong>
+                  <p>
+                    هذه الصفحة تعتمد على موقعك الحالي حتى تعرض البلاغات الموجودة
+                    داخل نطاق {NEARBY_RADIUS_KM} كم وتحسب المسافة إليها بدقة.
+                  </p>
+                </div>
+
+                <div className="nearby-location-intro-modal__control-guide">
+                  <span aria-hidden="true">
+                    <FiMapPin />
+                  </span>
+                  <div>
+                    <strong>أين يوجد زر الموقع؟</strong>
+                    <p>
+                      ستجده كزر دائري يحمل أيقونة تحديد الموقع أعلى يسار
+                      الخريطة. اضغط عليه ثم اسمح للمتصفح باستخدام موقعك.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="nearby-location-intro-modal__actions">
+                  <button
+                    type="button"
+                    className="nearby-location-intro-modal__confirm"
+                    onClick={handleGoToMapForLocation}
+                  >
+                    <FiMapPin />
+                    الذهاب للخريطة وتفعيل الموقع
+                  </button>
+
+                  <button
+                    type="button"
+                    className="nearby-location-intro-modal__cancel"
+                    onClick={closeLocationIntro}
+                  >
+                    لاحقًا
+                  </button>
+                </div>
+              </section>
+            </div>,
+            document.body
+          )
+        : null}
 
       <NearbyFilterBottomSheet
         isOpen={isFilterSheetOpen}

@@ -2446,7 +2446,7 @@
 .admin-assignment-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 99999;
+  z-index: 2147483000;
   padding: 24px;
   background: rgba(15, 23, 42, 0.48);
   backdrop-filter: blur(8px);
@@ -2662,7 +2662,7 @@
 
 @media (max-width: 768px) {
   .admin-assignment-modal-backdrop {
-    padding: 14px;
+    padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
     align-items: flex-start;
   }
 
@@ -2788,7 +2788,7 @@
 
 .admin-report-action-buttons {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   margin: 14px 0;
 }
@@ -2814,11 +2814,6 @@
 .admin-report-action-button--approve {
   background: #dcfce7;
   color: #166534;
-}
-
-.admin-report-action-button--close {
-  background: #e0f2fe;
-  color: #075985;
 }
 
 .admin-report-action-button--reject {

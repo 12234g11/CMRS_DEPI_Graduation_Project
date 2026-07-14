@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   FiAlertTriangle,
   FiCheckCircle,
-  FiLock,
 } from 'react-icons/fi';
 
 function normalizeStatus(value) {
@@ -90,7 +89,6 @@ function AdminReportStatusForm({
   report,
   onApprove,
   onReject,
-  onCloseReport,
 }) {
   const [rejectionReason, setRejectionReason] = useState(report?.rejectionReason || '');
   const [isSaving, setIsSaving] = useState(false);
@@ -165,17 +163,6 @@ function AdminReportStatusForm({
               {activeAction === 'approve' ? 'جاري الاعتماد...' : 'اعتماد البلاغ'}
             </button>
           ) : null}
-
-          <button
-            type="button"
-            className="admin-report-action-button admin-report-action-button--close"
-            onClick={() => runAction('close', onCloseReport)}
-            disabled={isSaving}
-            title="إغلاق البلاغ إداريًا دون تسجيله كبلاغ مرفوض"
-          >
-            <FiLock />
-            {activeAction === 'close' ? 'جاري الإغلاق...' : 'إغلاق بدون عقوبة'}
-          </button>
         </div>
 
         <label className="admin-report-rejection-field">

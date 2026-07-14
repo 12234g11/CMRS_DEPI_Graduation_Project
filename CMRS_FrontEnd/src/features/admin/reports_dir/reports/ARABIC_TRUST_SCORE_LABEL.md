@@ -1,1 +1,0 @@
-Changed the visible label from Trust Score to درجة الثقة.

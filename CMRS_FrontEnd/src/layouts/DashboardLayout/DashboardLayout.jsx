@@ -53,8 +53,10 @@ function DashboardLayout() {
   };
 
   const displayName =
-    user?.name ||
     user?.fullName ||
+    user?.name ||
+    user?.userName ||
+    user?.username ||
     user?.companyName ||
     'مستخدم النظام';
 

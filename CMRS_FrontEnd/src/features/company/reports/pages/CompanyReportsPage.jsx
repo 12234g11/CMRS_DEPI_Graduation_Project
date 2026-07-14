@@ -62,17 +62,17 @@ function useDebouncedValue(value, delay = 350) {
 function getReportPosition(report) {
   const lat = Number(
     report?.position?.lat ??
-      report?.position?.latitude ??
-      report?.latitude ??
-      report?.lat,
+    report?.position?.latitude ??
+    report?.latitude ??
+    report?.lat,
   );
   const lng = Number(
     report?.position?.lng ??
-      report?.position?.lon ??
-      report?.position?.longitude ??
-      report?.longitude ??
-      report?.lng ??
-      report?.lon,
+    report?.position?.lon ??
+    report?.position?.longitude ??
+    report?.longitude ??
+    report?.lng ??
+    report?.lon,
   );
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
@@ -291,18 +291,18 @@ function CompanyReportsPage() {
   const adminFeedbackCount = useMemo(() => {
     return Number(
       summary.needsCompletionCount ??
-        reports.filter(
-          (report) => report.adminReview?.status === 'needs_completion',
-        ).length,
+      reports.filter(
+        (report) => report.adminReview?.status === 'needs_completion',
+      ).length,
     );
   }, [reports, summary.needsCompletionCount]);
 
   const pendingReviewCount = useMemo(() => {
     return Number(
       summary.pendingAdminReviewCount ??
-        reports.filter(
-          (report) => report.status === 'بانتظار مراجعة الأدمن',
-        ).length,
+      reports.filter(
+        (report) => report.status === 'بانتظار مراجعة الأدمن',
+      ).length,
     );
   }, [reports, summary.pendingAdminReviewCount]);
 
@@ -634,7 +634,7 @@ function CompanyReportsPage() {
               <FiMapPin />
               <strong>لا توجد مواقع متاحة لبلاغات هذه الصفحة</strong>
               <span>
-                ستظهر العلامات هنا عندما يرجع الباك إحداثيات صحيحة للبلاغات.
+                ستظهر العلامات هنا عند توفر إحداثيات صحيحة للبلاغات.
               </span>
             </div>
           )}
@@ -654,9 +654,8 @@ function CompanyReportsPage() {
               </button>
 
               <span
-                className={`company-reports-map-selection-card__status is-${
-                  selectedMapReport.statusTone || 'info'
-                }`}
+                className={`company-reports-map-selection-card__status is-${selectedMapReport.statusTone || 'info'
+                  }`}
               >
                 {selectedMapReport.status}
               </span>

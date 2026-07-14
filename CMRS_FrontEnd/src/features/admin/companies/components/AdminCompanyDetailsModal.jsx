@@ -81,11 +81,7 @@ function AdminCompanyDetailsModal({ company, onClose, onEdit }) {
             <strong>{company.avgResponseTime || 'لا توجد بيانات'}</strong>
           </article>
 
-          <article>
-            <FiStar />
-            <span>التقييم</span>
-            <strong>{company.rating || 'لا توجد بيانات'}</strong>
-          </article>
+
         </div>
 
         <div className="admin-company-details-grid">

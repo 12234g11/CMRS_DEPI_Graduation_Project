@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { FiHome } from 'react-icons/fi';
 import PasswordInput from './PasswordInput';
-import { ROUTES, getPostLoginRedirectPath } from '../../../shared/navigation';
-import { useAuth } from '../hooks/useAuth';
+import { ROUTES } from '../../../shared/navigation';
+import { useAuthenticationFlow } from '../hooks/useAuthenticationFlow';
 import { loginUser } from '../api/authApi';
+import GoogleAuthSection from './GoogleAuthSection';
 
 const initialValues = {
   email: '',
@@ -33,32 +34,9 @@ const itemVariants = {
   },
 };
 
-function getRequestedPath(locationState) {
-  if (!locationState?.from) return undefined;
-
-  if (typeof locationState.from === 'string') {
-    return locationState.from;
-  }
-
-  return locationState.from.pathname;
-}
-
-function getLoginPayload(response) {
-  if (response?.data?.token && response?.data?.user) {
-    return response.data;
-  }
-
-  if (response?.data?.data?.token && response?.data?.data?.user) {
-    return response.data.data;
-  }
-
-  return null;
-}
-
 function LoginForm() {
-  const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { completeAuthentication } = useAuthenticationFlow();
 
   const [formData, setFormData] = useState(() => ({
     ...initialValues,
@@ -71,8 +49,6 @@ function LoginForm() {
   const [successMessage, setSuccessMessage] = useState(
     location.state?.message || ''
   );
-
-  const from = getRequestedPath(location.state);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -105,34 +81,7 @@ function LoginForm() {
       setSuccessMessage('');
 
       const response = await loginUser(formData);
-      const loginPayload = getLoginPayload(response);
-
-      if (!loginPayload?.token || !loginPayload?.user) {
-        throw new Error('استجابة تسجيل الدخول غير صحيحة من الخادم.');
-      }
-
-      const { token, user } = loginPayload;
-
-      const role = String(user.role || '').trim().toLowerCase();
-
-      if (!role) {
-        throw new Error('لم يتم تحديد صلاحية المستخدم من الخادم.');
-      }
-
-      login({
-        token,
-        userData: {
-          ...user,
-          role,
-        },
-      });
-
-      const redirectPath = getPostLoginRedirectPath({
-        role,
-        requestedPath: from,
-      });
-
-      navigate(redirectPath, { replace: true });
+      completeAuthentication(response);
     } catch (error) {
       setErrorMessage(error?.message || 'حدث خطأ أثناء تسجيل الدخول.');
     } finally {
@@ -145,8 +94,7 @@ function LoginForm() {
       className="login-form"
       variants={containerVariants}
       initial="hidden"
-      whileInView="visible"
-      viewport={{ once: false, amount: 0.2 }}
+      animate="visible"
     >
       <motion.header className="login-form__header" variants={itemVariants}>
         <h1 className="login-form__title">تسجيل الدخول</h1>
@@ -242,6 +190,10 @@ function LoginForm() {
           </Link>
         </motion.p>
       </motion.form>
+
+      <motion.div variants={itemVariants}>
+        <GoogleAuthSection dividerText="أو تابع باستخدام Google" />
+      </motion.div>
     </motion.div>
   );
 }

@@ -10,8 +10,7 @@ function SignupPage() {
           className="auth-page__visual"
           aria-hidden="true"
           initial={{ opacity: 0, x: -32, scale: 0.98 }}
-          whileInView={{ opacity: 1, x: 0, scale: 1 }}
-          viewport={{ once: false, amount: 0.2 }}
+          animate={{ opacity: 1, x: 0, scale: 1 }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
         >
           <img src={authImage} alt="" className="auth-page__image" />
@@ -21,8 +20,7 @@ function SignupPage() {
         <motion.section
           className="auth-page__panel"
           initial={{ opacity: 0, x: 32 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: false, amount: 0.2 }}
+          animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="auth-page__panel-inner auth-page__panel-inner--wide">

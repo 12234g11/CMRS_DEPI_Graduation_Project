@@ -11,7 +11,7 @@ import DashboardSectionCard from '../../../../shared/components/dashboard/Dashbo
 import PageHeader from '../../../../shared/components/ui/PageHeader';
 import { ROUTES } from '../../../../shared/navigation';
 import ReportsMap from '../../../map/components/ReportsMap';
-import UserMapSelectedReportCard from '../../dashboard/components/UserMapSelectedReportCard';
+import UserMapSelectedReportCard from '../../reports/components/UserMapSelectedReportCard';
 import UserReportsFilters from '../../reports/components/UserReportsFilters';
 import {
   FOLLOWED_REPORT_STATUS_API_VALUES,
@@ -290,6 +290,14 @@ function FollowedReportsPage() {
   const [selectedMapReport, setSelectedMapReport] = useState(null);
   const [routeReportId, setRouteReportId] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
+  const [directionsPromptReport, setDirectionsPromptReport] = useState(null);
+  const [pendingRouteReport, setPendingRouteReport] = useState(null);
+  const [showLocationControlHint, setShowLocationControlHint] = useState(false);
+  const [isMobileMapView, setIsMobileMapView] = useState(() =>
+    typeof window !== 'undefined'
+      ? window.matchMedia('(max-width: 768px)').matches
+      : false
+  );
   const [highlightedReportId, setHighlightedReportId] = useState(
     getNavigationReportId(location) || null
   );
@@ -469,6 +477,16 @@ function FollowedReportsPage() {
   }, [reports, selectedMapReport]);
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 768px)');
+    const handleChange = (event) => setIsMobileMapView(event.matches);
+
+    setIsMobileMapView(mediaQuery.matches);
+    mediaQuery.addEventListener?.('change', handleChange);
+
+    return () => mediaQuery.removeEventListener?.('change', handleChange);
+  }, []);
+
+  useEffect(() => {
     if (!selectedMapReport) return undefined;
 
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
@@ -514,6 +532,9 @@ function FollowedReportsPage() {
     setActiveMarkerId(null);
     setSelectedMapReport(null);
     setRouteReportId(null);
+    setDirectionsPromptReport(null);
+    setPendingRouteReport(null);
+    setShowLocationControlHint(false);
   }
 
   function handleSearchChange(value) {
@@ -554,16 +575,69 @@ function FollowedReportsPage() {
   function handleRequestDirections(report) {
     if (!report?.id) return;
 
-    if (!currentLocation?.lat || !currentLocation?.lng) {
-      window.alert(
-        'حدد موقعك الحالي من زر الخريطة أولًا، ثم اضغط أقصر مسافة.'
-      );
+    const normalizedLocation = {
+      lat: Number(currentLocation?.lat),
+      lng: Number(currentLocation?.lng),
+    };
+
+    if (
+      !Number.isFinite(normalizedLocation.lat) ||
+      !Number.isFinite(normalizedLocation.lng)
+    ) {
+      setDirectionsPromptReport(report);
       return;
     }
 
     setSelectedMapReport(report);
     setActiveMarkerId(report.id);
     setRouteReportId(report.id);
+  }
+
+  function closeDirectionsPrompt() {
+    setDirectionsPromptReport(null);
+  }
+
+  function handleGoToMapForLocation() {
+    const report = directionsPromptReport;
+    if (!report?.id) return;
+
+    setDirectionsPromptReport(null);
+    setSelectedMapReport(report);
+    setActiveMarkerId(report.id);
+    setRouteReportId(null);
+    setPendingRouteReport(report);
+    setShowLocationControlHint(true);
+
+    window.setTimeout(() => {
+      mapSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 100);
+  }
+
+  function handleCurrentLocationChange(locationPoint) {
+    const normalizedLocation = {
+      lat: Number(locationPoint?.lat),
+      lng: Number(locationPoint?.lng),
+    };
+
+    if (
+      !Number.isFinite(normalizedLocation.lat) ||
+      !Number.isFinite(normalizedLocation.lng)
+    ) {
+      return;
+    }
+
+    setCurrentLocation(normalizedLocation);
+
+    if (pendingRouteReport?.id) {
+      setSelectedMapReport(pendingRouteReport);
+      setActiveMarkerId(pendingRouteReport.id);
+      setRouteReportId(pendingRouteReport.id);
+      setPendingRouteReport(null);
+      setShowLocationControlHint(false);
+    }
   }
 
   function handleGoToReport(report) {
@@ -577,6 +651,34 @@ function FollowedReportsPage() {
         .querySelector(`[data-report-row-id="${reportId}"]`)
         ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 80);
+  }
+
+  function handleShowDetailsOnMap(report = {}) {
+    const reportId = report.reportId || report.id || report.originalId;
+    if (!reportId) return;
+
+    const mapReport = mapReports.find(
+      (item) => String(item.originalId) === String(reportId)
+    );
+
+    if (!mapReport?.position?.lat || !mapReport?.position?.lng) {
+      window.alert('لا توجد إحداثيات متاحة لهذا البلاغ لعرضه على الخريطة.');
+      return;
+    }
+
+    setSelectedReportDetails(null);
+    setModalActionMessage('');
+    setModalActionError('');
+    setRouteReportId(null);
+    setActiveMarkerId(mapReport.id);
+    setSelectedMapReport(mapReport);
+
+    window.setTimeout(() => {
+      mapSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 120);
   }
 
   async function handleOpenDetails(reportOrMapReport) {
@@ -775,13 +877,13 @@ function FollowedReportsPage() {
     if (!report) return null;
 
     return (
-      <div className="user-dashboard-map-popup">
+      <div className="user-reports-map-popup">
         <strong>{report.title}</strong>
 
-        <div className="user-dashboard-map-popup__meta">
+        <div className="user-reports-map-popup__meta">
           <span>{report.typeLabel}</span>
           <span
-            className={`user-dashboard-map-popup__status user-dashboard-map-popup__status--${report.statusTone}`}
+            className={`user-reports-map-popup__status user-reports-map-popup__status--${report.statusTone}`}
           >
             {report.statusLabel}
           </span>
@@ -792,7 +894,7 @@ function FollowedReportsPage() {
           {report.area || report.address || 'لم يتم تحديد الموقع'}
         </small>
 
-        <div className="user-dashboard-map-popup__actions">
+        <div className="user-reports-map-popup__actions">
           <button type="button" onClick={() => handleOpenDetails(report)}>
             <FiEye />
             عرض التفاصيل
@@ -808,7 +910,7 @@ function FollowedReportsPage() {
   }
 
   return (
-    <div className="dashboard-page user-dashboard-page user-reports-page followed-reports-page">
+    <div className="dashboard-page user-reports-layout user-reports-page followed-reports-page">
       <PageHeader
         title="البلاغات المتابَعة"
         subtitle="تابع البلاغات القريبة التي تهمك واعرض حالتها وموقعها وتفاصيلها العامة بأمان."
@@ -849,8 +951,8 @@ function FollowedReportsPage() {
         }
       />
 
-      <section ref={mapSectionRef} className="user-dashboard-map-card">
-        <header className="user-dashboard-map-card__header">
+      <section ref={mapSectionRef} className="user-reports-map-card">
+        <header className="user-reports-map-card__header">
           <div>
             <h2>خريطة البلاغات المتابَعة</h2>
             <p>
@@ -858,7 +960,7 @@ function FollowedReportsPage() {
             </p>
           </div>
 
-          <div className="user-dashboard-map-card__actions">
+          <div className="user-reports-map-card__actions">
             <span className="dashboard-chip">
               {mapMarkers.length} من {reports.length} بلاغ على الخريطة
             </span>
@@ -866,14 +968,38 @@ function FollowedReportsPage() {
           </div>
         </header>
 
-        <div className="user-dashboard-map-wrapper">
+        <div
+          className={`user-reports-map-wrapper ${
+            showLocationControlHint
+              ? 'followed-reports-map-wrapper--awaiting-location'
+              : ''
+          }`}
+        >
+          {showLocationControlHint ? (
+            <div className="followed-reports-current-location-guide" dir="rtl">
+              <span
+                className="followed-reports-current-location-guide__icon"
+                aria-hidden="true"
+              >
+                <FiMapPin />
+              </span>
+              <div>
+                <strong>اضغط زر موقعك الحالي</strong>
+                <p>
+                  استخدم الأيقونة الدائرية الموجودة أعلى يسار الخريطة، وبعد
+                  تحديد موقعك سيظهر أقصر مسار تلقائيًا.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
           <ReportsMap
             markers={mapMarkers}
             activeMarkerId={activeMarkerId}
             onMarkerSelect={handleMarkerSelect}
-            onCurrentLocationChange={setCurrentLocation}
+            onCurrentLocationChange={handleCurrentLocationChange}
             routeDestination={routeDestination}
-            height={560}
+            height={isMobileMapView ? 360 : 560}
             renderPopupContent={renderPopupContent}
           />
 
@@ -888,7 +1014,7 @@ function FollowedReportsPage() {
 
           <div
             ref={selectedReportCardRef}
-            className="user-dashboard-selected-report-card-slot"
+            className="user-reports-selected-report-card-slot"
           >
             <UserMapSelectedReportCard
               report={selectedMapReport}
@@ -933,6 +1059,7 @@ function FollowedReportsPage() {
               }}
               onUnfollow={handleUnfollow}
               onToggleVerify={handleToggleVerify}
+              onShowOnMap={handleShowDetailsOnMap}
               isUnfollowing={
                 String(unfollowingReportId) ===
                 String(selectedReportDetails.reportId)
@@ -946,6 +1073,79 @@ function FollowedReportsPage() {
               actionMessage={modalActionMessage}
               actionError={modalActionError}
             />,
+            document.body
+          )
+        : null}
+
+
+      {directionsPromptReport
+        ? createPortal(
+            <div
+              className="followed-reports-location-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="followed-reports-location-modal-title"
+              dir="rtl"
+            >
+              <button
+                type="button"
+                className="followed-reports-location-modal__backdrop"
+                onClick={closeDirectionsPrompt}
+                aria-label="إغلاق نافذة تفعيل الموقع"
+              />
+
+              <section className="followed-reports-location-modal__panel">
+                <span
+                  className="followed-reports-location-modal__icon"
+                  aria-hidden="true"
+                >
+                  <FiMapPin />
+                </span>
+
+                <div className="followed-reports-location-modal__content">
+                  <strong id="followed-reports-location-modal-title">
+                    فعّل موقعك من الخريطة لعرض أقصر مسافة
+                  </strong>
+                  <p>
+                    لحساب أقصر مسار إلى البلاغ
+                    <b> {directionsPromptReport.title}</b>، انتقل إلى الخريطة ثم
+                    اضغط زر موقعك الحالي الموجود أعلى يسارها.
+                  </p>
+                </div>
+
+                <div className="followed-reports-location-modal__control-guide">
+                  <span aria-hidden="true">
+                    <FiMapPin />
+                  </span>
+                  <div>
+                    <strong>كيف ستتعرف على الزر؟</strong>
+                    <p>
+                      هو الزر الدائري الذي يحتوي على أيقونة تحديد الموقع، ويظهر
+                      أعلى يسار الخريطة بجوار أدوات التكبير والتصغير.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="followed-reports-location-modal__actions">
+                  <button
+                    type="button"
+                    className="followed-reports-location-modal__confirm"
+                    onClick={handleGoToMapForLocation}
+                  >
+                    <FiMapPin />
+                    الذهاب للخريطة وتفعيل الموقع
+                  </button>
+
+                  <button
+                    type="button"
+                    className="followed-reports-location-modal__cancel"
+                    onClick={closeDirectionsPrompt}
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </section>
+            </div>,
             document.body
           )
         : null}

@@ -31,12 +31,50 @@ const itemVariants = {
   },
 };
 
+function getRawQueryParam(search, paramName) {
+  const queryString = search.startsWith('?') ? search.slice(1) : search;
+
+  if (!queryString) {
+    return '';
+  }
+
+  const queryParts = queryString.split('&');
+
+  const matchingPart = queryParts.find((part) => {
+    const separatorIndex = part.indexOf('=');
+
+    const rawKey =
+      separatorIndex === -1 ? part : part.slice(0, separatorIndex);
+
+    try {
+      return decodeURIComponent(rawKey) === paramName;
+    } catch {
+      return rawKey === paramName;
+    }
+  });
+
+  if (!matchingPart) {
+    return '';
+  }
+
+  const separatorIndex = matchingPart.indexOf('=');
+
+  if (separatorIndex === -1) {
+    return '';
+  }
+
+  return matchingPart.slice(separatorIndex + 1);
+}
+
 function ResetPasswordForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  const resetToken = searchParams.get('token') || '';
+  // قراءة التوكن من الرابط كما هو، بدون URL Decode
+  const resetToken =
+    window.location.search.match(/[?&]token=([^&]*)/)?.[1] || '';
+
   const emailFromUrl = searchParams.get('email') || '';
   const emailFromState = location.state?.email || '';
 
@@ -45,12 +83,13 @@ function ResetPasswordForm() {
     newPassword: '',
     confirmPassword: '',
   }));
-
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [visiblePasswords, setVisiblePasswords] = useState({
     newPassword: false,
     confirmPassword: false,
   });
+
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -62,8 +101,13 @@ function ResetPasswordForm() {
       [name]: value,
     }));
 
-    if (errorMessage) setErrorMessage('');
-    if (successMessage) setSuccessMessage('');
+    if (errorMessage) {
+      setErrorMessage('');
+    }
+
+    if (successMessage) {
+      setSuccessMessage('');
+    }
   }
 
   function validateForm() {
@@ -107,10 +151,13 @@ function ResetPasswordForm() {
       setIsSubmitting(true);
       setErrorMessage('');
       setSuccessMessage('');
-
+      console.log('Token الموجود بعد قراءة الرابط:', decodedResetToken);
+      console.log('Token الذي سيتم إرساله:', resetToken);
       const response = await resetPassword({
-        email: formData.email,
+        email: formData.email.trim(),
+
         token: resetToken,
+
         newPassword: formData.newPassword,
         confirmPassword: formData.confirmPassword,
       });
@@ -125,13 +172,15 @@ function ResetPasswordForm() {
         navigate(ROUTES.LOGIN, {
           replace: true,
           state: {
-            email: formData.email,
+            email: formData.email.trim(),
             message: successText,
           },
         });
       }, 1200);
     } catch (error) {
-      setErrorMessage(error?.message || 'حدث خطأ أثناء تغيير كلمة المرور.');
+      setErrorMessage(
+        error?.message || 'حدث خطأ أثناء تغيير كلمة المرور.',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -145,10 +194,17 @@ function ResetPasswordForm() {
       whileInView="visible"
       viewport={{ once: false, amount: 0.2 }}
     >
-      <motion.header className="forgot-form__header" variants={itemVariants}>
-        <h1 className="forgot-form__title">إعادة تعيين كلمة المرور</h1>
+      <motion.header
+        className="forgot-form__header"
+        variants={itemVariants}
+      >
+        <h1 className="forgot-form__title">
+          إعادة تعيين كلمة المرور
+        </h1>
+
         <p className="forgot-form__subtitle">
-          أدخل بريدك الإلكتروني وكلمة المرور الجديدة لإكمال عملية إعادة التعيين
+          أدخل بريدك الإلكتروني وكلمة المرور الجديدة لإكمال عملية إعادة
+          التعيين
         </p>
       </motion.header>
 
@@ -158,8 +214,12 @@ function ResetPasswordForm() {
         noValidate
         variants={containerVariants}
       >
-        <motion.div className="forgot-form__field" variants={itemVariants}>
+        <motion.div
+          className="forgot-form__field"
+          variants={itemVariants}
+        >
           <label htmlFor="email">البريد الإلكتروني</label>
+
           <input
             id="email"
             name="email"
@@ -171,8 +231,12 @@ function ResetPasswordForm() {
           />
         </motion.div>
 
-        <motion.div className="forgot-form__field" variants={itemVariants}>
+        <motion.div
+          className="forgot-form__field"
+          variants={itemVariants}
+        >
           <label htmlFor="newPassword">كلمة المرور الجديدة</label>
+
           <PasswordInput
             id="newPassword"
             name="newPassword"
@@ -189,8 +253,14 @@ function ResetPasswordForm() {
           />
         </motion.div>
 
-        <motion.div className="forgot-form__field" variants={itemVariants}>
-          <label htmlFor="confirmPassword">تأكيد كلمة المرور</label>
+        <motion.div
+          className="forgot-form__field"
+          variants={itemVariants}
+        >
+          <label htmlFor="confirmPassword">
+            تأكيد كلمة المرور
+          </label>
+
           <PasswordInput
             id="confirmPassword"
             name="confirmPassword"
@@ -237,11 +307,19 @@ function ResetPasswordForm() {
           whileHover={{ y: -2, scale: 1.01 }}
           whileTap={{ scale: 0.985 }}
         >
-          {isSubmitting ? 'جاري تغيير كلمة المرور...' : 'تغيير كلمة المرور'}
+          {isSubmitting
+            ? 'جاري تغيير كلمة المرور...'
+            : 'تغيير كلمة المرور'}
         </motion.button>
 
-        <motion.div className="forgot-form__links" variants={itemVariants}>
-          <Link to={ROUTES.LOGIN} className="forgot-form__link">
+        <motion.div
+          className="forgot-form__links"
+          variants={itemVariants}
+        >
+          <Link
+            to={ROUTES.LOGIN}
+            className="forgot-form__link"
+          >
             العودة لتسجيل الدخول
           </Link>
         </motion.div>

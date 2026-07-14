@@ -8,6 +8,7 @@ function NearbyIssuesList({
   onSelectIssue,
   currentLocation = null,
   onRequestDirections,
+  onShowIssueOnMap,
   onClearSelection,
   onToggleFollow,
   onToggleVerify,
@@ -63,6 +64,7 @@ function NearbyIssuesList({
                 issue={issue}
                 currentLocation={currentLocation}
                 onRequestDirections={onRequestDirections}
+                onShowIssueOnMap={onShowIssueOnMap}
                 onClearSelection={onClearSelection}
                 onToggleFollow={onToggleFollow}
                 onToggleVerify={onToggleVerify}

@@ -9,7 +9,6 @@ import {
   acceptCompanyFix,
   archiveAdminReport,
   approveAdminReport,
-  closeAdminReport,
   getAdminReportById,
   prepareCompanyReassignment,
   rejectAdminReport,
@@ -209,11 +208,6 @@ function AdminReportDetailsPage() {
 
   async function handleRejectReport(rejectionReason) {
     const updatedReport = await rejectAdminReport(report.id, rejectionReason);
-    setReport(updatedReport);
-  }
-
-  async function handleCloseReport() {
-    const updatedReport = await closeAdminReport(report.id);
     setReport(updatedReport);
   }
 
@@ -452,7 +446,6 @@ function AdminReportDetailsPage() {
             report={report}
             onApprove={handleApproveReport}
             onReject={handleRejectReport}
-            onCloseReport={handleCloseReport}
           />
 
           <AdminReportTimelineCard timeline={report.timeline || []} />
