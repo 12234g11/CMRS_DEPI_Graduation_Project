@@ -151,7 +151,6 @@ function ResetPasswordForm() {
       setIsSubmitting(true);
       setErrorMessage('');
       setSuccessMessage('');
-      console.log('Token الموجود بعد قراءة الرابط:', decodedResetToken);
       console.log('Token الذي سيتم إرساله:', resetToken);
       const response = await resetPassword({
         email: formData.email.trim(),
