@@ -7,20 +7,54 @@ const API_BASE_URL = (
 
 const COMPANY_REPORT_STATUS_OPTIONS_FALLBACK = [
   { value: 'all', label: 'كل الحالات' },
-  { value: 'تم التعيين', label: 'تم التعيين' },
-  { value: 'جاري التنفيذ', label: 'جاري التنفيذ' },
-  { value: 'بانتظار مراجعة الأدمن', label: 'بانتظار مراجعة الأدمن' },
-  { value: 'مطلوب استكمال', label: 'مطلوب استكمال' },
-  { value: 'متعذر التنفيذ', label: 'متعذر التنفيذ' },
-  { value: 'تم الحل', label: 'تم الحل' },
+  { value: 'Assigned', label: 'تم التعيين' },
+  { value: 'InProgress', label: 'جاري التنفيذ' },
+  { value: 'PendingAdminApproval', label: 'بانتظار مراجعة الأدمن' },
+  { value: 'NeedsCompletion', label: 'مطلوب استكمال' },
+  { value: 'UnableToExecute', label: 'متعذر التنفيذ' },
+  { value: 'Resolved', label: 'تم الحل' },
 ];
 
 const COMPANY_REPORT_PRIORITY_OPTIONS_FALLBACK = [
   { value: 'all', label: 'كل الأولويات' },
-  { value: 'عالية', label: 'عالية' },
-  { value: 'متوسطة', label: 'متوسطة' },
-  { value: 'منخفضة', label: 'منخفضة' },
+  { value: 'high', label: 'عالية' },
+  { value: 'Medium', label: 'متوسطة' },
+  { value: 'low', label: 'منخفضة' },
 ];
+
+const REPORT_STATUS_FILTER_VALUES = {
+  underreview: 'UnderReview',
+  accepted: 'Accepted',
+  rejected: 'Rejected',
+  assigned: 'Assigned',
+  inprogress: 'InProgress',
+  pendingadminapproval: 'PendingAdminApproval',
+  needscompletion: 'NeedsCompletion',
+  unabletoexecute: 'UnableToExecute',
+  resolved: 'Resolved',
+  'قيدالمراجعة': 'UnderReview',
+  'تحتالمراجعة': 'UnderReview',
+  'تمالقبول': 'Accepted',
+  'مقبول': 'Accepted',
+  'تمالرفض': 'Rejected',
+  'مرفوض': 'Rejected',
+  'تمالتعيين': 'Assigned',
+  'جاريالتنفيذ': 'InProgress',
+  'بانتظارمراجعةالأدمن': 'PendingAdminApproval',
+  'بانتظارمراجعةالادمن': 'PendingAdminApproval',
+  'مطلوباستكمال': 'NeedsCompletion',
+  'متعذرالتنفيذ': 'UnableToExecute',
+  'تمالحل': 'Resolved',
+};
+
+const REPORT_PRIORITY_FILTER_VALUES = {
+  low: 'low',
+  medium: 'Medium',
+  high: 'high',
+  'منخفضة': 'low',
+  'متوسطة': 'Medium',
+  'عالية': 'high',
+};
 
 const STATUS_MAP = {
   assigned: { label: 'تم التعيين', tone: 'info' },
@@ -55,6 +89,61 @@ function compactKey(value) {
     .trim()
     .toLowerCase()
     .replace(/[\s_-]+/g, '');
+}
+
+
+function normalizeReportStatusFilterValue(value) {
+  if (!value || value === 'all') return undefined;
+
+  return REPORT_STATUS_FILTER_VALUES[compactKey(value)] || value;
+}
+
+function normalizeReportPriorityFilterValue(value) {
+  if (!value || value === 'all') return undefined;
+
+  return REPORT_PRIORITY_FILTER_VALUES[compactKey(value)] || value;
+}
+
+function normalizeFilterOptions(options, type) {
+  if (!Array.isArray(options)) return [];
+
+  const normalizeValue =
+    type === 'status'
+      ? normalizeReportStatusFilterValue
+      : normalizeReportPriorityFilterValue;
+
+  return options
+    .map((option) => {
+      if (!option) return null;
+
+      if (typeof option === 'string') {
+        return {
+          value: normalizeValue(option),
+          label: option,
+        };
+      }
+
+      const rawValue = option.value ?? option.id ?? option.name ?? option.label;
+      const label = option.label ?? option.name ?? String(rawValue || '');
+      const compactRawValue = compactKey(rawValue);
+      const compactLabel = compactKey(label);
+      const isAllOption =
+        compactRawValue === 'all' ||
+        compactLabel === 'all' ||
+        ['كلالحالات', 'كلالأولويات', 'الكل'].includes(compactRawValue) ||
+        ['كلالحالات', 'كلالأولويات', 'الكل'].includes(compactLabel);
+      const shouldUseLabelValue =
+        typeof rawValue === 'number' || /^\d+$/.test(String(rawValue || ''));
+
+      return {
+        ...option,
+        value: isAllOption
+          ? 'all'
+          : normalizeValue(shouldUseLabelValue ? label : rawValue),
+        label,
+      };
+    })
+    .filter((option) => option?.value && option?.label);
 }
 
 function readStorageValue(key) {
@@ -730,13 +819,18 @@ function appendFilesToFormData(formData, fieldName, files = []) {
 
 export async function getCompanyReportFilterOptions() {
   const data = await request('/api/company/reports/options');
+  const statusOptions = normalizeFilterOptions(data?.statusOptions, 'status');
+  const priorityOptions = normalizeFilterOptions(
+    data?.priorityOptions,
+    'priority',
+  );
 
   return {
-    statusOptions: data?.statusOptions?.length
-      ? data.statusOptions
+    statusOptions: statusOptions.length
+      ? statusOptions
       : COMPANY_REPORT_STATUS_OPTIONS_FALLBACK,
-    priorityOptions: data?.priorityOptions?.length
-      ? data.priorityOptions
+    priorityOptions: priorityOptions.length
+      ? priorityOptions
       : COMPANY_REPORT_PRIORITY_OPTIONS_FALLBACK,
   };
 }
@@ -745,11 +839,8 @@ export async function getCompanyReports(params = {}) {
   const data = await request('/api/company/reports', {
     queryParams: {
       search: params.search || undefined,
-      status: params.status && params.status !== 'all' ? params.status : undefined,
-      priority:
-        params.priority && params.priority !== 'all'
-          ? params.priority
-          : undefined,
+      status: normalizeReportStatusFilterValue(params.status),
+      priority: normalizeReportPriorityFilterValue(params.priority),
       page: params.page || 1,
       pageSize: params.pageSize || 10,
     },

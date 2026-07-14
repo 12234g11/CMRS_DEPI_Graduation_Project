@@ -30,19 +30,19 @@ const DEFAULT_PAGE_SIZE = 10;
 
 const DEFAULT_STATUS_OPTIONS = [
   { value: 'all', label: 'كل الحالات' },
-  { value: 'تم التعيين', label: 'تم التعيين' },
-  { value: 'جاري التنفيذ', label: 'جاري التنفيذ' },
-  { value: 'بانتظار مراجعة الأدمن', label: 'بانتظار مراجعة الأدمن' },
-  { value: 'مطلوب استكمال', label: 'مطلوب استكمال' },
-  { value: 'متعذر التنفيذ', label: 'متعذر التنفيذ' },
-  { value: 'تم الحل', label: 'تم الحل' },
+  { value: 'Assigned', label: 'تم التعيين' },
+  { value: 'InProgress', label: 'جاري التنفيذ' },
+  { value: 'PendingAdminApproval', label: 'بانتظار مراجعة الأدمن' },
+  { value: 'NeedsCompletion', label: 'مطلوب استكمال' },
+  { value: 'UnableToExecute', label: 'متعذر التنفيذ' },
+  { value: 'Resolved', label: 'تم الحل' },
 ];
 
 const DEFAULT_PRIORITY_OPTIONS = [
   { value: 'all', label: 'كل الأولويات' },
-  { value: 'عالية', label: 'عالية' },
-  { value: 'متوسطة', label: 'متوسطة' },
-  { value: 'منخفضة', label: 'منخفضة' },
+  { value: 'high', label: 'عالية' },
+  { value: 'Medium', label: 'متوسطة' },
+  { value: 'low', label: 'منخفضة' },
 ];
 
 function useDebouncedValue(value, delay = 350) {

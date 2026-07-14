@@ -67,7 +67,7 @@ function toMapReport(report = {}) {
     typeLabel: report.issueCategoryName || 'أخرى',
     statusKey: report.statusKey,
     statusLabel: report.statusLabel || 'غير محدد',
-    statusTone: report.statusTone || 'warning',
+    statusTone: report.statusTone || 'accepted',
     priority: report.priorityLabel || 'غير محددة',
     description:
       report.descriptionPreview ||

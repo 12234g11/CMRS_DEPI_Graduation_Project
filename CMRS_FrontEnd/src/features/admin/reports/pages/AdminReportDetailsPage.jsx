@@ -7,11 +7,15 @@ import ReportsMap from '../../../map/components/ReportsMap';
 import {
   acceptCompanyCannotFix,
   acceptCompanyFix,
+  archiveAdminReport,
   approveAdminReport,
   closeAdminReport,
   getAdminReportById,
+  prepareCompanyReassignment,
   rejectAdminReport,
+  rejectCompanyCannotFix,
   requestCompanyCompletion,
+  unarchiveAdminReport,
 } from '../api/adminReportsApi';
 import AdminCompanyAssignmentPanel from '../components/AdminCompanyAssignmentPanel';
 import AdminCompanyResponseReviewCard from '../components/AdminCompanyResponseReviewCard';
@@ -21,6 +25,7 @@ import AdminReporterCard from '../components/AdminReporterCard';
 import AdminReportStatusForm from '../components/AdminReportStatusForm';
 import AdminReportSummaryCard from '../components/AdminReportSummaryCard';
 import AdminReportTimelineCard from '../components/AdminReportTimelineCard';
+import AdminReportArchiveCard from '../components/AdminReportArchiveCard';
 import '../admin-reports.css';
 
 function hasPreparedReassignment(report = {}) {
@@ -28,6 +33,8 @@ function hasPreparedReassignment(report = {}) {
     report.reassignmentStatus ||
       report.assignmentMode ||
       report.assignmentState ||
+      report.adminDecision?.decisionType ||
+      report.adminDecision?.decision ||
       '',
   ).toLowerCase();
 
@@ -59,10 +66,65 @@ function getReassignmentStorageKey(reportId) {
   return `admin-report-reassignment:${reportId}`;
 }
 
+function getStoredReassignment(reportId) {
+  const rawValue = window.sessionStorage.getItem(
+    getReassignmentStorageKey(reportId),
+  );
+
+  if (!rawValue) return null;
+  if (rawValue === 'true') return { isActive: true };
+
+  try {
+    const parsedValue = JSON.parse(rawValue);
+
+    return parsedValue && typeof parsedValue === 'object'
+      ? { ...parsedValue, isActive: true }
+      : { isActive: true };
+  } catch {
+    return { isActive: true };
+  }
+}
+
+function mergeStoredReassignment(report, storedReassignment) {
+  if (!storedReassignment) return report;
+
+  return {
+    ...report,
+    adminDecision: {
+      ...(report.adminDecision || {}),
+      decisionType:
+        report.adminDecision?.decisionType || storedReassignment.decisionType || 'reassign',
+      decisionLabel:
+        report.adminDecision?.decisionLabel ||
+        storedReassignment.decisionLabel ||
+        'بانتظار تعيين شركة جديدة',
+      previousCompanyId:
+        report.adminDecision?.previousCompanyId ||
+        storedReassignment.previousCompanyId ||
+        '',
+      previousCompanyName:
+        report.adminDecision?.previousCompanyName ||
+        storedReassignment.previousCompanyName ||
+        '',
+      companyResponseId:
+        report.adminDecision?.companyResponseId ||
+        storedReassignment.companyResponseId ||
+        '',
+      adminNote:
+        report.adminDecision?.adminNote ||
+        storedReassignment.adminNote ||
+        '',
+    },
+  };
+}
+
 function AdminReportDetailsPage() {
   const { reportId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const isArchiveRoute = location.pathname.startsWith(
+    ROUTES.ADMIN_ARCHIVED_REPORTS,
+  );
 
   const [report, setReport] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,12 +139,13 @@ function AdminReportDetailsPage() {
     getAdminReportById(reportId)
       .then((data) => {
         if (isMounted) {
-          const savedReassignmentMode =
-            window.sessionStorage.getItem(getReassignmentStorageKey(reportId)) === 'true';
+          const storedReassignment = getStoredReassignment(reportId);
+          const preparedData = mergeStoredReassignment(data, storedReassignment);
 
-          setReport(data);
+          setReport(preparedData);
           setIsReassignmentMode(
-            hasPreparedReassignment(data) || savedReassignmentMode,
+            hasPreparedReassignment(preparedData) ||
+              Boolean(storedReassignment?.isActive),
           );
         }
       })
@@ -190,10 +253,80 @@ function AdminReportDetailsPage() {
     setReport(updatedReport);
   }
 
-  function handleReassign() {
-    // لا يتم تغيير الإسناد أو إرسال أي رسالة قبل اختيار الشركة الجديدة
-    // وتأكيد العملية من نافذة التعيين.
-    window.sessionStorage.setItem(getReassignmentStorageKey(report.id), 'true');
+  async function handleRejectCannotFix(payload = {}) {
+    const updatedReport = await rejectCompanyCannotFix(report.id, payload);
+    clearReassignmentMode();
+    setReport(updatedReport);
+  }
+
+  async function handleArchiveReport() {
+    const updatedReport = await archiveAdminReport(report.id);
+
+    clearReassignmentMode();
+    setReport(updatedReport);
+    navigate(`${ROUTES.ADMIN_ARCHIVED_REPORTS}/${report.id}`, {
+      replace: true,
+    });
+  }
+
+  async function handleUnarchiveReport() {
+    const updatedReport = await unarchiveAdminReport(report.id);
+
+    clearReassignmentMode();
+    setReport(updatedReport);
+    navigate(`${ROUTES.ADMIN_REVIEW_REPORTS}/${report.id}`, {
+      replace: true,
+    });
+  }
+
+  async function handleReassign(payload = {}) {
+    const previousCompanyId = report.assignedCompanyId || '';
+    const previousCompanyName =
+      report.assignedCompanyName ||
+      report.assignedCompany ||
+      report.concernedCompanyName ||
+      '';
+    const updatedReport = await prepareCompanyReassignment(report.id, payload);
+    const preparedReport = {
+      ...updatedReport,
+      adminDecision: {
+        ...(updatedReport.adminDecision || {}),
+        decisionType: updatedReport.adminDecision?.decisionType || 'reassign',
+        decisionLabel:
+          updatedReport.adminDecision?.decisionLabel || 'بانتظار تعيين شركة جديدة',
+        previousCompanyId:
+          updatedReport.adminDecision?.previousCompanyId || previousCompanyId,
+        previousCompanyName:
+          updatedReport.adminDecision?.previousCompanyName || previousCompanyName,
+        companyResponseId:
+          updatedReport.adminDecision?.companyResponseId ||
+          report.companyResponse?.submissionId ||
+          report.companyResponse?.id ||
+          '',
+        adminNote:
+          updatedReport.adminDecision?.adminNote ||
+          payload.adminNote ||
+          payload.companyMessage ||
+          '',
+      },
+    };
+
+    window.sessionStorage.setItem(
+      getReassignmentStorageKey(report.id),
+      JSON.stringify({
+        isActive: true,
+        decisionType: 'reassign',
+        decisionLabel: 'بانتظار تعيين شركة جديدة',
+        previousCompanyId,
+        previousCompanyName,
+        companyResponseId:
+          report.companyResponse?.submissionId ||
+          report.companyResponse?.id ||
+          '',
+        adminNote: payload.adminNote || payload.companyMessage || '',
+      }),
+    );
+    setReport(preparedReport);
     setIsReassignmentMode(true);
 
     navigate(`${ROUTES.ADMIN_REVIEW_REPORTS}/${report.id}#company-assignment`, {
@@ -209,6 +342,7 @@ function AdminReportDetailsPage() {
       });
     }, 350);
   }
+
   if (isLoading) {
     return (
       <div className="dashboard-page admin-report-details-page">
@@ -223,6 +357,10 @@ function AdminReportDetailsPage() {
   }
 
   if (!report) {
+    const fallbackRoute = isArchiveRoute
+      ? ROUTES.ADMIN_ARCHIVED_REPORTS
+      : ROUTES.ADMIN_REVIEW_REPORTS;
+
     return (
       <div className="dashboard-page admin-report-details-page">
         <PageHeader title="عرض البلاغ" subtitle="Report Details" />
@@ -233,9 +371,9 @@ function AdminReportDetailsPage() {
 
           <button
             type="button"
-            onClick={() => navigate(ROUTES.ADMIN_REVIEW_REPORTS)}
+            onClick={() => navigate(fallbackRoute)}
           >
-            الرجوع لإدارة البلاغات
+            {isArchiveRoute ? 'الرجوع إلى أرشيف البلاغات' : 'الرجوع لإدارة البلاغات'}
           </button>
         </section>
       </div>
@@ -260,7 +398,12 @@ function AdminReportDetailsPage() {
     reportStatusText.includes('مرفوض') ||
     reportStatusText.includes('مغلق');
   const reportHasAssignedCompany = hasAssignedCompany(report);
+  const isArchiveContext = isArchiveRoute || report.isArchived;
+  const backRoute = isArchiveContext
+    ? ROUTES.ADMIN_ARCHIVED_REPORTS
+    : ROUTES.ADMIN_REVIEW_REPORTS;
   const canShowCompanyAssignmentPanel =
+    !report.isArchived &&
     !isTerminalReport &&
     (
       isReassignmentMode ||
@@ -270,14 +413,20 @@ function AdminReportDetailsPage() {
   return (
     <div className="dashboard-page admin-report-details-page">
       <PageHeader
-        title="عرض البلاغ"
+        title={isArchiveContext ? 'تفاصيل البلاغ المؤرشف' : 'عرض البلاغ'}
         subtitle={`Report Details - تفاصيل البلاغ رقم #${report.id}`}
       />
 
-      <Link to={ROUTES.ADMIN_REVIEW_REPORTS} className="admin-report-back-link">
+      <Link to={backRoute} className="admin-report-back-link">
         <FiArrowRight />
-        الرجوع إلى إدارة البلاغات
+        {isArchiveContext ? 'الرجوع إلى أرشيف البلاغات' : 'الرجوع إلى إدارة البلاغات'}
       </Link>
+
+      <AdminReportArchiveCard
+        report={report}
+        onArchive={handleArchiveReport}
+        onUnarchive={handleUnarchiveReport}
+      />
 
       <div className="admin-report-details-grid">
         <div className="admin-report-details-left">
@@ -331,14 +480,16 @@ function AdminReportDetailsPage() {
 
           <AdminReporterCard reporter={report.reporter} />
 
-          <AdminCompanyResponseReviewCard
-            report={report}
-            onAcceptFix={handleAcceptFix}
-            onRequestCompletion={handleRequestCompletion}
-            onAcceptCannotFix={handleAcceptCannotFix}
-            onReassign={handleReassign}
-          />
-
+          {!isReassignmentMode ? (
+            <AdminCompanyResponseReviewCard
+              report={report}
+              onAcceptFix={handleAcceptFix}
+              onRequestCompletion={handleRequestCompletion}
+              onAcceptCannotFix={handleAcceptCannotFix}
+              onRejectCannotFix={handleRejectCannotFix}
+              onReassign={handleReassign}
+            />
+          ) : null}
 
           {canShowCompanyAssignmentPanel ? (
             <AdminCompanyAssignmentPanel

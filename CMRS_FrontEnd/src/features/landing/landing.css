@@ -263,9 +263,13 @@ section[id] {
   white-space: nowrap;
 }
 
-.hero-section__title span {
-  color: #025f48;
-  text-shadow: 0 0 3px rgba(0, 0, 0, 0.65), 0 0 6px rgba(0, 0, 0, 0.22);
+.hero-section__title-brand {
+  color: #f1f1f1;
+}
+
+.hero-section__title-city {
+  color: #f1f1f1;
+  text-shadow: none;
 }
 
 .hero-section__subtitle {
@@ -1129,4 +1133,32 @@ section[id] {
   .landing-footer__bottom {
     font-size: 0.88rem;
   }
+}
+/* Contact form feedback */
+.contact-form__status {
+  padding: 13px 16px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  text-align: center;
+  font-size: 0.98rem;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.contact-form__status--success {
+  color: #075b44;
+  background: #dff7e9;
+  border-color: #8ed5ad;
+}
+
+.contact-form__status--error {
+  color: #8f1d1d;
+  background: #fff0f0;
+  border-color: #efaaaa;
+}
+
+.landing-btn--submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+  transform: none;
 }

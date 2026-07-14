@@ -14,7 +14,14 @@ function getCompanyResponseLabel(response) {
   return response.statusLabel || 'رد شركة';
 }
 
-function AdminReportsTable({ reports = [], highlightedReportId = '' }) {
+function AdminReportsTable({
+  reports = [],
+  highlightedReportId = '',
+  detailsBasePath = ROUTES.ADMIN_REVIEW_REPORTS,
+  showCompanyReviewAction = true,
+  showAssignmentAction = true,
+  emptyMessage = 'لا توجد بلاغات مطابقة للبحث أو الفلاتر الحالية.',
+}) {
   const tableWrapRef = useRef(null);
 
   useLayoutEffect(() => {
@@ -105,9 +112,9 @@ function AdminReportsTable({ reports = [], highlightedReportId = '' }) {
 
                   <td>
                     <div className="admin-report-actions">
-                      {hasPendingCompanyResponse ? (
+                      {showCompanyReviewAction && hasPendingCompanyResponse ? (
                         <Link
-                          to={`${ROUTES.ADMIN_REVIEW_REPORTS}/${report.id}#company-response`}
+                          to={`${detailsBasePath}/${report.id}#company-response`}
                           className="admin-review-response-btn"
                         >
                           <FiMessageSquare />
@@ -116,20 +123,22 @@ function AdminReportsTable({ reports = [], highlightedReportId = '' }) {
                       ) : null}
 
                       <Link
-                        to={`${ROUTES.ADMIN_REVIEW_REPORTS}/${report.id}`}
+                        to={`${detailsBasePath}/${report.id}`}
                         className="admin-view-btn"
                       >
                         <FiEye />
                         عرض
                       </Link>
 
-                      <Link
-                        to={`${ROUTES.ADMIN_REVIEW_REPORTS}/${report.id}#company-assignment`}
-                        className="admin-assign-btn"
-                      >
-                        <FiUserPlus />
-                        تعيين
-                      </Link>
+                      {showAssignmentAction ? (
+                        <Link
+                          to={`${detailsBasePath}/${report.id}#company-assignment`}
+                          className="admin-assign-btn"
+                        >
+                          <FiUserPlus />
+                          تعيين
+                        </Link>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -139,7 +148,7 @@ function AdminReportsTable({ reports = [], highlightedReportId = '' }) {
             <tr>
               <td colSpan="8">
                 <div className="admin-reports-empty-state">
-                  لا توجد بلاغات مطابقة للبحث أو الفلاتر الحالية.
+                  {emptyMessage}
                 </div>
               </td>
             </tr>

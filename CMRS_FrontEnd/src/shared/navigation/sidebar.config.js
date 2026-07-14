@@ -60,6 +60,12 @@ export const DASHBOARD_LAYOUT_CONFIG = {
         icon: 'file-text',
       },
       {
+        key: 'reports-archive',
+        label: 'أرشيف البلاغات',
+        path: ROUTES.ADMIN_ARCHIVED_REPORTS,
+        icon: 'archive',
+      },
+      {
         key: 'companies',
         label: 'الشركات',
         path: ROUTES.ADMIN_COMPANIES,

@@ -440,20 +440,22 @@ function CompanyReportDetailsPage() {
               <div className="company-admin-decision-card__content">
                 <strong>{adminReviewPresentation.title}</strong>
 
-                <div className="company-admin-decision-card__message">
-                  <b>رسالة الأدمن للشركة</b>
-                  <p>{adminReviewPresentation.description || 'لا توجد بيانات للعرض'}</p>
-                </div>
-
                 {adminReviewPresentation.showCompletionRequirements ? (
                   <div className="company-admin-decision-card__requirements">
                     <b>الأعمال المطلوب استكمالها</b>
                     <p>
-                      {adminReviewPresentation.completionRequirements ||
+                      {effectiveAdminReview.companyMessage ||
+                        effectiveAdminReview.note ||
+                        effectiveAdminReview.completionRequirements ||
                         'لا توجد بيانات للعرض'}
                     </p>
                   </div>
-                ) : null}
+                ) : (
+                  <div className="company-admin-decision-card__message">
+                    <b>رسالة الأدمن للشركة</b>
+                    <p>{adminReviewPresentation.description || 'لا توجد بيانات للعرض'}</p>
+                  </div>
+                )}
 
                 <small>
                   <FiClock />
@@ -505,11 +507,6 @@ function CompanyReportDetailsPage() {
               {report.adminReview ? (
                 <div className="company-company-response-card__admin-review">
                   <strong>رد الأدمن على هذا الطلب</strong>
-                  <p>
-                    {report.adminReview.companyMessage ||
-                      report.adminReview.note ||
-                      'لا توجد بيانات للعرض'}
-                  </p>
 
                   {['needs_completion', 'cannot_fix_rejected', 'rejected'].includes(
                     report.adminReview.status,
@@ -517,11 +514,19 @@ function CompanyReportDetailsPage() {
                     <div>
                       <b>المطلوب استكماله</b>
                       <p>
-                        {report.adminReview.completionRequirements ||
+                        {report.adminReview.companyMessage ||
+                          report.adminReview.note ||
+                          report.adminReview.completionRequirements ||
                           'لا توجد بيانات للعرض'}
                       </p>
                     </div>
-                  ) : null}
+                  ) : (
+                    <p>
+                      {report.adminReview.companyMessage ||
+                        report.adminReview.note ||
+                        'لا توجد بيانات للعرض'}
+                    </p>
+                  )}
                 </div>
               ) : null}
 

@@ -18,6 +18,8 @@ export const ROUTES = {
   ADMIN_DASHBOARD: '/admin',
   ADMIN_REVIEW_REPORTS: '/admin/reports/review',
   ADMIN_REPORT_DETAILS: '/admin/reports/review/:reportId',
+  ADMIN_ARCHIVED_REPORTS: '/admin/reports/archive',
+  ADMIN_ARCHIVED_REPORT_DETAILS: '/admin/reports/archive/:reportId',
   ADMIN_COMPANIES: '/admin/companies',
   ADMIN_COMPANY_REQUESTS: '/admin/companies/requests',
   ADMIN_ANALYTICS: '/admin/analytics',

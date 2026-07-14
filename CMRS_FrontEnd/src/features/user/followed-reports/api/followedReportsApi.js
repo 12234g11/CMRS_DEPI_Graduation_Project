@@ -52,13 +52,13 @@ const STATUS_LABELS = {
 };
 
 const STATUS_TONES = {
-  Accepted: 'warning',
-  Assigned: 'info',
-  InProgress: 'info',
-  Resolved: 'success',
-  UnableToExecute: 'secondary',
-  NeedsCompletion: 'warning',
-  PendingAdminApproval: 'info',
+  Accepted: 'accepted',
+  Assigned: 'assigned',
+  InProgress: 'in-progress',
+  Resolved: 'resolved',
+  UnableToExecute: 'unable-to-execute',
+  NeedsCompletion: 'needs-completion',
+  PendingAdminApproval: 'pending-admin-approval',
 };
 
 const ALLOWED_STATUS_KEYS = new Set(
@@ -270,15 +270,34 @@ function getCurrentUserVerifyVote(report = {}, engagement = {}) {
 }
 
 function normalizeStatusTone(tone, statusKey) {
+  if (statusKey && STATUS_TONES[statusKey]) {
+    return STATUS_TONES[statusKey];
+  }
+
   const normalizedTone = String(tone || '').trim().toLowerCase();
 
-  if (normalizedTone === 'primary') return 'info';
+  if (normalizedTone === 'primary') return 'assigned';
 
-  if (['success', 'warning', 'info', 'danger', 'secondary'].includes(normalizedTone)) {
+  if (
+    [
+      'accepted',
+      'assigned',
+      'in-progress',
+      'resolved',
+      'unable-to-execute',
+      'needs-completion',
+      'pending-admin-approval',
+      'success',
+      'warning',
+      'info',
+      'danger',
+      'secondary',
+    ].includes(normalizedTone)
+  ) {
     return normalizedTone;
   }
 
-  return STATUS_TONES[statusKey] || 'warning';
+  return 'accepted';
 }
 
 function normalizeArea(area = {}, report = {}) {

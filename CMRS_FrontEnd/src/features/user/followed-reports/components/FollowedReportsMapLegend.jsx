@@ -1,13 +1,13 @@
 import { FiInfo } from 'react-icons/fi';
 
 const LEGEND_ITEMS = [
-  { id: 'accepted', label: 'مقبول', tone: 'warning' },
-  { id: 'assigned', label: 'تم التعيين', tone: 'info' },
-  { id: 'in-progress', label: 'جاري التنفيذ', tone: 'info' },
-  { id: 'pending-admin', label: 'بانتظار مراجعة الأدمن', tone: 'info' },
-  { id: 'needs-completion', label: 'مطلوب استكمال', tone: 'warning' },
-  { id: 'resolved', label: 'تم الحل', tone: 'success' },
-  { id: 'unable', label: 'متعذر التنفيذ', tone: 'secondary' },
+  { id: 'accepted', label: 'مقبول', tone: 'accepted' },
+  { id: 'assigned', label: 'تم التعيين', tone: 'assigned' },
+  { id: 'in-progress', label: 'جاري التنفيذ', tone: 'in-progress' },
+  { id: 'pending-admin', label: 'بانتظار مراجعة الأدمن', tone: 'pending-admin-approval' },
+  { id: 'needs-completion', label: 'مطلوب استكمال', tone: 'needs-completion' },
+  { id: 'resolved', label: 'تم الحل', tone: 'resolved' },
+  { id: 'unable', label: 'متعذر التنفيذ', tone: 'unable-to-execute' },
 ];
 
 function FollowedReportsMapLegend() {

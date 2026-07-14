@@ -159,8 +159,24 @@ function AdminCompanyAssignmentPanel({ report, onAssigned, allowReassignment = f
   );
 
   const assignedCompanyName = getAssignedCompanyName(report);
+  const previousCompanyId =
+    report.adminDecision?.previousCompanyId ||
+    report.previousCompanyId ||
+    report.assignedCompanyId ||
+    '';
+  const previousCompanyName =
+    report.adminDecision?.previousCompanyName ||
+    report.previousCompanyName ||
+    assignedCompanyName ||
+    '';
   const reportHasExistingAssignment = hasExistingAssignment(report);
   const canReassign = allowReassignment;
+  const reassignmentCompanyMessage = String(
+    report.adminDecision?.adminNote ||
+      report.adminDecision?.companyMessage ||
+      report.reassignmentMessage ||
+      '',
+  ).trim();
   const isAssignmentLocked = reportHasExistingAssignment && !canReassign;
 
   const excludedCompanyIds = useMemo(
@@ -183,8 +199,12 @@ function AdminCompanyAssignmentPanel({ report, onAssigned, allowReassignment = f
       excludedCompanyIds.includes(company.id) ||
       excludedCompanyNames.includes(company.name) ||
       (canReassign &&
-        (String(company.id) === String(report.assignedCompanyId || '') ||
-          company.name === assignedCompanyName))
+        (
+          String(company.id) === String(previousCompanyId || '') ||
+          company.name === previousCompanyName ||
+          String(company.id) === String(report.assignedCompanyId || '') ||
+          company.name === assignedCompanyName
+        ))
     );
   }
 
@@ -258,6 +278,8 @@ function AdminCompanyAssignmentPanel({ report, onAssigned, allowReassignment = f
   }, [
     assignedCompanyName,
     canReassign,
+    previousCompanyId,
+    previousCompanyName,
     excludedCompanyKey,
     isAssignmentLocked,
     report.assignedCompanyId,
@@ -349,11 +371,10 @@ function AdminCompanyAssignmentPanel({ report, onAssigned, allowReassignment = f
     try {
       const result = await assignCompanyToReport(report.id, {
         companyId: selectedCompany.id,
-        adminNote: canReassign ? null : adminNote,
+        adminNote: canReassign ? reassignmentCompanyMessage || null : adminNote,
         assignmentSource: canReassign ? 'reassignment' : 'manual',
         isReassignment: canReassign,
-        previousCompanyId:
-          report.adminDecision?.previousCompanyId || report.assignedCompanyId || null,
+        previousCompanyId: previousCompanyId || null,
         companyResponseId:
           report.adminDecision?.companyResponseId ||
           report.companyResponse?.submissionId ||
@@ -548,8 +569,15 @@ function AdminCompanyAssignmentPanel({ report, onAssigned, allowReassignment = f
 
               {canReassign ? (
                 <div className="admin-assignment-reassignment-note">
-                  لن يتم إرسال أي رسالة للشركة القديمة أو للمستخدمين. بعد التأكيد
-                  ينتقل البلاغ مباشرة إلى الشركة الجديدة ويصلها إشعار التعيين المعتاد فقط.
+                  <strong>ما الذي سيحدث بعد التأكيد؟</strong>
+                  <p>
+                    ستصل رسالة إعادة الإسناد إلى الشركة الجديدة مع البلاغ، وسيُحذف البلاغ
+                    نهائيًا من قائمة وتفاصيل الشركة القديمة، ولن تُرسل أي رسالة للمستخدمين.
+                  </p>
+                  <p>
+                    <b>الرسالة المرسلة للشركة الجديدة:</b>{' '}
+                    {reassignmentCompanyMessage || 'لا توجد بيانات للعرض'}
+                  </p>
                 </div>
               ) : (
                 <label className="admin-assignment-note">

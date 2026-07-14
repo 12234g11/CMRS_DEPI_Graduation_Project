@@ -124,13 +124,13 @@ export const NEARBY_STATUS_LEGEND_ITEMS = [
 ];
 
 const STATUS_TONE = {
-  Accepted: 'warning',
-  Assigned: 'info',
-  InProgress: 'info',
-  PendingAdminApproval: 'warning',
-  NeedsCompletion: 'warning',
-  Resolved: 'success',
-  UnableToExecute: 'secondary',
+  Accepted: 'accepted',
+  Assigned: 'assigned',
+  InProgress: 'in-progress',
+  PendingAdminApproval: 'pending-admin-approval',
+  NeedsCompletion: 'needs-completion',
+  Resolved: 'resolved',
+  UnableToExecute: 'unable-to-execute',
 };
 
 const STATUS_COLOR_CLASS = {

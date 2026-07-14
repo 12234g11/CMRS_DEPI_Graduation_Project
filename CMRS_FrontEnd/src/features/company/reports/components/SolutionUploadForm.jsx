@@ -203,16 +203,11 @@ function SolutionUploadForm({ report, onSubmitSolution, onFilePickerOpen }) {
         <div className="company-solution-required-note">
           <FiAlertCircle />
           <div>
-            <strong>رسالة الأدمن للشركة</strong>
+            <strong>الأعمال المطلوب استكمالها</strong>
             <p>
               {report.adminReview?.companyMessage ||
                 report.adminReview?.note ||
-                'لا توجد بيانات للعرض'}
-            </p>
-
-            <strong>الأعمال المطلوب استكمالها</strong>
-            <p>
-              {report.adminReview?.completionRequirements ||
+                report.adminReview?.completionRequirements ||
                 'لا توجد بيانات للعرض'}
             </p>
           </div>

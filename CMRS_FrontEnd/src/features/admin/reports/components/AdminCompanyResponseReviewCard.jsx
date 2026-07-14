@@ -49,9 +49,23 @@ function getResponseTone(response) {
 function getResponseScenario(response) {
   const status = `${response?.responseType || ''} ${response?.responseTypeLabel || ''} ${response?.status || ''} ${response?.statusLabel || ''}`.toLowerCase();
 
+  // آخر status/responseType للشركة هو الذي يحدد أزرار المراجعة.
+  // وجود reason قد يكون من رد سابق أو حقلًا إضافيًا في رد الحل، لذلك لا يسبق
+  // الحالة الحالية عند تحديد ما إذا كانت المراجعة للحل أم للتعذر.
   if (
-    cleanText(response?.reason) ||
+    status.includes('fixed') ||
+    status.includes('solution') ||
+    status.includes('resolved') ||
+    status.includes('complete') ||
+    status.includes('تم الإصلاح') ||
+    status.includes('تم الحل')
+  ) {
+    return 'fixed';
+  }
+
+  if (
     status.includes('cannot') ||
+    status.includes('unable') ||
     status.includes('reject') ||
     status.includes('decline') ||
     status.includes('تعذر') ||
@@ -61,16 +75,18 @@ function getResponseScenario(response) {
   }
 
   if (
-    status.includes('fixed') ||
-    status.includes('resolved') ||
-    status.includes('complete') ||
-    status.includes('تم الإصلاح')
+    status.includes('started') ||
+    status.includes('inprogress') ||
+    status.includes('in progress') ||
+    status.includes('بدء التنفيذ') ||
+    status.includes('جاري التنفيذ')
   ) {
-    return 'fixed';
+    return 'started';
   }
 
-  if (status.includes('started') || status.includes('inprogress') || status.includes('بدء التنفيذ')) {
-    return 'started';
+  // fallback للبيانات القديمة التي لم تكن ترجع نوع الرد أو حالته بوضوح.
+  if (cleanText(response?.reason)) {
+    return 'cannot-fix';
   }
 
   return 'general';
@@ -87,25 +103,89 @@ function getResponseTypeLabel(response, scenario) {
   return 'نوع الرد غير محدد';
 }
 
+function getDecisionModalConfig(action, scenario) {
+  const configs = {
+    'accept-fix': {
+      title: scenario === 'started' ? 'قبول رد الشركة' : 'قبول الحل وإغلاق البلاغ',
+      description:
+        scenario === 'started'
+          ? 'اكتب رسالة واحدة توضّح للشركة نتيجة مراجعة رد بدء التنفيذ.'
+          : 'اكتب رسالة واحدة ستصل إلى الشركة عند اعتماد الحل وإغلاق البلاغ.',
+      fieldLabel: 'الرسالة الموجهة للشركة',
+      destination:
+        'هذه الرسالة موجهة للشركة وتظهر لها داخل تفاصيل البلاغ. لا تُستخدم كرسالة عامة للمستخدمين.',
+      placeholder: 'مثال: تمت مراجعة الرد والمرفقات واعتماد الإجراء المرسل من الشركة.',
+      confirmLabel: scenario === 'started' ? 'تأكيد قبول الرد' : 'تأكيد قبول الحل',
+      tone: 'accept',
+    },
+    'request-completion': {
+      title: scenario === 'started' ? 'رفض الرد وطلب المتابعة' : 'رفض الحل وطلب الاستكمال',
+      description:
+        'اكتب رسالة واحدة واضحة تحدد للشركة ما المطلوب تنفيذه أو استكماله قبل إرسال الرد مرة أخرى.',
+      fieldLabel: 'رسالة الاستكمال الموجهة للشركة',
+      destination:
+        'هذه الرسالة ستصل إلى الشركة الحالية فقط، ولن تظهر لصاحب البلاغ أو المتابعين أو المستخدمين القريبين.',
+      placeholder: 'مثال: الصور غير كافية، برجاء استكمال الأعمال وإرفاق صور واضحة بعد التنفيذ.',
+      confirmLabel: 'إرسال طلب الاستكمال',
+      tone: 'completion',
+    },
+    'close-cannot-fix': {
+      title: 'قبول الاعتذار وإنهاء البلاغ',
+      description:
+        'اكتب رسالتين منفصلتين: رسالة للشركة التي قدمت الاعتذار، ورسالة عامة للمستخدمين.',
+      fieldLabel: 'الرسالة الموجهة للشركة',
+      destination:
+        'الرسالة الأولى ستصل إلى الشركة التي قدمت الاعتذار، والرسالة الثانية ستظهر لصاحب البلاغ والمتابعين والمستخدمين القريبين عند فتح تفاصيل البلاغ.',
+      placeholder: 'مثال: تمت مراجعة طلب التعذر وقبول اعتذار شركتكم، وتم إغلاق البلاغ نهائيًا.',
+      userFieldLabel: 'الرسالة الموجهة للمستخدمين',
+      userPlaceholder: 'مثال: تعذر تنفيذ البلاغ لأسباب خارجة عن إرادة جهة التنفيذ، وتم إغلاقه نهائيًا.',
+      confirmLabel: 'تأكيد قبول الاعتذار',
+      tone: 'danger',
+    },
+    reassign: {
+      title: 'تهيئة إعادة الإسناد',
+      description:
+        'اكتب رسالة واحدة ستصل إلى الشركة الجديدة بعد اختيارها وتعيين البلاغ لها.',
+      fieldLabel: 'الرسالة الموجهة للشركة الجديدة',
+      destination:
+        'ستصل هذه الرسالة إلى الشركة الجديدة بعد تعيينها. لن تُرسل إلى الشركة القديمة أو إلى أي مستخدم، وسيُحذف البلاغ نهائيًا من قائمة وتفاصيل الشركة القديمة بعد نجاح التعيين.',
+      placeholder: 'مثال: تم إسناد البلاغ لشركتكم، برجاء مراجعة التفاصيل وبدء التنفيذ في أقرب وقت.',
+      confirmLabel: 'تأكيد وفتح اختيار الشركة',
+      tone: 'reassign',
+    },
+    'reject-cannot-fix': {
+      title: 'رفض الاعتذار وإعادة البلاغ للشركة',
+      description:
+        'اكتب رسالة واحدة توضّح للشركة سبب رفض التعذر وما المطلوب منها قبل بدء التنفيذ من جديد.',
+      fieldLabel: 'رسالة الأدمن الموجهة للشركة',
+      destination:
+        'هذه الرسالة ستصل إلى الشركة الحالية فقط. لن تظهر لصاحب البلاغ أو المتابعين أو المستخدمين القريبين.',
+      placeholder: 'مثال: سبب التعذر غير كافٍ، يرجى بدء التنفيذ من جديد واستكمال الأعمال المطلوبة.',
+      confirmLabel: 'رفض الاعتذار وإعادة البلاغ',
+      tone: 'completion',
+    },
+  };
+
+  return configs[action] || null;
+}
+
 function AdminCompanyResponseReviewCard({
   report,
   onAcceptFix,
   onRequestCompletion,
   onAcceptCannotFix,
+  onRejectCannotFix,
   onReassign,
 }) {
-  const [adminNote, setAdminNote] = useState('');
-  const [publicUserMessage, setPublicUserMessage] = useState('');
-  const [completionRequirements, setCompletionRequirements] = useState('');
-  const [isDecisionConfirmed, setIsDecisionConfirmed] = useState(false);
-  const [noteError, setNoteError] = useState('');
   const [actionError, setActionError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [activeAction, setActiveAction] = useState('');
   const [previewIndex, setPreviewIndex] = useState(null);
   const [fixedDecisionModal, setFixedDecisionModal] = useState('');
   const [fixedDecisionNote, setFixedDecisionNote] = useState('');
+  const [fixedDecisionUserMessage, setFixedDecisionUserMessage] = useState('');
   const [fixedDecisionNoteError, setFixedDecisionNoteError] = useState('');
+  const [fixedDecisionUserMessageError, setFixedDecisionUserMessageError] = useState('');
 
   const response = report.companyResponse;
   const decisionScenario = useMemo(() => getResponseScenario(response), [response]);
@@ -117,15 +197,12 @@ function AdminCompanyResponseReviewCard({
 
   useEffect(() => {
     setPreviewIndex(null);
-    setAdminNote('');
-    setPublicUserMessage('');
-    setCompletionRequirements('');
-    setIsDecisionConfirmed(false);
-    setNoteError('');
     setActionError('');
     setFixedDecisionModal('');
     setFixedDecisionNote('');
+    setFixedDecisionUserMessage('');
     setFixedDecisionNoteError('');
+    setFixedDecisionUserMessageError('');
   }, [report.id, response?.id, images.length]);
 
   useEffect(() => {
@@ -138,7 +215,9 @@ function AdminCompanyResponseReviewCard({
       if (event.key === 'Escape' && !isSaving) {
         setFixedDecisionModal('');
         setFixedDecisionNote('');
+        setFixedDecisionUserMessage('');
         setFixedDecisionNoteError('');
+        setFixedDecisionUserMessageError('');
       }
     }
 
@@ -186,7 +265,7 @@ function AdminCompanyResponseReviewCard({
             <div>
               <strong>{existingDecision.decisionLabel || 'تم تسجيل قرار الأدمن'}</strong>
               {isExistingReassignment ? (
-                <p>تمت إعادة الإسناد بدون إرسال رسائل للشركة القديمة أو المستخدمين.</p>
+                <p>تم تجهيز إعادة الإسناد، وستصل الرسالة إلى الشركة الجديدة بعد تعيينها، وسيُحذف البلاغ نهائيًا من الشركة القديمة.</p>
               ) : (
                 <>
                   {isExistingCompletionRequest ? (
@@ -260,18 +339,13 @@ function AdminCompanyResponseReviewCard({
     .toLowerCase()
     .replace(/[\s_-]+/g, '');
 
-  function handleNoteChange(event) {
-    setAdminNote(event.target.value);
-
-    if (noteError) {
-      setNoteError('');
-    }
-  }
 
   function openFixedDecisionModal(action) {
     setFixedDecisionModal(action);
     setFixedDecisionNote('');
+    setFixedDecisionUserMessage('');
     setFixedDecisionNoteError('');
+    setFixedDecisionUserMessageError('');
     setActionError('');
   }
 
@@ -280,17 +354,21 @@ function AdminCompanyResponseReviewCard({
 
     setFixedDecisionModal('');
     setFixedDecisionNote('');
+    setFixedDecisionUserMessage('');
     setFixedDecisionNoteError('');
+    setFixedDecisionUserMessageError('');
   }
 
   async function confirmFixedDecision() {
     const trimmedNote = fixedDecisionNote.trim();
+    const trimmedUserMessage = fixedDecisionUserMessage.trim();
+    const requiresUserMessage = fixedDecisionModal === 'close-cannot-fix';
 
     if (!trimmedNote) {
       setFixedDecisionNoteError(
-        fixedDecisionModal === 'accept-fix'
-          ? 'اكتب رسالة الأدمن التي سيتم إرسالها إلى الشركة عند قبول الحل.'
-          : 'اكتب تفاصيل الأعمال المطلوب من الشركة استكمالها قبل إعادة إرسال الحل.',
+        decisionModalConfig?.fieldLabel
+          ? `اكتب ${decisionModalConfig.fieldLabel} قبل تنفيذ القرار.`
+          : 'اكتب الرسالة أو الملاحظة المطلوبة قبل تنفيذ القرار.',
       );
       return;
     }
@@ -300,7 +378,23 @@ function AdminCompanyResponseReviewCard({
       return;
     }
 
-    const wasSuccessful = await handleDecision(fixedDecisionModal, trimmedNote);
+    if (requiresUserMessage && !trimmedUserMessage) {
+      setFixedDecisionUserMessageError(
+        'اكتب الرسالة العامة الموجهة للمستخدمين قبل قبول الاعتذار.',
+      );
+      return;
+    }
+
+    if (requiresUserMessage && trimmedUserMessage.length > 1000) {
+      setFixedDecisionUserMessageError('يجب ألا تتجاوز رسالة المستخدمين 1000 حرف.');
+      return;
+    }
+
+    const wasSuccessful = await handleDecision(
+      fixedDecisionModal,
+      trimmedNote,
+      trimmedUserMessage,
+    );
 
     if (wasSuccessful) {
       closeFixedDecisionModal();
@@ -323,73 +417,39 @@ function AdminCompanyResponseReviewCard({
     ));
   }
 
-  async function handleDecision(action, fixedActionNote = '') {
-    const isFixedSolutionDecision =
-      decisionScenario === 'fixed' &&
-      ['accept-fix', 'request-completion'].includes(action);
-    const trimmedFixedActionNote = fixedActionNote.trim();
-    const trimmedCompanyMessage = isFixedSolutionDecision
-      ? trimmedFixedActionNote
-      : adminNote.trim();
-    const trimmedPublicUserMessage = publicUserMessage.trim();
-    const trimmedCompletionRequirements = isFixedSolutionDecision
-      ? ''
-      : completionRequirements.trim();
-    const isCannotFixDecision = decisionScenario === 'cannot-fix';
-    const needsCompanyMessage =
-      isFixedSolutionDecision ||
-      [
-        'request-completion',
-        'reject-cannot-fix',
-        'close-cannot-fix',
-      ].includes(action);
-    const needsCompletionRequirements =
-      !isFixedSolutionDecision &&
-      [
-        'request-completion',
-        'reject-cannot-fix',
-      ].includes(action);
-    const needsPublicUserMessage = action === 'close-cannot-fix';
+  async function handleDecision(action, modalMessage = '', modalUserMessage = '') {
+    const trimmedMessage = modalMessage.trim();
+    const trimmedPublicMessage = modalUserMessage.trim();
 
-    if (needsCompanyMessage && !trimmedCompanyMessage) {
-      setNoteError('اكتب رسالة واضحة للشركة قبل تنفيذ هذا القرار.');
+    if (!trimmedMessage) {
+      setFixedDecisionNoteError('اكتب الرسالة أو الملاحظة المطلوبة قبل تنفيذ القرار.');
       return false;
     }
 
-    if (needsCompletionRequirements && !trimmedCompletionRequirements) {
-      setNoteError('اكتب الأعمال أو النقاط المطلوب من الشركة استكمالها.');
+    if (trimmedMessage.length > 1000) {
+      setFixedDecisionNoteError('يجب ألا تتجاوز الرسالة 1000 حرف.');
       return false;
     }
 
-    if (needsPublicUserMessage && !trimmedPublicUserMessage) {
-      setNoteError('اكتب الرسالة العامة التي ستظهر لصاحب البلاغ والمتابعين والمستخدمين القريبين.');
+    const isAcceptedCannotFix = action === 'close-cannot-fix';
+
+    if (isAcceptedCannotFix && !trimmedPublicMessage) {
+      setFixedDecisionUserMessageError(
+        'اكتب الرسالة العامة الموجهة للمستخدمين قبل قبول الاعتذار.',
+      );
       return false;
     }
 
-    if (
-      trimmedCompanyMessage.length > 1000 ||
-      trimmedCompletionRequirements.length > 1000 ||
-      trimmedPublicUserMessage.length > 500
-    ) {
-      setNoteError('تأكد من الالتزام بالحد الأقصى المسموح به لكل رسالة.');
+    if (isAcceptedCannotFix && trimmedPublicMessage.length > 1000) {
+      setFixedDecisionUserMessageError('يجب ألا تتجاوز رسالة المستخدمين 1000 حرف.');
       return false;
     }
 
-    if (isCannotFixDecision && !isDecisionConfirmed) {
-      setNoteError('أكد أنك راجعت سبب التعذر وفهمت نتيجة القرار قبل المتابعة.');
-      return false;
-    }
-
-    const isReassignmentAction = action === 'reassign';
     const payload = {
-      adminNote: isReassignmentAction ? '' : trimmedCompanyMessage,
-      companyMessage: isReassignmentAction ? '' : trimmedCompanyMessage,
-      userMessage: needsPublicUserMessage ? trimmedPublicUserMessage : '',
-      publicUserMessage: needsPublicUserMessage ? trimmedPublicUserMessage : '',
-      publicUnableReason: needsPublicUserMessage ? trimmedPublicUserMessage : '',
-      completionRequirements: needsCompletionRequirements
-        ? trimmedCompletionRequirements
-        : '',
+      adminNote: trimmedMessage,
+      companyMessage: trimmedMessage,
+      userMessage: isAcceptedCannotFix ? trimmedPublicMessage : undefined,
+      publicUserMessage: isAcceptedCannotFix ? trimmedPublicMessage : undefined,
       submissionId: response.submissionId || response.id,
       companyResponseId: response.id || response.submissionId,
       responseType: response.responseType,
@@ -397,21 +457,22 @@ function AdminCompanyResponseReviewCard({
 
     setIsSaving(true);
     setActiveAction(action);
-    setNoteError('');
+    setFixedDecisionNoteError('');
+    setFixedDecisionUserMessageError('');
     setActionError('');
 
     try {
       if (action === 'accept-fix') {
         await onAcceptFix?.({
           ...payload,
-          decision: 'accept_solution',
+          decision: 'AcceptFix',
         });
       }
 
-      if (action === 'request-completion' || action === 'reject-cannot-fix') {
+      if (action === 'request-completion') {
         await onRequestCompletion?.({
           ...payload,
-          decision: 'request_completion',
+          decision: 'RequestCompletion',
         });
       }
 
@@ -422,10 +483,21 @@ function AdminCompanyResponseReviewCard({
         });
       }
 
+      if (action === 'reject-cannot-fix') {
+        await onRejectCannotFix?.({
+          ...payload,
+          decision: 'reject_and_continue',
+          userMessage: undefined,
+          publicUserMessage: undefined,
+        });
+      }
+
       if (action === 'reassign') {
         await onReassign?.({
           ...payload,
           decision: 'reassign',
+          userMessage: undefined,
+          publicUserMessage: undefined,
         });
       }
 
@@ -446,6 +518,11 @@ function AdminCompanyResponseReviewCard({
       setActiveAction('');
     }
   }
+
+  const decisionModalConfig = getDecisionModalConfig(
+    fixedDecisionModal,
+    decisionScenario,
+  );
 
   return (
     <section
@@ -542,11 +619,11 @@ function AdminCompanyResponseReviewCard({
         </div>
       )}
 
-      {decisionScenario !== 'cannot-fix' && cannotFixReason ? (
+      {decisionScenario === 'general' && cannotFixReason ? (
         <div className="admin-company-response-warning">
           <FiAlertCircle />
           <div>
-            <strong>سبب التعذر / الاعتذار</strong>
+            <strong>توضيح إضافي من الشركة</strong>
             <p>{cannotFixReason}</p>
           </div>
         </div>
@@ -635,119 +712,13 @@ function AdminCompanyResponseReviewCard({
             </div>
           </div>
 
-          {decisionScenario !== 'fixed' ? (
-            <label className="admin-company-response-admin-note">
-              رسالة الأدمن الموجهة للشركة
-
-              <textarea
-                value={adminNote}
-                onChange={handleNoteChange}
-                rows={4}
-                maxLength={1000}
-                className={noteError ? 'is-invalid' : ''}
-                placeholder="اكتب الرسالة التي ستظهر للشركة عند فتح تفاصيل البلاغ..."
-              />
-
-              <span className="admin-company-response-character-count">
-                {adminNote.length} / 1000
-              </span>
-
-              {noteError ? (
-                <span className="admin-company-response-note-error">
-                  <FiAlertCircle />
-                  {noteError}
-                </span>
-              ) : null}
-            </label>
-          ) : null}
-
-          {decisionScenario === 'cannot-fix' ? (
-            <label className="admin-company-response-admin-note admin-company-response-completion-requirements">
-              الأعمال المطلوب من الشركة استكمالها
-
-              <textarea
-                value={completionRequirements}
-                onChange={(event) => {
-                  setCompletionRequirements(event.target.value.slice(0, 1000));
-                  if (noteError) setNoteError('');
-                }}
-                rows={3}
-                maxLength={1000}
-                placeholder="اكتب بدقة ما الذي يجب على الشركة استكماله قبل إعادة إرسال الحل..."
-              />
-
-              <span className="admin-company-response-character-count">
-                {completionRequirements.length} / 1000
-              </span>
-              <small className="admin-company-response-field-hint">
-                يستخدم هذا الحقل فقط عند رفض الحل أو رفض الاعتذار وطلب الاستكمال.
-              </small>
-            </label>
-          ) : null}
-
-          {decisionScenario === 'cannot-fix' ? (
-            <>
-              <label className="admin-company-response-admin-note admin-company-response-user-message">
-                الرسالة العامة التي ستظهر داخل تفاصيل البلاغ للمستخدمين
-
-                <textarea
-                  value={publicUserMessage}
-                  onChange={(event) => {
-                    setPublicUserMessage(event.target.value.slice(0, 500));
-                    if (noteError) setNoteError('');
-                  }}
-                  rows={3}
-                  maxLength={500}
-                  placeholder="اكتب الرسالة التي ستظهر لصاحب البلاغ والمتابعين والمستخدمين القريبين عند قبول التعذر وإغلاق البلاغ."
-                />
-
-                <span className="admin-company-response-character-count">
-                  {publicUserMessage.length} / 500
-                </span>
-                <small className="admin-company-response-field-hint">
-                  تستخدم هذه الرسالة فقط عند قبول الاعتذار. لا يتم إرسالها عند طلب الاستكمال أو إعادة الإسناد.
-                </small>
-              </label>
-
-              <div className="admin-company-response-decision-guide">
-                <article>
-                  <FiXCircle />
-                  <div>
-                    <strong>قبول الاعتذار</strong>
-                    <p>يغلق البلاغ كمتعذر التنفيذ، ويحفظ رسالة للشركة ورسالة عامة للمستخدمين.</p>
-                  </div>
-                </article>
-                <article>
-                  <FiRefreshCw />
-                  <div>
-                    <strong>إعادة الإسناد</strong>
-                    <p>يفتح اختيار شركة بديلة بدون إرسال رسائل للشركة القديمة أو المستخدمين.</p>
-                  </div>
-                </article>
-                <article>
-                  <FiSend />
-                  <div>
-                    <strong>رفض الاعتذار</strong>
-                    <p>يبقي البلاغ لدى نفس الشركة ويرسل لها فقط رسالة ومتطلبات الاستكمال.</p>
-                  </div>
-                </article>
-              </div>
-
-              <label className="admin-company-response-confirmation">
-                <input
-                  type="checkbox"
-                  checked={isDecisionConfirmed}
-                  onChange={(event) => {
-                    setIsDecisionConfirmed(event.target.checked);
-                    if (noteError) setNoteError('');
-                  }}
-                />
-                <span>
-                  أؤكد أنني راجعت سبب التعذر والمرفقات وفهمت تأثير القرار على الشركة والمستخدم.
-                </span>
-              </label>
-            </>
-          ) : null}
+          <div className="admin-company-response-modal-guidance">
+            <FiInfo />
+            <p>
+              اضغط على القرار المناسب، وسيظهر نموذج واحد فقط يوضّح لك أين ستذهب
+              الرسالة ومن سيستطيع رؤيتها قبل الإرسال.
+            </p>
+          </div>
 
           <div className="admin-company-response-actions">
             {decisionScenario === 'fixed' ? (
@@ -779,7 +750,7 @@ function AdminCompanyResponseReviewCard({
                 <button
                   type="button"
                   className="admin-company-response-btn admin-company-response-btn--danger"
-                  onClick={() => handleDecision('close-cannot-fix')}
+                  onClick={() => openFixedDecisionModal('close-cannot-fix')}
                   disabled={isSaving}
                 >
                   <FiXCircle />
@@ -791,7 +762,7 @@ function AdminCompanyResponseReviewCard({
                 <button
                   type="button"
                   className="admin-company-response-btn admin-company-response-btn--reassign"
-                  onClick={() => handleDecision('reassign')}
+                  onClick={() => openFixedDecisionModal('reassign')}
                   disabled={isSaving}
                 >
                   <FiRefreshCw />
@@ -803,7 +774,7 @@ function AdminCompanyResponseReviewCard({
                 <button
                   type="button"
                   className="admin-company-response-btn admin-company-response-btn--complete"
-                  onClick={() => handleDecision('reject-cannot-fix')}
+                  onClick={() => openFixedDecisionModal('reject-cannot-fix')}
                   disabled={isSaving}
                 >
                   <FiSend />
@@ -819,7 +790,7 @@ function AdminCompanyResponseReviewCard({
                 <button
                   type="button"
                   className="admin-company-response-btn admin-company-response-btn--accept"
-                  onClick={() => handleDecision('accept-fix')}
+                  onClick={() => openFixedDecisionModal('accept-fix')}
                   disabled={isSaving}
                 >
                   <FiCheckCircle />
@@ -829,7 +800,7 @@ function AdminCompanyResponseReviewCard({
                 <button
                   type="button"
                   className="admin-company-response-btn admin-company-response-btn--complete"
-                  onClick={() => handleDecision('request-completion')}
+                  onClick={() => openFixedDecisionModal('request-completion')}
                   disabled={isSaving}
                 >
                   <FiSend />
@@ -855,7 +826,7 @@ function AdminCompanyResponseReviewCard({
             </strong>
 
             {reviewedDecisionType.includes('reassign') ? (
-              <p>تم اختيار إعادة الإسناد بدون إرسال رسائل للشركة القديمة أو المستخدمين.</p>
+              <p>تم تجهيز إعادة الإسناد، وستصل الرسالة إلى الشركة الجديدة بعد تعيينها، وسيُحذف البلاغ نهائيًا من الشركة القديمة.</p>
             ) : (
               <>
                 {reviewedDecisionType.includes('requestcompletion') ||
@@ -885,7 +856,7 @@ function AdminCompanyResponseReviewCard({
         </div>
       )}
 
-      {fixedDecisionModal ? (
+      {fixedDecisionModal && decisionModalConfig ? (
         <div
           className="admin-company-decision-modal-backdrop"
           role="dialog"
@@ -901,9 +872,7 @@ function AdminCompanyResponseReviewCard({
           />
 
           <form
-            className={`admin-company-decision-modal ${
-              fixedDecisionModal === 'accept-fix' ? 'is-accept' : 'is-completion'
-            }`}
+            className={`admin-company-decision-modal is-${decisionModalConfig.tone}`}
             onSubmit={(event) => {
               event.preventDefault();
               confirmFixedDecision();
@@ -911,20 +880,22 @@ function AdminCompanyResponseReviewCard({
           >
             <header className="admin-company-decision-modal__header">
               <span className="admin-company-decision-modal__icon" aria-hidden="true">
-                {fixedDecisionModal === 'accept-fix' ? <FiCheckCircle /> : <FiSend />}
+                {fixedDecisionModal === 'accept-fix' ? (
+                  <FiCheckCircle />
+                ) : fixedDecisionModal === 'close-cannot-fix' ? (
+                  <FiXCircle />
+                ) : fixedDecisionModal === 'reassign' ? (
+                  <FiRefreshCw />
+                ) : (
+                  <FiSend />
+                )}
               </span>
 
               <div>
                 <h3 id="admin-company-decision-modal-title">
-                  {fixedDecisionModal === 'accept-fix'
-                    ? 'قبول الحل وإغلاق البلاغ'
-                    : 'رفض الحل وطلب الاستكمال'}
+                  {decisionModalConfig.title}
                 </h3>
-                <p>
-                  {fixedDecisionModal === 'accept-fix'
-                    ? 'اكتب رسالة الأدمن التي ستصل إلى الشركة عند اعتماد الحل.'
-                    : 'اكتب بدقة الأعمال التي يجب على الشركة استكمالها قبل إرسال الحل مرة أخرى.'}
-                </p>
+                <p>{decisionModalConfig.description}</p>
               </div>
 
               <button
@@ -938,10 +909,24 @@ function AdminCompanyResponseReviewCard({
               </button>
             </header>
 
+            <div className="admin-company-decision-modal__destination">
+              <FiInfo />
+              <div>
+                <strong>مكان ظهور الرسالة</strong>
+                <p>{decisionModalConfig.destination}</p>
+              </div>
+            </div>
+
             <label className="admin-company-decision-modal__field">
-              {fixedDecisionModal === 'accept-fix'
-                ? 'رسالة الأدمن الموجهة للشركة'
-                : 'تفاصيل الأعمال المطلوب استكمالها'}
+              <span className="admin-company-decision-modal__field-title">
+                {decisionModalConfig.fieldLabel}
+              </span>
+
+              {fixedDecisionModal === 'close-cannot-fix' ? (
+                <small className="admin-company-decision-modal__field-hint">
+                  ستصل هذه الرسالة إلى الشركة التي قدمت طلب التعذر.
+                </small>
+              ) : null}
 
               <textarea
                 autoFocus
@@ -954,11 +939,7 @@ function AdminCompanyResponseReviewCard({
                 rows={5}
                 maxLength={1000}
                 className={fixedDecisionNoteError ? 'is-invalid' : ''}
-                placeholder={
-                  fixedDecisionModal === 'accept-fix'
-                    ? 'مثال: تمت مراجعة الأعمال والصور واعتماد الحل. شكرًا لتعاونكم.'
-                    : 'مثال: الصور غير كافية، برجاء رفع صور أوضح واستكمال الأعمال الموضحة...'
-                }
+                placeholder={decisionModalConfig.placeholder}
               />
 
               <span className="admin-company-decision-modal__counter">
@@ -966,10 +947,48 @@ function AdminCompanyResponseReviewCard({
               </span>
             </label>
 
+            {fixedDecisionModal === 'close-cannot-fix' ? (
+              <label className="admin-company-decision-modal__field admin-company-decision-modal__field--user-message">
+                <span className="admin-company-decision-modal__field-title">
+                  {decisionModalConfig.userFieldLabel}
+                </span>
+
+                <small className="admin-company-decision-modal__field-hint">
+                  ستظهر هذه الرسالة لصاحب البلاغ والمتابعين والمستخدمين القريبين عند فتح تفاصيل البلاغ.
+                </small>
+
+                <textarea
+                  value={fixedDecisionUserMessage}
+                  onChange={(event) => {
+                    setFixedDecisionUserMessage(event.target.value.slice(0, 1000));
+                    if (fixedDecisionUserMessageError) {
+                      setFixedDecisionUserMessageError('');
+                    }
+                    if (actionError) setActionError('');
+                  }}
+                  rows={5}
+                  maxLength={1000}
+                  className={fixedDecisionUserMessageError ? 'is-invalid' : ''}
+                  placeholder={decisionModalConfig.userPlaceholder}
+                />
+
+                <span className="admin-company-decision-modal__counter">
+                  {fixedDecisionUserMessage.length} / 1000
+                </span>
+              </label>
+            ) : null}
+
             {fixedDecisionNoteError ? (
               <div className="admin-company-decision-modal__error" role="alert">
                 <FiAlertCircle />
                 <span>{fixedDecisionNoteError}</span>
+              </div>
+            ) : null}
+
+            {fixedDecisionUserMessageError ? (
+              <div className="admin-company-decision-modal__error" role="alert">
+                <FiAlertCircle />
+                <span>{fixedDecisionUserMessageError}</span>
               </div>
             ) : null}
 
@@ -995,12 +1014,16 @@ function AdminCompanyResponseReviewCard({
                 className="admin-company-decision-modal__confirm"
                 disabled={isSaving}
               >
-                {fixedDecisionModal === 'accept-fix' ? <FiCheckCircle /> : <FiSend />}
-                {isSaving
-                  ? 'جاري الإرسال...'
-                  : fixedDecisionModal === 'accept-fix'
-                    ? 'تأكيد قبول الحل'
-                    : 'إرسال طلب الاستكمال'}
+                {fixedDecisionModal === 'accept-fix' ? (
+                  <FiCheckCircle />
+                ) : fixedDecisionModal === 'close-cannot-fix' ? (
+                  <FiXCircle />
+                ) : fixedDecisionModal === 'reassign' ? (
+                  <FiRefreshCw />
+                ) : (
+                  <FiSend />
+                )}
+                {isSaving ? 'جاري الإرسال...' : decisionModalConfig.confirmLabel}
               </button>
             </footer>
           </form>

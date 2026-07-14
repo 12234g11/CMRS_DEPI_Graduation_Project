@@ -1465,10 +1465,10 @@
 }
 
 .nearby-status-panel__card--unable-to-execute {
-  --status-color: #66758a;
-  --status-soft: rgba(102, 117, 138, 0.1);
-  --status-border: rgba(102, 117, 138, 0.26);
-  --status-shadow: rgba(102, 117, 138, 0.14);
+  --status-color: #111827;
+  --status-soft: rgba(17, 24, 39, 0.1);
+  --status-border: rgba(17, 24, 39, 0.3);
+  --status-shadow: rgba(17, 24, 39, 0.2);
 }
 
 .nearby-status-panel__dot {
@@ -1574,9 +1574,9 @@
 .nearby-status-panel__dot--unable-to-execute,
 .nearby-filter-dropdown__status-dot--unable-to-execute,
 .nearby-filter-sheet__dot--unable-to-execute {
-  --status-soft: rgba(102, 117, 138, 0.2);
-  --status-shadow: rgba(102, 117, 138, 0.34);
-  background: #66758a;
+  --status-soft: rgba(17, 24, 39, 0.2);
+  --status-shadow: rgba(17, 24, 39, 0.38);
+  background: #111827;
 }
 
 .nearby-filter-dropdown__status-dot--all,
@@ -1629,9 +1629,9 @@
 }
 
 .nearby-issue-details__status--unable-to-execute {
-  color: #4a586b;
-  background: rgba(102, 117, 138, 0.13);
-  border: 1px solid rgba(102, 117, 138, 0.25);
+  color: #111827;
+  background: rgba(17, 24, 39, 0.1);
+  border: 1px solid rgba(17, 24, 39, 0.26);
 }
 
 @media (max-width: 768px) {
@@ -1888,4 +1888,80 @@
   .unfollow-confirmation__confirm {
     order: -1;
   }
+}
+
+
+/* Keep UnableToExecute markers clearly visible on the nearby reports map. */
+.nearby-page .reports-map__marker--secondary {
+  background: #111827;
+  box-shadow: 0 8px 18px rgba(17, 24, 39, 0.34);
+}
+
+.nearby-page .reports-map__marker--secondary.is-active::after {
+  border-color: rgba(17, 24, 39, 0.36);
+}
+
+
+/* Match nearby map flag colors exactly with the status legend cards above. */
+.nearby-page .reports-map__marker--accepted {
+  background: #d6b817;
+  box-shadow: 0 8px 18px rgba(214, 184, 23, 0.34);
+}
+
+.nearby-page .reports-map__marker--accepted.is-active::after {
+  border-color: rgba(214, 184, 23, 0.34);
+}
+
+.nearby-page .reports-map__marker--assigned {
+  background: #2780e3;
+  box-shadow: 0 8px 18px rgba(39, 128, 227, 0.34);
+}
+
+.nearby-page .reports-map__marker--assigned.is-active::after {
+  border-color: rgba(39, 128, 227, 0.34);
+}
+
+.nearby-page .reports-map__marker--in-progress {
+  background: #4f5ee8;
+  box-shadow: 0 8px 18px rgba(79, 94, 232, 0.34);
+}
+
+.nearby-page .reports-map__marker--in-progress.is-active::after {
+  border-color: rgba(79, 94, 232, 0.34);
+}
+
+.nearby-page .reports-map__marker--pending-admin-approval {
+  background: #7c3aed;
+  box-shadow: 0 8px 18px rgba(124, 58, 237, 0.34);
+}
+
+.nearby-page .reports-map__marker--pending-admin-approval.is-active::after {
+  border-color: rgba(124, 58, 237, 0.34);
+}
+
+.nearby-page .reports-map__marker--needs-completion {
+  background: #e8890c;
+  box-shadow: 0 8px 18px rgba(232, 137, 12, 0.34);
+}
+
+.nearby-page .reports-map__marker--needs-completion.is-active::after {
+  border-color: rgba(232, 137, 12, 0.34);
+}
+
+.nearby-page .reports-map__marker--resolved {
+  background: #25a55b;
+  box-shadow: 0 8px 18px rgba(37, 165, 91, 0.34);
+}
+
+.nearby-page .reports-map__marker--resolved.is-active::after {
+  border-color: rgba(37, 165, 91, 0.34);
+}
+
+.nearby-page .reports-map__marker--unable-to-execute {
+  background: #111827;
+  box-shadow: 0 8px 18px rgba(17, 24, 39, 0.34);
+}
+
+.nearby-page .reports-map__marker--unable-to-execute.is-active::after {
+  border-color: rgba(17, 24, 39, 0.36);
 }

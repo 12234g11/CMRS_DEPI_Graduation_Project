@@ -72,11 +72,14 @@ function getStatusTone(statusValue, statusLabel) {
   }
 
   if (
-    status.includes('rejected') ||
     status.includes('cannot') ||
-    status.includes('مرفوض') ||
+    status.includes('unable') ||
     status.includes('متعذر')
   ) {
+    return 'dark';
+  }
+
+  if (status.includes('rejected') || status.includes('مرفوض')) {
     return 'danger';
   }
 
@@ -175,18 +178,23 @@ function cleanApiText(value) {
 function normalizeCompanyResponse(response, report = {}) {
   if (!response) return null;
 
-  const explicitResponseType = cleanApiText(
+  // بيانات آخر رد مرسل من الشركة هي المرجع الأساسي لتحديد شاشة المراجعة.
+  // لا يجب أن يحول وجود reason أو pendingReviewType قديم ردًا جديدًا من نوع fixed
+  // إلى طلب تعذر تنفيذ، خصوصًا بعد رفض التعذر ثم إرسال الشركة حلًا جديدًا.
+  const directResponseType = cleanApiText(
     response.type ||
       response.responseType ||
       response.companyResponseType ||
       response.actionType ||
-      response.submissionType ||
-      report.pendingReviewType ||
+      response.submissionType,
+  );
+  const fallbackResponseType = cleanApiText(
+    report.pendingReviewType ||
       report.companyResponseType ||
       report.responseType,
   );
-
-  const searchableResponseType = `${explicitResponseType} ${response.status || ''} ${response.statusLabel || ''}`.toLowerCase();
+  const directResponseText = `${directResponseType} ${response.status || ''} ${response.statusLabel || ''}`.toLowerCase();
+  const fallbackResponseText = fallbackResponseType.toLowerCase();
   const reason = cleanApiText(
     response.reason ||
       response.cannotFixReason ||
@@ -197,30 +205,45 @@ function normalizeCompanyResponse(response, report = {}) {
       report.cannotFixReason,
   );
 
-  let responseType = explicitResponseType;
+  function resolveResponseType(searchableText) {
+    if (
+      searchableText.includes('fixed') ||
+      searchableText.includes('solution') ||
+      searchableText.includes('resolved') ||
+      searchableText.includes('complete') ||
+      searchableText.includes('تم الإصلاح') ||
+      searchableText.includes('تم الحل')
+    ) {
+      return 'fixed';
+    }
 
-  if (
-    reason ||
-    searchableResponseType.includes('cannot') ||
-    searchableResponseType.includes('unable') ||
-    searchableResponseType.includes('تعذر') ||
-    searchableResponseType.includes('اعتذار')
-  ) {
-    responseType = 'cannot_fix';
-  } else if (
-    searchableResponseType.includes('fixed') ||
-    searchableResponseType.includes('solution') ||
-    searchableResponseType.includes('resolved') ||
-    searchableResponseType.includes('تم الإصلاح')
-  ) {
-    responseType = 'fixed';
-  } else if (
-    searchableResponseType.includes('started') ||
-    searchableResponseType.includes('inprogress') ||
-    searchableResponseType.includes('بدء التنفيذ')
-  ) {
-    responseType = 'started';
+    if (
+      searchableText.includes('cannot') ||
+      searchableText.includes('unable') ||
+      searchableText.includes('تعذر') ||
+      searchableText.includes('اعتذار')
+    ) {
+      return 'cannot_fix';
+    }
+
+    if (
+      searchableText.includes('started') ||
+      searchableText.includes('inprogress') ||
+      searchableText.includes('in progress') ||
+      searchableText.includes('بدء التنفيذ') ||
+      searchableText.includes('جاري التنفيذ')
+    ) {
+      return 'started';
+    }
+
+    return '';
   }
+
+  const responseType =
+    resolveResponseType(directResponseText) ||
+    resolveResponseType(fallbackResponseText) ||
+    directResponseType ||
+    (reason && !directResponseText.trim() ? 'cannot_fix' : '');
 
   const responseTypeLabel = cleanApiText(
     response.typeLabel ||
@@ -287,10 +310,21 @@ function normalizeAdminDecision(report = {}, companyResponse = null) {
   const source =
     report.adminDecision ||
     report.AdminDecision ||
+    report.adminReview ||
+    report.AdminReview ||
+    report.cannotFixReview ||
+    report.CannotFixReview ||
+    report.companyResponseReview ||
+    report.CompanyResponseReview ||
+    report.latestAdminReview ||
+    report.LatestAdminReview ||
     report.companyResponseDecision ||
     report.CompanyResponseDecision ||
     companyResponse?.adminDecision ||
     companyResponse?.AdminDecision ||
+    companyResponse?.adminReview ||
+    companyResponse?.AdminReview ||
+    ((report.adminNote || report.userMessage || report.decision || report.decisionType) && report) ||
     (companyResponse &&
     (companyResponse.reviewStatus ||
       companyResponse.decision ||
@@ -422,6 +456,16 @@ function normalizeTimeline(timeline = []) {
   }));
 }
 
+function normalizeArchivedBy(archivedBy) {
+  if (!archivedBy) return null;
+
+  return {
+    id: archivedBy.id || '',
+    name: archivedBy.name || 'مسؤول النظام',
+    email: archivedBy.email || '',
+  };
+}
+
 export function normalizeAdminReport(report = {}) {
   const statusValue = report.status || '';
   const statusLabel = report.statusLabel || statusValue || '-';
@@ -501,6 +545,10 @@ export function normalizeAdminReport(report = {}) {
     excludedCompanyIds: report.excludedCompanyIds || [],
     excludedCompanyNames: report.excludedCompanyNames || [],
     timeline: normalizeTimeline(report.timeline || []),
+    isArchived: Boolean(report.isArchived),
+    archivedAt: report.archivedAt || null,
+    archivedAtLabel: report.archivedAt ? formatDateTime(report.archivedAt) : '-',
+    archivedBy: normalizeArchivedBy(report.archivedBy),
   };
 }
 
@@ -532,10 +580,19 @@ function normalizeOptions(options = []) {
   }));
 }
 
+function isAllowedArchiveStatusOption(option = {}) {
+  const normalizedValue = String(option.value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+
+  return ['resolved', 'unabletoexecute', 'rejected'].includes(normalizedValue);
+}
+
 function normalizeIssueCategories(categories = []) {
   return categories.map((category) => ({
-    value: category.id,
-    label: category.name,
+    value: category.value ?? category.id ?? category.name,
+    label: category.label ?? category.name ?? category.value,
   }));
 }
 
@@ -588,10 +645,87 @@ export async function getAdminReportFilterOptions() {
   };
 }
 
+export async function getArchivedAdminReports(params = {}) {
+  const response = await axiosClient.get(buildAdminUrl('/reports/archive'), {
+    params: removeEmptyParams(params),
+  });
+
+  return normalizeReportsPayload(unwrapResponse(response));
+}
+
+export async function getArchivedAdminReportFilterOptions() {
+  const response = await axiosClient.get(
+    buildAdminUrl('/reports/archive/filter-options'),
+  );
+  const data = unwrapResponse(response) || {};
+  const archiveStatuses = normalizeOptions(data.statuses || []).filter(
+    isAllowedArchiveStatusOption,
+  );
+
+  return {
+    statuses: [
+      { value: 'all', label: 'كل الحالات' },
+      ...(archiveStatuses.length
+        ? archiveStatuses
+        : [
+            { value: 'Resolved', label: 'تم الحل' },
+            { value: 'UnableToExecute', label: 'متعذر التنفيذ' },
+            { value: 'Rejected', label: 'مرفوض' },
+          ]),
+    ],
+    priorities: [
+      { value: 'all', label: 'كل الأولويات' },
+      ...normalizeOptions(data.priorities || []),
+    ],
+    issueCategories: [
+      { value: 'all', label: 'كل التصنيفات' },
+      ...normalizeIssueCategories(data.issueCategories || []),
+    ],
+    cities: [
+      { value: 'all', label: 'كل المدن' },
+      ...normalizeOptions(data.cities || []),
+    ],
+  };
+}
+
 export async function getAdminReportById(reportId) {
   const response = await axiosClient.get(buildAdminUrl(`/reports/${reportId}`));
 
   return normalizeAdminReport(unwrapResponse(response));
+}
+
+export async function archiveAdminReport(reportId) {
+  const response = await axiosClient.put(
+    buildAdminUrl(`/reports/${reportId}/archive`),
+  );
+  const actionData = unwrapResponse(response) || {};
+  const report = await getAdminReportById(reportId);
+
+  return {
+    ...report,
+    statusValue: actionData.status || report.statusValue,
+    isArchived: actionData.isArchived ?? true,
+    archivedAt: actionData.archivedAt || report.archivedAt,
+    archivedAtLabel: formatDateTime(actionData.archivedAt || report.archivedAt),
+    archivedBy: normalizeArchivedBy(actionData.archivedBy) || report.archivedBy,
+  };
+}
+
+export async function unarchiveAdminReport(reportId) {
+  const response = await axiosClient.put(
+    buildAdminUrl(`/reports/${reportId}/unarchive`),
+  );
+  const actionData = unwrapResponse(response) || {};
+  const report = await getAdminReportById(reportId);
+
+  return {
+    ...report,
+    statusValue: actionData.status || report.statusValue,
+    isArchived: actionData.isArchived ?? false,
+    archivedAt: null,
+    archivedAtLabel: '-',
+    archivedBy: null,
+  };
 }
 
 export async function approveAdminReport(reportId) {
@@ -650,63 +784,48 @@ export async function getAssignmentCompaniesForReport(reportId, filters = {}) {
 }
 
 
-export async function assignCompanyToReport(reportId, payload) {
-  if (payload.isReassignment) {
-    await reviewCompanyResponse(reportId, {
-      action: 'reassign',
-      decision: 'reassign',
-      companyResponseId: payload.companyResponseId,
-      submissionId: payload.companyResponseId,
-      newCompanyId: payload.companyId,
-      previousCompanyId: payload.previousCompanyId,
-      companyMessage: null,
-      publicUserMessage: null,
-      publicUnableReason: null,
-      completionRequirements: null,
-      excludeCurrentCompany: true,
-    });
-
-    return getAdminReportById(reportId);
-  }
-
+export async function assignCompanyToReport(reportId, payload = {}) {
   await axiosClient.post(
     buildAdminUrl(`/reports/${reportId}/assign-company`),
     {
       companyId: payload.companyId,
       adminNote: payload.adminNote || null,
-      assignmentSource: payload.assignmentSource || 'manual',
-      isReassignment: Boolean(payload.isReassignment),
-      previousCompanyId: payload.previousCompanyId || null,
-      companyResponseId: payload.companyResponseId || null,
     },
   );
 
   return getAdminReportById(reportId);
 }
 
-export async function reviewCompanyResponse(reportId, payload) {
+export async function reviewCompanyResponse(reportId, payload = {}) {
   const response = await axiosClient.post(
     buildAdminUrl(`/reports/${reportId}/company-response/review`),
     {
       action: payload.action,
-      decision: payload.decision || payload.action || null,
-      companyResponseId: payload.companyResponseId || payload.submissionId || null,
-      submissionId: payload.submissionId || payload.companyResponseId || null,
-
-      // Keep adminNote/userMessage for backward compatibility while sending
-      // the explicit fields required by the upgraded backend contract.
-      adminNote: payload.companyMessage || payload.adminNote || null,
-      userMessage: payload.publicUserMessage || payload.userMessage || null,
-      companyMessage: payload.companyMessage || payload.adminNote || null,
-      publicUserMessage: payload.publicUserMessage || payload.userMessage || null,
-      publicUnableReason: payload.publicUnableReason || null,
-      completionRequirements: payload.completionRequirements || null,
-
-      excludeCurrentCompany: Boolean(payload.excludeCurrentCompany),
-      newCompanyId: payload.newCompanyId || null,
-      previousCompanyId: payload.previousCompanyId || null,
-      dueDate: payload.dueDate || null,
+      adminNote: payload.adminNote || payload.companyMessage || null,
     },
+  );
+
+  return unwrapResponse(response);
+}
+
+export async function reviewCannotFixResponse(reportId, payload = {}) {
+  const requestPayload = {
+    decision: payload.decision,
+    adminNote: payload.adminNote || payload.companyMessage || null,
+  };
+
+  if (payload.decision === 'accept_cannot_fix') {
+    requestPayload.userMessage =
+      payload.userMessage ||
+      payload.publicUserMessage ||
+      payload.adminNote ||
+      payload.companyMessage ||
+      null;
+  }
+
+  const response = await axiosClient.post(
+    buildAdminUrl(`/reports/${reportId}/cannot-fix-review`),
+    requestPayload,
   );
 
   return unwrapResponse(response);
@@ -799,20 +918,87 @@ export async function requestCompanyCompletion(reportId, payload = {}) {
 }
 
 export async function acceptCompanyCannotFix(reportId, payload = {}) {
-  await reviewCompanyResponse(reportId, {
-    action: 'accept_cannot_fix',
+  const adminNote = payload.adminNote || payload.companyMessage || '';
+  const userMessage =
+    payload.userMessage ||
+    payload.publicUserMessage ||
+    adminNote;
+
+  await reviewCannotFixResponse(reportId, {
     decision: 'accept_cannot_fix',
-    companyResponseId: payload.companyResponseId || payload.submissionId,
-    submissionId: payload.submissionId || payload.companyResponseId,
-    companyMessage: payload.companyMessage || payload.adminNote,
-    publicUserMessage: payload.publicUserMessage || payload.userMessage,
-    publicUnableReason:
-      payload.publicUnableReason || payload.publicUserMessage || payload.userMessage,
-    completionRequirements: null,
-    excludeCurrentCompany: false,
+    adminNote,
+    userMessage,
   });
 
-  return getAdminReportById(reportId);
+  const updatedReport = await getAdminReportById(reportId);
+
+  return {
+    ...updatedReport,
+    adminDecision: {
+      ...(updatedReport.adminDecision || {}),
+      decisionType:
+        updatedReport.adminDecision?.decisionType || 'accept_cannot_fix',
+      decisionLabel:
+        updatedReport.adminDecision?.decisionLabel || 'تم قبول تعذر التنفيذ',
+      companyMessage:
+        updatedReport.adminDecision?.companyMessage || adminNote,
+      publicUserMessage:
+        updatedReport.adminDecision?.publicUserMessage || userMessage,
+      isFinal: updatedReport.adminDecision?.isFinal ?? true,
+    },
+  };
+}
+
+export async function rejectCompanyCannotFix(reportId, payload = {}) {
+  const adminNote = payload.adminNote || payload.companyMessage || '';
+
+  await reviewCannotFixResponse(reportId, {
+    decision: 'reject_and_continue',
+    adminNote,
+  });
+
+  const updatedReport = await getAdminReportById(reportId);
+
+  return {
+    ...updatedReport,
+    adminDecision: {
+      ...(updatedReport.adminDecision || {}),
+      decisionType:
+        updatedReport.adminDecision?.decisionType || 'reject_and_continue',
+      decisionLabel:
+        updatedReport.adminDecision?.decisionLabel || 'تم رفض الاعتذار وإعادة البلاغ للشركة',
+      companyMessage:
+        updatedReport.adminDecision?.companyMessage || adminNote,
+      completionRequirements:
+        updatedReport.adminDecision?.completionRequirements || adminNote,
+      isFinal: updatedReport.adminDecision?.isFinal ?? false,
+    },
+  };
+}
+
+export async function prepareCompanyReassignment(reportId, payload = {}) {
+  const adminNote = payload.adminNote || payload.companyMessage || '';
+
+  await reviewCannotFixResponse(reportId, {
+    decision: 'reassign',
+    adminNote,
+  });
+
+  const updatedReport = await getAdminReportById(reportId);
+
+  return {
+    ...updatedReport,
+    adminDecision: {
+      ...(updatedReport.adminDecision || {}),
+      decisionType:
+        updatedReport.adminDecision?.decisionType || 'reassign',
+      decisionLabel:
+        updatedReport.adminDecision?.decisionLabel || 'بانتظار تعيين شركة جديدة',
+      adminNote:
+        updatedReport.adminDecision?.adminNote || adminNote,
+      isFinal: updatedReport.adminDecision?.isFinal ?? false,
+    },
+  };
 }
 
 export async function getPendingCompanyReviewReports(params = {}) {

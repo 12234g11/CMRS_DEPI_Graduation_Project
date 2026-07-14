@@ -155,3 +155,41 @@ GET /api/company/reports?page=1&pageSize=10
 الفرونت يدعم أيضًا `latitude` و`longitude` كبدائل، لكن الشكل الأفضل والثابت هو `position.lat` و`position.lng`.
 
 الخريطة تعرض نفس بلاغات الصفحة الحالية فقط، لذلك تغيير صفحة الـ pagination يحدّث الخريطة والجدول معًا بدون طلب API إضافي.
+
+## 7. فلترة البلاغات بقيم الـ Enum الإنجليزية
+
+المسار المتاح حاليًا من الباك هو:
+
+```http
+GET /api/company/reports
+```
+
+لذلك تُرسل الفلاتر كـ query parameters مع الحفاظ على قيم الـ Enum الإنجليزية:
+
+```http
+GET /api/company/reports?status=InProgress&priority=Medium&page=1&pageSize=10
+```
+
+قيم `status` المدعومة:
+
+```txt
+UnderReview
+Accepted
+Rejected
+Assigned
+InProgress
+PendingAdminApproval
+NeedsCompletion
+UnableToExecute
+Resolved
+```
+
+وقيم `priority`:
+
+```txt
+low
+Medium
+high
+```
+
+عند اختيار «كل الحالات» أو «كل الأولويات» لا يتم إرسال الـ query parameter المقابل.

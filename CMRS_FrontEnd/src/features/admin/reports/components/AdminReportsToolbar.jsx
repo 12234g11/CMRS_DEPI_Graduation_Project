@@ -80,6 +80,11 @@ function AdminReportsToolbar({
   totalCount = 0,
   activeFiltersCount = 0,
   onClearFilters,
+  title = 'فلترة البلاغات',
+  mobileTitle = 'فلاتر البلاغات',
+  mobileDescription = 'اختار الفلاتر المناسبة ثم ارجع للجدول.',
+  searchPlaceholder = 'ابحث في العنوان أو الوصف أو الشركة...',
+  ariaLabel = 'فلاتر البلاغات',
 }) {
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
@@ -111,10 +116,10 @@ function AdminReportsToolbar({
   };
 
   return (
-    <section className="admin-reports-filter-box" aria-label="فلاتر البلاغات">
+    <section className="admin-reports-filter-box" aria-label={ariaLabel}>
       <div className="admin-reports-filter-box__header">
         <div>
-          <h2>فلترة البلاغات</h2>
+          <h2>{title}</h2>
           <p>
             يتم عرض {totalCount} بلاغ طبقاً للفلاتر الحالية
             {activeFiltersCount ? `، مع تطبيق ${activeFiltersCount} فلتر.` : '.'}
@@ -139,7 +144,7 @@ function AdminReportsToolbar({
             type="search"
             value={searchTerm}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="ابحث في العنوان أو الوصف أو الشركة..."
+            placeholder={searchPlaceholder}
             aria-label="البحث في البلاغات"
           />
         </div>
@@ -172,12 +177,12 @@ function AdminReportsToolbar({
             className="admin-reports-mobile-filters__sheet"
             role="dialog"
             aria-modal="true"
-            aria-label="فلاتر البلاغات"
+            aria-label={ariaLabel}
           >
             <header className="admin-reports-mobile-filters__header">
               <div>
-                <h3>فلاتر البلاغات</h3>
-                <p>اختار الفلاتر المناسبة ثم ارجع للجدول.</p>
+                <h3>{mobileTitle}</h3>
+                <p>{mobileDescription}</p>
               </div>
 
               <button type="button" onClick={closeMobileFilters} aria-label="إغلاق">

@@ -11,6 +11,7 @@ import {
   FiSettings,
   FiTool,
   FiBookmark,
+  FiArchive,
 } from 'react-icons/fi';
 
 export const SIDEBAR_ICONS = {
@@ -26,4 +27,5 @@ export const SIDEBAR_ICONS = {
   settings: FiSettings,
   tool: FiTool,
   bookmark: FiBookmark,
+  archive: FiArchive,
 };

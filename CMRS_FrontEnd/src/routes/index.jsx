@@ -23,6 +23,7 @@ import UserProfilePage from '../features/user/profile/pages/UserProfilePage';
 import AdminDashboardPage from '../features/admin/dashboard/pages/AdminDashboardPage';
 import ReviewReportsPage from '../features/admin/reports/pages/ReviewReportsPage';
 import AdminReportDetailsPage from '../features/admin/reports/pages/AdminReportDetailsPage';
+import AdminReportsArchivePage from '../features/admin/reports/pages/AdminReportsArchivePage';
 import AdminCompaniesPage from '../features/admin/companies/pages/AdminCompaniesPage';
 import AdminAnalyticsPage from '../features/admin/analytics/pages/AdminAnalyticsPage';
 import AdminNotificationsPage from '../features/admin/notifications/pages/AdminNotificationsPage';
@@ -84,6 +85,8 @@ function AppRouter() {
             <Route path={ROUTES.ADMIN_DASHBOARD} element={<AdminDashboardPage />} />
             <Route path={ROUTES.ADMIN_REVIEW_REPORTS} element={<ReviewReportsPage />} />
             <Route path={ROUTES.ADMIN_REPORT_DETAILS} element={<AdminReportDetailsPage />} />
+            <Route path={ROUTES.ADMIN_ARCHIVED_REPORTS} element={<AdminReportsArchivePage />} />
+            <Route path={ROUTES.ADMIN_ARCHIVED_REPORT_DETAILS} element={<AdminReportDetailsPage />} />
             <Route path={ROUTES.ADMIN_COMPANIES} element={<AdminCompaniesPage />} />
             <Route path={ROUTES.ADMIN_ANALYTICS} element={<AdminAnalyticsPage />} />
             <Route path={ROUTES.ADMIN_NOTIFICATIONS} element={<AdminNotificationsPage />} />

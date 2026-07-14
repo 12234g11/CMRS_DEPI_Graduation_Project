@@ -121,8 +121,11 @@ function HeroSection() {
           animate="visible"
         >
           <motion.h1 className="hero-section__title" variants={titleVariants}>
-            بلّغ عن{' '}
-            <motion.span variants={highlightVariants}>
+            <span className="hero-section__title-brand">بلّغ</span> عن{' '}
+            <motion.span
+              className="hero-section__title-city"
+              variants={highlightVariants}
+            >
               مشاكل مدينتك
             </motion.span>{' '}
             في ثواني
