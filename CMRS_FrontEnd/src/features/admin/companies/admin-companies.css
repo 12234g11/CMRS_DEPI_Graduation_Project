@@ -1450,3 +1450,16 @@
   direction: ltr;
   text-align: right;
 }
+
+
+/* Keep company phone placeholders and values aligned from the right. */
+.admin-company-form .admin-company-phone-input {
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: plaintext;
+}
+
+.admin-company-form .admin-company-phone-input::placeholder {
+  direction: rtl;
+  text-align: right;
+}

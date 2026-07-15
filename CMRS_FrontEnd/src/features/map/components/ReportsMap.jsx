@@ -232,6 +232,7 @@ function ReportsMap({
   renderPopupContent,
 }) {
   const markerRefs = useRef({});
+  const lastReportedLocationKeyRef = useRef(null);
   const dedupedMarkers = useMemo(
     () => dedupeMarkers(markers, activeMarkerId),
     [markers, activeMarkerId],
@@ -303,10 +304,33 @@ function ReportsMap({
   }, [activeMarkerId]);
 
   useEffect(() => {
-    if (typeof onCurrentLocationChange === 'function') {
-      onCurrentLocationChange(showCurrentLocationMarker ? location : null);
+    if (typeof onCurrentLocationChange !== 'function') return;
+
+    const latitude = Number(location?.lat);
+    const longitude = Number(location?.lng);
+    const hasValidLocation =
+      showCurrentLocationMarker &&
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude);
+
+    const locationKey = hasValidLocation
+      ? `${latitude.toFixed(7)}|${longitude.toFixed(7)}`
+      : 'no-current-location';
+
+    if (lastReportedLocationKeyRef.current === locationKey) {
+      return;
     }
-  }, [location, onCurrentLocationChange, showCurrentLocationMarker]);
+
+    lastReportedLocationKeyRef.current = locationKey;
+    onCurrentLocationChange(
+      hasValidLocation ? { lat: latitude, lng: longitude } : null
+    );
+  }, [
+    location?.lat,
+    location?.lng,
+    onCurrentLocationChange,
+    showCurrentLocationMarker,
+  ]);
 
   useEffect(() => {
     let isCancelled = false;

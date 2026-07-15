@@ -61,12 +61,6 @@ function createEmptyForm({ defaultGovernorate, firstSpecialization }) {
   };
 }
 
-function toggleArrayValue(list, value) {
-  return list.includes(value)
-    ? list.filter((item) => item !== value)
-    : [...list, value];
-}
-
 function resolveSpecializationValue(specialization, options) {
   const value = String(specialization || '').trim();
   const matchedOption = options.find(
@@ -162,8 +156,8 @@ function validateForm(formData) {
     errors.email = 'برجاء إدخال بريد إلكتروني صحيح، مثل company@example.com.';
   }
 
-  if (!formData.governorates.length) {
-    errors.governorates = 'برجاء اختيار محافظة واحدة على الأقل تعمل بها الشركة.';
+  if (formData.governorates.length !== 1) {
+    errors.governorates = 'برجاء اختيار محافظة واحدة فقط تعمل بها الشركة.';
   }
 
   if (address.length > ADDRESS_MAX_LENGTH) {
@@ -274,9 +268,9 @@ function AdminCompanyFormModal({
           company.specialization,
           cleanedSpecializationOptions,
         ),
-        governorates: company.governorates?.length
-          ? company.governorates
-          : [company.governorate].filter(Boolean),
+        governorates: [
+          company.governorates?.[0] || company.governorate || defaultGovernorate,
+        ].filter(Boolean),
         maxCapacity: company.maxCapacity || 10,
         phone: sanitizePhone(company.phone === '-' ? '' : company.phone),
         managerPhone: sanitizePhone(company.managerPhone === '-' ? '' : company.managerPhone),
@@ -324,12 +318,10 @@ function AdminCompanyFormModal({
     handleChange(field, sanitizePhone(value));
   }
 
-  function handleGovernorateToggle(governorate) {
-    const nextGovernorates = toggleArrayValue(formData.governorates, governorate);
-
+  function handleGovernorateSelect(governorate) {
     setFormData((current) => ({
       ...current,
-      governorates: nextGovernorates,
+      governorates: [governorate],
     }));
 
     clearFieldError('governorates');
@@ -551,8 +543,10 @@ function AdminCompanyFormModal({
             >
               هاتف المسؤول
               <input
+                className="admin-company-phone-input"
                 type="tel"
                 inputMode="numeric"
+                dir="rtl"
                 value={formData.managerPhone}
                 onChange={(event) => handlePhoneChange('managerPhone', event.target.value)}
                 placeholder="مثال: 01000000000"
@@ -583,8 +577,10 @@ function AdminCompanyFormModal({
             >
               رقم الشركة
               <input
+                className="admin-company-phone-input"
                 type="tel"
                 inputMode="numeric"
+                dir="rtl"
                 value={formData.phone}
                 onChange={(event) => handlePhoneChange('phone', event.target.value)}
                 placeholder="مثال: 01000000000"
@@ -653,9 +649,9 @@ function AdminCompanyFormModal({
             ref={(node) => setFieldRef('governorates', node)}
             className={`admin-company-form-section${fieldErrors.governorates ? ' has-error' : ''}`}
           >
-            <h3>المحافظات التي تغطيها الشركة</h3>
+            <h3>المحافظة التي تغطيها الشركة</h3>
             <p>
-              تستخدم في تعديل بيانات الشركة، وتساعد الأدمن في تحديد نطاق العمل داخل النظام.
+              اختر محافظة واحدة لتحديد نطاق عمل الشركة داخل النظام.
             </p>
 
             <div className="admin-company-checks admin-company-checks--large">
@@ -665,9 +661,10 @@ function AdminCompanyFormModal({
                   className={formData.governorates.includes(governorate.value) ? 'is-checked' : ''}
                 >
                   <input
-                    type="checkbox"
+                    type="radio"
+                    name="company-governorate"
                     checked={formData.governorates.includes(governorate.value)}
-                    onChange={() => handleGovernorateToggle(governorate.value)}
+                    onChange={() => handleGovernorateSelect(governorate.value)}
                   />
                   {governorate.label}
                 </label>
@@ -687,7 +684,7 @@ function AdminCompanyFormModal({
             <textarea
               value={formData.description}
               onChange={(event) => handleChange('description', event.target.value)}
-              placeholder="اكتب نبذة مختصرة عن الشركة أو ملاحظات يتم إرسالها للباك..."
+              placeholder="اكتب نبذة مختصرة عن الشركة، مثل مجال عملها وخبراتها، أو أضف أي ملاحظات مهمة خاصة بالدعوة..."
               rows={4}
               maxLength={DESCRIPTION_MAX_LENGTH}
               aria-invalid={Boolean(fieldErrors.description)}

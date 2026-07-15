@@ -1,9 +1,18 @@
+import { useEffect, useRef, useState } from 'react';
 import {
+  FiCheck,
+  FiChevronDown,
   FiMail,
   FiMapPin,
   FiPhone,
   FiUser,
 } from 'react-icons/fi';
+
+const GOVERNORATE_OPTIONS = [
+  { value: 'القاهرة', label: 'القاهرة' },
+  { value: 'الجيزة', label: 'الجيزة' },
+  { value: 'القليوبية', label: 'القليوبية' },
+];
 
 function ProfileInfoCard({
   values,
@@ -11,6 +20,9 @@ function ProfileInfoCard({
   onChange,
   errors = {},
 }) {
+  const [isGovernorateMenuOpen, setIsGovernorateMenuOpen] = useState(false);
+  const governorateDropdownRef = useRef(null);
+
   function handleChange(event) {
     const { name, value } = event.target;
 
@@ -19,6 +31,48 @@ function ProfileInfoCard({
       [name]: value,
     });
   }
+
+  function handleGovernorateSelect(governorate) {
+    onChange?.({
+      ...values,
+      city: governorate,
+    });
+
+    setIsGovernorateMenuOpen(false);
+  }
+
+  useEffect(() => {
+    if (!isGovernorateMenuOpen) return undefined;
+
+    function handleOutsideClick(event) {
+      if (
+        governorateDropdownRef.current &&
+        !governorateDropdownRef.current.contains(event.target)
+      ) {
+        setIsGovernorateMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event) {
+      if (event.key === 'Escape') {
+        setIsGovernorateMenuOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isGovernorateMenuOpen]);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setIsGovernorateMenuOpen(false);
+    }
+  }, [isEditing]);
 
   return (
     <section className="user-profile-card user-profile-info-card">
@@ -89,23 +143,68 @@ function ProfileInfoCard({
             ) : null}
           </label>
 
-          <label>
-            <span>المدينة</span>
-            <input
-              type="text"
-              name="city"
-              value={values.city || ''}
-              onChange={handleChange}
-              placeholder="المدينة"
-              className={errors.city ? 'is-invalid' : ''}
-            />
+          <div className="user-profile-form__field">
+            <span>المحافظة</span>
+
+            <div
+              ref={governorateDropdownRef}
+              className={`user-profile-dropdown ${
+                isGovernorateMenuOpen ? 'is-open' : ''
+              } ${errors.city ? 'is-invalid' : ''}`}
+            >
+              <button
+                type="button"
+                className="user-profile-dropdown__trigger"
+                onClick={() =>
+                  setIsGovernorateMenuOpen((currentValue) => !currentValue)
+                }
+                aria-haspopup="listbox"
+                aria-expanded={isGovernorateMenuOpen}
+                aria-invalid={Boolean(errors.city)}
+              >
+                <span className={!values.city ? 'is-placeholder' : ''}>
+                  {values.city || 'اختر المحافظة'}
+                </span>
+                <FiChevronDown aria-hidden="true" />
+              </button>
+
+              {isGovernorateMenuOpen ? (
+                <div
+                  className="user-profile-dropdown__menu"
+                  role="listbox"
+                  aria-label="اختر المحافظة"
+                >
+                  {GOVERNORATE_OPTIONS.map((governorate) => {
+                    const isSelected = values.city === governorate.value;
+
+                    return (
+                      <button
+                        key={governorate.value}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        className={`user-profile-dropdown__option ${
+                          isSelected ? 'is-selected' : ''
+                        }`}
+                        onClick={() =>
+                          handleGovernorateSelect(governorate.value)
+                        }
+                      >
+                        <span>{governorate.label}</span>
+                        <FiCheck aria-hidden="true" />
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
 
             {errors.city ? (
               <small className="user-profile-form__error">
                 {errors.city}
               </small>
             ) : null}
-          </label>
+          </div>
         </div>
       ) : (
         <div className="user-profile-info-list">
@@ -136,7 +235,7 @@ function ProfileInfoCard({
           <article>
             <FiMapPin />
             <div>
-              <span>المدينة</span>
+              <span>المحافظة</span>
               <strong>{values.city || '—'}</strong>
             </div>
           </article>

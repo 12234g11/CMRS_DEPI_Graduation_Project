@@ -32,13 +32,6 @@ const DEFAULT_FILTER_OPTIONS = {
   issueCategories: [{ value: 'all', label: 'كل التصنيفات' }],
 };
 
-const COMPANY_REVIEW_STATUS_OPTIONS = [
-  { value: 'all', label: 'كل مراجعات الشركات' },
-  { value: 'pending', label: 'بانتظار مراجعة الأدمن' },
-  { value: 'approved', label: 'تم قبول رد الشركة' },
-  { value: 'rejected', label: 'تم طلب متابعة' },
-];
-
 const SORT_OPTIONS = [
   { value: 'createdAt-desc', label: 'الأحدث أولاً' },
   { value: 'createdAt-asc', label: 'الأقدم أولاً' },
@@ -133,7 +126,6 @@ function AdminReportsArchivePage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [issueCategoryFilter, setIssueCategoryFilter] = useState('all');
-  const [companyReviewStatusFilter, setCompanyReviewStatusFilter] = useState('all');
   const [sortFilter, setSortFilter] = useState('createdAt-desc');
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize] = useState(10);
@@ -171,7 +163,6 @@ function AdminReportsArchivePage() {
     statusFilter,
     priorityFilter,
     issueCategoryFilter,
-    companyReviewStatusFilter,
     sortFilter,
   ]);
 
@@ -189,7 +180,6 @@ function AdminReportsArchivePage() {
       status: statusFilter,
       priority: priorityFilter,
       issueCategoryId: issueCategoryFilter,
-      companyReviewStatus: companyReviewStatusFilter,
       sortBy: sortParams.sortBy,
       sortDirection: sortParams.sortDirection,
     })
@@ -223,7 +213,6 @@ function AdminReportsArchivePage() {
       isMounted = false;
     };
   }, [
-    companyReviewStatusFilter,
     issueCategoryFilter,
     pageNumber,
     pageSize,
@@ -257,7 +246,6 @@ function AdminReportsArchivePage() {
       statusFilter,
       priorityFilter,
       issueCategoryFilter,
-      companyReviewStatusFilter,
     ].filter((value) => value && value !== 'all').length;
 
     const hasSearch = searchTerm.trim() ? 1 : 0;
@@ -265,7 +253,6 @@ function AdminReportsArchivePage() {
 
     return dropdownFilters + hasSearch + hasCustomSort;
   }, [
-    companyReviewStatusFilter,
     issueCategoryFilter,
     priorityFilter,
     searchTerm,
@@ -323,7 +310,6 @@ function AdminReportsArchivePage() {
     setStatusFilter('all');
     setPriorityFilter('all');
     setIssueCategoryFilter('all');
-    setCompanyReviewStatusFilter('all');
     setSortFilter('createdAt-desc');
     setPageNumber(1);
     setSelectedReport(null);
@@ -380,14 +366,11 @@ function AdminReportsArchivePage() {
         onPriorityChange={setPriorityFilter}
         issueCategoryFilter={issueCategoryFilter}
         onIssueCategoryChange={setIssueCategoryFilter}
-        companyReviewStatusFilter={companyReviewStatusFilter}
-        onCompanyReviewStatusChange={setCompanyReviewStatusFilter}
         sortFilter={sortFilter}
         onSortChange={setSortFilter}
         statusOptions={filterOptions.statuses}
         priorityOptions={filterOptions.priorities}
         issueCategoryOptions={filterOptions.issueCategories}
-        companyReviewStatusOptions={COMPANY_REVIEW_STATUS_OPTIONS}
         sortOptions={SORT_OPTIONS}
         totalCount={totalCount}
         activeFiltersCount={activeFiltersCount}

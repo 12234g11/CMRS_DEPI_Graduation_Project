@@ -10,12 +10,38 @@ import {
 } from '../api/userProfileApi';
 import '../user-profile.css';
 
+const ALLOWED_GOVERNORATES = ['القاهرة', 'الجيزة', 'القليوبية'];
+
+function normalizeGovernorate(value = '') {
+  const normalizedValue = String(value).trim();
+
+  const governorateAliases = {
+    قاهرة: 'القاهرة',
+    القاهرة: 'القاهرة',
+    القاهره: 'القاهرة',
+    cairo: 'القاهرة',
+    جيزة: 'الجيزة',
+    جيزه: 'الجيزة',
+    الجيزة: 'الجيزة',
+    الجيزه: 'الجيزة',
+    giza: 'الجيزة',
+    قليوبية: 'القليوبية',
+    قليوبيه: 'القليوبية',
+    القليوبية: 'القليوبية',
+    القليوبيه: 'القليوبية',
+    qalyubia: 'القليوبية',
+    qalubia: 'القليوبية',
+  };
+
+  return governorateAliases[normalizedValue.toLowerCase()] || '';
+}
+
 function createEditableProfile(profile = {}) {
   return {
     fullName: profile.fullName || '',
     email: profile.email || '',
     phone: profile.phone || '',
-    city: profile.city || '',
+    city: normalizeGovernorate(profile.city),
   };
 }
 
@@ -39,7 +65,9 @@ function validateProfileForm(values = {}) {
   }
 
   if (!String(values.city || '').trim()) {
-    errors.city = 'المدينة مطلوبة.';
+    errors.city = 'المحافظة مطلوبة.';
+  } else if (!ALLOWED_GOVERNORATES.includes(values.city)) {
+    errors.city = 'برجاء اختيار محافظة من القائمة.';
   }
 
   return errors;
@@ -68,8 +96,16 @@ function UserProfilePage() {
 
       const response = await getUserProfile();
 
-      setProfile(response.profile);
-      setFormValues(createEditableProfile(response.profile));
+      const normalizedProfile = {
+        ...response.profile,
+        city:
+          normalizeGovernorate(response.profile?.city) ||
+          response.profile?.city ||
+          '',
+      };
+
+      setProfile(normalizedProfile);
+      setFormValues(createEditableProfile(normalizedProfile));
       setAchievements(response.achievements);
       setRecentActivity(response.recentActivity);
     } catch (error) {
@@ -129,7 +165,9 @@ function UserProfilePage() {
         fullName: response.profile?.fullName || formValues.fullName.trim(),
         email: response.profile?.email || formValues.email.trim(),
         phone: response.profile?.phone || formValues.phone.trim(),
-        city: response.profile?.city || formValues.city.trim(),
+        city:
+          normalizeGovernorate(response.profile?.city || formValues.city) ||
+          formValues.city.trim(),
       };
 
       setProfile(nextProfile);

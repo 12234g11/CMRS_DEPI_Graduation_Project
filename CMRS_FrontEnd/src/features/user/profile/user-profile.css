@@ -890,3 +890,172 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== Governorate dropdown ===== */
+
+.user-profile-form__field {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.user-profile-dropdown {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  z-index: 20;
+}
+
+.user-profile-dropdown__trigger {
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 15px;
+  border: 1.5px solid rgba(2, 95, 72, 0.14);
+  border-radius: 16px;
+  background: #ffffff;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 900;
+  text-align: right;
+  direction: rtl;
+  outline: 0;
+  cursor: pointer;
+  transition:
+    border-color var(--transition-base),
+    box-shadow var(--transition-base),
+    background var(--transition-base);
+}
+
+.user-profile-dropdown__trigger:hover {
+  border-color: rgba(2, 95, 72, 0.34);
+  background: rgba(248, 252, 249, 0.92);
+}
+
+.user-profile-dropdown__trigger:focus-visible,
+.user-profile-dropdown.is-open .user-profile-dropdown__trigger {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(2, 95, 72, 0.1);
+  background: #ffffff;
+}
+
+.user-profile-dropdown__trigger > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-profile-dropdown__trigger > span.is-placeholder {
+  color: var(--color-subtitle);
+  font-weight: 800;
+}
+
+.user-profile-dropdown__trigger > svg {
+  width: 19px;
+  height: 19px;
+  color: var(--color-primary);
+  flex-shrink: 0;
+  transition: transform var(--transition-base);
+}
+
+.user-profile-dropdown.is-open .user-profile-dropdown__trigger > svg {
+  transform: rotate(180deg);
+}
+
+.user-profile-dropdown__menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  inset-inline: 0;
+  z-index: 60;
+  padding: 8px;
+  border: 1px solid rgba(2, 95, 72, 0.1);
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow:
+    0 20px 45px rgba(2, 95, 72, 0.16),
+    0 5px 14px rgba(15, 23, 42, 0.06);
+  display: grid;
+  gap: 4px;
+  overflow: visible;
+  animation: userProfileDropdownIn 150ms ease-out;
+}
+
+.user-profile-dropdown__option {
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: inherit;
+  font-size: 0.96rem;
+  font-weight: 900;
+  text-align: right;
+  direction: rtl;
+  cursor: pointer;
+  transition:
+    background var(--transition-base),
+    color var(--transition-base),
+    transform var(--transition-base);
+}
+
+.user-profile-dropdown__option:hover,
+.user-profile-dropdown__option:focus-visible {
+  background: rgba(2, 95, 72, 0.07);
+  color: var(--color-primary);
+  outline: 0;
+}
+
+.user-profile-dropdown__option:active {
+  transform: scale(0.99);
+}
+
+.user-profile-dropdown__option > svg {
+  width: 18px;
+  height: 18px;
+  color: var(--color-primary);
+  flex-shrink: 0;
+  opacity: 0;
+  transform: scale(0.75);
+  transition:
+    opacity var(--transition-base),
+    transform var(--transition-base);
+}
+
+.user-profile-dropdown__option.is-selected {
+  background: rgba(2, 95, 72, 0.1);
+  color: var(--color-primary);
+}
+
+.user-profile-dropdown__option.is-selected > svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.user-profile-dropdown.is-invalid .user-profile-dropdown__trigger {
+  border-color: #dc2626;
+  background: rgba(254, 242, 242, 0.5);
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.08);
+}
+
+@keyframes userProfileDropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

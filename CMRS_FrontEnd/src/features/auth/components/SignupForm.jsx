@@ -44,6 +44,14 @@ const itemVariants = {
   },
 };
 
+
+function getDisplayedErrorMessages(message) {
+  return String(message || '')
+    .split(/\r?\n|\\r?\\n/)
+    .map((item) => item.replace(/^\s*[-•]\s*/, '').trim())
+    .filter(Boolean);
+}
+
 function SignupForm() {
   const navigate = useNavigate();
 
@@ -310,14 +318,23 @@ function SignupForm() {
         </motion.label>
 
         {errorMessage ? (
-          <motion.p
+          <motion.div
             className="signup-form__error"
             role="alert"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            {errorMessage}
-          </motion.p>
+            <ul className="signup-form__error-list">
+              {getDisplayedErrorMessages(errorMessage).map((message, index) => (
+                <li
+                  key={`${message}-${index}`}
+                  className="signup-form__error-item"
+                >
+                  {message}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
         ) : null}
 
         <motion.button

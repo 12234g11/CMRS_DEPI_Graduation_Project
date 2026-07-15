@@ -116,7 +116,7 @@ function ProfileHeader({
 
           <span>
             <FiMapPin />
-            {profile?.city || 'مدينة غير محددة'}
+            {profile?.city || 'محافظة غير محددة'}
           </span>
 
           <span>

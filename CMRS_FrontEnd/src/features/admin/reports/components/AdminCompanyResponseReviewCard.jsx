@@ -282,7 +282,7 @@ function AdminCompanyResponseReviewCard({
                       <b>رسالة الأدمن الموجهة للشركة:</b>{' '}
                       {cleanText(
                         existingDecision.adminNote || existingDecision.companyMessage,
-                      ) || 'لا توجد بيانات للعرض'}
+                      ) || 'لم يتم إرسال أي رسالة من الأدمن إلى الشركة.'}
                     </p>
                   )}
 
@@ -661,7 +661,7 @@ function AdminCompanyResponseReviewCard({
           </div>
         ) : (
           <p className="admin-company-response-no-images">
-            لا توجد صور مرفقة من الشركة، أو لم يرجعها الخادم داخل companyResponse.images.
+            لم يتم إرسال صور من الشركة.
           </p>
         )}
       </div>
@@ -841,7 +841,7 @@ function AdminCompanyResponseReviewCard({
                 ) : (
                   <p>
                     <b>رسالة الأدمن الموجهة للشركة:</b>{' '}
-                    {reviewedAdminNote || 'لا توجد بيانات للعرض'}
+                    {reviewedAdminNote || 'لم يتم إرسال أي رسالة من الأدمن إلى الشركة.'}
                   </p>
                 )}
 

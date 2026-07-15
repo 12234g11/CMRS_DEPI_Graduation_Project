@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { FiCheck, FiChevronDown, FiFilter, FiMapPin, FiX } from 'react-icons/fi';
 
@@ -788,7 +788,7 @@ function NearbyIssuesPage() {
     scrollToMap();
   }
 
-  function handleCurrentLocationChange(locationPoint) {
+  const handleCurrentLocationChange = useCallback((locationPoint) => {
     const normalizedLocation = {
       lat: Number(locationPoint?.lat),
       lng: Number(locationPoint?.lng),
@@ -801,10 +801,25 @@ function NearbyIssuesPage() {
       return;
     }
 
-    setCurrentLocation(normalizedLocation);
+    setCurrentLocation((currentLocationValue) => {
+      const currentLat = Number(currentLocationValue?.lat);
+      const currentLng = Number(currentLocationValue?.lng);
+
+      if (
+        Number.isFinite(currentLat) &&
+        Number.isFinite(currentLng) &&
+        currentLat === normalizedLocation.lat &&
+        currentLng === normalizedLocation.lng
+      ) {
+        return currentLocationValue;
+      }
+
+      return normalizedLocation;
+    });
+
     setShowLocationControlHint(false);
     setIsLocationIntroOpen(false);
-  }
+  }, []);
 
   function handleRequestDirections(issue) {
     if (!issue?.id) return;

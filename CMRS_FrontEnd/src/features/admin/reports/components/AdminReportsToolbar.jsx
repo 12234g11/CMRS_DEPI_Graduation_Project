@@ -42,12 +42,14 @@ function ReportsFilterControls({
         ariaLabel="فلترة البلاغات حسب التصنيف"
       />
 
-      <AdminReportFilterSelect
-        value={companyReviewStatusFilter}
-        options={companyReviewStatusOptions}
-        onChange={onCompanyReviewStatusChange}
-        ariaLabel="فلترة حسب مراجعة رد الشركة"
-      />
+      {companyReviewStatusOptions.length ? (
+        <AdminReportFilterSelect
+          value={companyReviewStatusFilter}
+          options={companyReviewStatusOptions}
+          onChange={onCompanyReviewStatusChange}
+          ariaLabel="فلترة حسب مراجعة رد الشركة"
+        />
+      ) : null}
 
       <AdminReportFilterSelect
         value={sortFilter}
