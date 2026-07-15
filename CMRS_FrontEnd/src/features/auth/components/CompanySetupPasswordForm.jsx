@@ -3,7 +3,14 @@ import { motion } from 'motion/react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ROUTES } from '../../../shared/navigation';
 import PasswordInput from './PasswordInput';
+import AuthErrorList from './AuthErrorList';
 import { acceptCompanyInvitation } from '../api/authApi';
+import {
+  getApiErrorMessages,
+  validateEmail,
+  validatePassword,
+  validatePasswordConfirmation,
+} from '../utils/authValidation';
 
 const initialValues = {
   email: '',
@@ -35,7 +42,6 @@ const itemVariants = {
 function CompanySetupPasswordForm() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-
   const invitationToken = searchParams.get('token');
 
   const [formData, setFormData] = useState(initialValues);
@@ -44,7 +50,7 @@ function CompanySetupPasswordForm() {
     password: false,
     confirmPassword: false,
   });
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessages, setErrorMessages] = useState([]);
   const [successMessage, setSuccessMessage] = useState('');
 
   function handleChange(event) {
@@ -55,52 +61,51 @@ function CompanySetupPasswordForm() {
       [name]: value,
     }));
 
-    if (errorMessage) setErrorMessage('');
+    if (errorMessages.length > 0) setErrorMessages([]);
     if (successMessage) setSuccessMessage('');
   }
 
   function validateForm() {
+    const errors = [];
+
     if (!invitationToken) {
-      return 'رابط الدعوة غير صحيح أو منتهي الصلاحية.';
+      errors.push('رابط الدعوة غير صحيح أو منتهي الصلاحية.');
     }
 
-    if (
-      !formData.email.trim() ||
-      !formData.password.trim() ||
-      !formData.confirmPassword.trim()
-    ) {
-      return 'من فضلك املأ جميع الحقول المطلوبة.';
-    }
+    errors.push(
+      ...validateEmail(formData.email, {
+        requiredMessage: 'البريد الإلكتروني للشركة مطلوب.',
+      })
+    );
+    errors.push(...validatePassword(formData.password));
+    errors.push(
+      ...validatePasswordConfirmation(
+        formData.password,
+        formData.confirmPassword
+      )
+    );
 
-    if (formData.password.length < 8) {
-      return 'كلمة المرور يجب ألا تقل عن 8 أحرف.';
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      return 'كلمة المرور وتأكيد كلمة المرور غير متطابقين.';
-    }
-
-    return '';
+    return errors;
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    const validationError = validateForm();
+    const validationErrors = validateForm();
 
-    if (validationError) {
-      setErrorMessage(validationError);
+    if (validationErrors.length > 0) {
+      setErrorMessages(validationErrors);
       return;
     }
 
     try {
       setIsSubmitting(true);
-      setErrorMessage('');
+      setErrorMessages([]);
       setSuccessMessage('');
 
       await acceptCompanyInvitation({
         token: invitationToken,
-        email: formData.email,
+        email: formData.email.trim(),
         password: formData.password,
         confirmPassword: formData.confirmPassword,
       });
@@ -114,13 +119,18 @@ function CompanySetupPasswordForm() {
         navigate(ROUTES.LOGIN, {
           replace: true,
           state: {
-            email: formData.email,
+            email: formData.email.trim(),
             message: successText,
           },
         });
       }, 1200);
     } catch (error) {
-      setErrorMessage(error?.message || 'حدث خطأ أثناء تفعيل حساب الشركة.');
+      setErrorMessages(
+        getApiErrorMessages(
+          error,
+          'تعذر تفعيل حساب الشركة. راجع البيانات أو اطلب دعوة جديدة.'
+        )
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -203,16 +213,7 @@ function CompanySetupPasswordForm() {
           </motion.div>
         </motion.div>
 
-        {errorMessage ? (
-          <motion.p
-            className="company-form__error"
-            role="alert"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            {errorMessage}
-          </motion.p>
-        ) : null}
+        <AuthErrorList messages={errorMessages} />
 
         {successMessage ? (
           <motion.p

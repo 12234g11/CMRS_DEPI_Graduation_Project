@@ -8,7 +8,14 @@ import {
 } from 'react-router-dom';
 import { ROUTES } from '../../../shared/navigation';
 import PasswordInput from './PasswordInput';
+import AuthErrorList from './AuthErrorList';
 import { resetPassword } from '../api/authApi';
+import {
+  getApiErrorMessages,
+  validateEmail,
+  validatePassword,
+  validatePasswordConfirmation,
+} from '../utils/authValidation';
 
 const containerVariants = {
   hidden: {},
@@ -31,47 +38,12 @@ const itemVariants = {
   },
 };
 
-function getRawQueryParam(search, paramName) {
-  const queryString = search.startsWith('?') ? search.slice(1) : search;
-
-  if (!queryString) {
-    return '';
-  }
-
-  const queryParts = queryString.split('&');
-
-  const matchingPart = queryParts.find((part) => {
-    const separatorIndex = part.indexOf('=');
-
-    const rawKey =
-      separatorIndex === -1 ? part : part.slice(0, separatorIndex);
-
-    try {
-      return decodeURIComponent(rawKey) === paramName;
-    } catch {
-      return rawKey === paramName;
-    }
-  });
-
-  if (!matchingPart) {
-    return '';
-  }
-
-  const separatorIndex = matchingPart.indexOf('=');
-
-  if (separatorIndex === -1) {
-    return '';
-  }
-
-  return matchingPart.slice(separatorIndex + 1);
-}
-
 function ResetPasswordForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  // قراءة التوكن من الرابط كما هو، بدون URL Decode
+  // Keep the reset token exactly as received in the URL.
   const resetToken =
     window.location.search.match(/[?&]token=([^&]*)/)?.[1] || '';
 
@@ -84,13 +56,11 @@ function ResetPasswordForm() {
     confirmPassword: '',
   }));
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [visiblePasswords, setVisiblePasswords] = useState({
     newPassword: false,
     confirmPassword: false,
   });
-
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessages, setErrorMessages] = useState([]);
   const [successMessage, setSuccessMessage] = useState('');
 
   function handleChange(event) {
@@ -101,62 +71,51 @@ function ResetPasswordForm() {
       [name]: value,
     }));
 
-    if (errorMessage) {
-      setErrorMessage('');
-    }
-
-    if (successMessage) {
-      setSuccessMessage('');
-    }
+    if (errorMessages.length > 0) setErrorMessages([]);
+    if (successMessage) setSuccessMessage('');
   }
 
   function validateForm() {
+    const errors = [];
+
     if (!resetToken) {
-      return 'رابط إعادة تعيين كلمة المرور غير صحيح أو منتهي الصلاحية.';
+      errors.push('رابط إعادة تعيين كلمة المرور غير صحيح أو منتهي الصلاحية.');
     }
 
-    if (
-      !formData.email.trim() ||
-      !formData.newPassword.trim() ||
-      !formData.confirmPassword.trim()
-    ) {
-      return 'من فضلك املأ البريد الإلكتروني وكلمة المرور وتأكيد كلمة المرور.';
-    }
+    errors.push(...validateEmail(formData.email));
+    errors.push(
+      ...validatePassword(formData.newPassword, {
+        label: 'كلمة المرور الجديدة',
+      })
+    );
+    errors.push(
+      ...validatePasswordConfirmation(
+        formData.newPassword,
+        formData.confirmPassword
+      )
+    );
 
-    const passwordRegex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
-
-    if (!passwordRegex.test(formData.newPassword)) {
-      return 'كلمة المرور يجب أن تحتوي على حرف كبير وحرف صغير ورقم ورمز خاص وألا تقل عن 8 أحرف.';
-    }
-
-    if (formData.newPassword !== formData.confirmPassword) {
-      return 'كلمة المرور وتأكيد كلمة المرور غير متطابقين.';
-    }
-
-    return '';
+    return errors;
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    const validationError = validateForm();
+    const validationErrors = validateForm();
 
-    if (validationError) {
-      setErrorMessage(validationError);
+    if (validationErrors.length > 0) {
+      setErrorMessages(validationErrors);
       return;
     }
 
     try {
       setIsSubmitting(true);
-      setErrorMessage('');
+      setErrorMessages([]);
       setSuccessMessage('');
 
       const response = await resetPassword({
         email: formData.email.trim(),
-
         token: resetToken,
-
         newPassword: formData.newPassword,
         confirmPassword: formData.confirmPassword,
       });
@@ -177,8 +136,11 @@ function ResetPasswordForm() {
         });
       }, 1200);
     } catch (error) {
-      setErrorMessage(
-        error?.message || 'حدث خطأ أثناء تغيير كلمة المرور.',
+      setErrorMessages(
+        getApiErrorMessages(
+          error,
+          'تعذر تغيير كلمة المرور. راجع البيانات أو اطلب رابطًا جديدًا.'
+        )
       );
     } finally {
       setIsSubmitting(false);
@@ -193,13 +155,8 @@ function ResetPasswordForm() {
       whileInView="visible"
       viewport={{ once: false, amount: 0.2 }}
     >
-      <motion.header
-        className="forgot-form__header"
-        variants={itemVariants}
-      >
-        <h1 className="forgot-form__title">
-          إعادة تعيين كلمة المرور
-        </h1>
+      <motion.header className="forgot-form__header" variants={itemVariants}>
+        <h1 className="forgot-form__title">إعادة تعيين كلمة المرور</h1>
 
         <p className="forgot-form__subtitle">
           أدخل بريدك الإلكتروني وكلمة المرور الجديدة لإكمال عملية إعادة
@@ -213,10 +170,7 @@ function ResetPasswordForm() {
         noValidate
         variants={containerVariants}
       >
-        <motion.div
-          className="forgot-form__field"
-          variants={itemVariants}
-        >
+        <motion.div className="forgot-form__field" variants={itemVariants}>
           <label htmlFor="email">البريد الإلكتروني</label>
 
           <input
@@ -230,10 +184,7 @@ function ResetPasswordForm() {
           />
         </motion.div>
 
-        <motion.div
-          className="forgot-form__field"
-          variants={itemVariants}
-        >
+        <motion.div className="forgot-form__field" variants={itemVariants}>
           <label htmlFor="newPassword">كلمة المرور الجديدة</label>
 
           <PasswordInput
@@ -252,13 +203,8 @@ function ResetPasswordForm() {
           />
         </motion.div>
 
-        <motion.div
-          className="forgot-form__field"
-          variants={itemVariants}
-        >
-          <label htmlFor="confirmPassword">
-            تأكيد كلمة المرور
-          </label>
+        <motion.div className="forgot-form__field" variants={itemVariants}>
+          <label htmlFor="confirmPassword">تأكيد كلمة المرور</label>
 
           <PasswordInput
             id="confirmPassword"
@@ -276,16 +222,7 @@ function ResetPasswordForm() {
           />
         </motion.div>
 
-        {errorMessage ? (
-          <motion.p
-            className="forgot-form__error"
-            role="alert"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            {errorMessage}
-          </motion.p>
-        ) : null}
+        <AuthErrorList messages={errorMessages} />
 
         {successMessage ? (
           <motion.p
@@ -306,19 +243,11 @@ function ResetPasswordForm() {
           whileHover={{ y: -2, scale: 1.01 }}
           whileTap={{ scale: 0.985 }}
         >
-          {isSubmitting
-            ? 'جاري تغيير كلمة المرور...'
-            : 'تغيير كلمة المرور'}
+          {isSubmitting ? 'جاري تغيير كلمة المرور...' : 'تغيير كلمة المرور'}
         </motion.button>
 
-        <motion.div
-          className="forgot-form__links"
-          variants={itemVariants}
-        >
-          <Link
-            to={ROUTES.LOGIN}
-            className="forgot-form__link"
-          >
+        <motion.div className="forgot-form__links" variants={itemVariants}>
+          <Link to={ROUTES.LOGIN} className="forgot-form__link">
             العودة لتسجيل الدخول
           </Link>
         </motion.div>
@@ -327,4 +256,4 @@ function ResetPasswordForm() {
   );
 }
 
-export default ResetPasswordForm;   
+export default ResetPasswordForm;

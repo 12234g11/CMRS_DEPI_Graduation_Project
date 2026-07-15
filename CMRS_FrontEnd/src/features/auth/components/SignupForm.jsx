@@ -4,8 +4,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FiChevronDown, FiCheck, FiHome } from 'react-icons/fi';
 import { ROUTES } from '../../../shared/navigation';
 import PasswordInput from './PasswordInput';
+import AuthErrorList from './AuthErrorList';
 import { registerUser } from '../api/authApi';
 import GoogleAuthSection from './GoogleAuthSection';
+import {
+  getApiErrorMessages,
+  validateEmail,
+  validateEgyptianMobile,
+  validateFullName,
+  validatePassword,
+  validatePasswordConfirmation,
+} from '../utils/authValidation';
 
 const GOVERNORATE_OPTIONS = [
   { value: 'القاهرة', label: 'القاهرة' },
@@ -44,14 +53,6 @@ const itemVariants = {
   },
 };
 
-
-function getDisplayedErrorMessages(message) {
-  return String(message || '')
-    .split(/\r?\n|\\r?\\n/)
-    .map((item) => item.replace(/^\s*[-•]\s*/, '').trim())
-    .filter(Boolean);
-}
-
 function SignupForm() {
   const navigate = useNavigate();
 
@@ -61,12 +62,18 @@ function SignupForm() {
     password: false,
     confirmPassword: false,
   });
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessages, setErrorMessages] = useState([]);
   const [isCityMenuOpen, setIsCityMenuOpen] = useState(false);
 
   const selectedCity = GOVERNORATE_OPTIONS.find(
     (city) => city.value === formData.city
   );
+
+  function clearErrors() {
+    if (errorMessages.length > 0) {
+      setErrorMessages([]);
+    }
+  }
 
   function handleChange(event) {
     const { name, value, type, checked } = event.target;
@@ -76,9 +83,7 @@ function SignupForm() {
       [name]: type === 'checkbox' ? checked : value,
     }));
 
-    if (errorMessage) {
-      setErrorMessage('');
-    }
+    clearErrors();
   }
 
   function handleCitySelect(city) {
@@ -88,57 +93,62 @@ function SignupForm() {
     }));
 
     setIsCityMenuOpen(false);
-
-    if (errorMessage) {
-      setErrorMessage('');
-    }
+    clearErrors();
   }
 
   function validateForm() {
-    if (
-      !formData.fullName.trim() ||
-      !formData.phone.trim() ||
-      !formData.email.trim() ||
-      !formData.city.trim() ||
-      !formData.password.trim() ||
-      !formData.confirmPassword.trim()
-    ) {
-      return 'من فضلك املأ جميع الحقول المطلوبة.';
+    const errors = [];
+    const isKnownGovernorate = GOVERNORATE_OPTIONS.some(
+      (option) => option.value === formData.city
+    );
+
+    errors.push(...validateFullName(formData.fullName));
+    errors.push(...validateEgyptianMobile(formData.phone));
+    errors.push(...validateEmail(formData.email));
+
+    if (!formData.city.trim()) {
+      errors.push('اختر المحافظة.');
+    } else if (!isKnownGovernorate) {
+      errors.push('المحافظة المختارة غير متاحة.');
     }
 
-    if (formData.password.length < 8) {
-      return 'كلمة المرور يجب ألا تقل عن 8 أحرف.';
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      return 'كلمتا المرور غير متطابقتين.';
-    }
+    errors.push(...validatePassword(formData.password));
+    errors.push(
+      ...validatePasswordConfirmation(
+        formData.password,
+        formData.confirmPassword
+      )
+    );
 
     if (!formData.termsAccepted) {
-      return 'يجب الموافقة على الشروط والأحكام أولاً.';
+      errors.push('يجب الموافقة على الشروط والأحكام أولًا.');
     }
 
-    return '';
+    return errors;
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    const validationError = validateForm();
+    const validationErrors = validateForm();
 
-    if (validationError) {
-      setErrorMessage(validationError);
+    if (validationErrors.length > 0) {
+      setErrorMessages(validationErrors);
       return;
     }
 
     try {
       setIsSubmitting(true);
-      setErrorMessage('');
+      setErrorMessages([]);
 
       const response = await registerUser(formData);
 
       if (response?.success === false) {
-        throw new Error(response.message || 'حدث خطأ أثناء إنشاء الحساب.');
+        const responseError = new Error(
+          response.message || 'حدث خطأ أثناء إنشاء الحساب.'
+        );
+        responseError.data = response;
+        throw responseError;
       }
 
       navigate(ROUTES.LOGIN, {
@@ -151,7 +161,12 @@ function SignupForm() {
         },
       });
     } catch (error) {
-      setErrorMessage(error?.message || 'حدث خطأ أثناء إنشاء الحساب.');
+      setErrorMessages(
+        getApiErrorMessages(
+          error,
+          'تعذر إنشاء الحساب بسبب وجود بيانات غير صحيحة. راجع الحقول وحاول مرة أخرى.'
+        )
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -205,7 +220,7 @@ function SignupForm() {
               id="phone"
               name="phone"
               type="tel"
-              placeholder="مثال: 0123456789"
+              placeholder="مثال: 01012345678"
               value={formData.phone}
               onChange={handleChange}
               autoComplete="tel"
@@ -317,25 +332,7 @@ function SignupForm() {
           <span>أوافق على الشروط والأحكام</span>
         </motion.label>
 
-        {errorMessage ? (
-          <motion.div
-            className="signup-form__error"
-            role="alert"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <ul className="signup-form__error-list">
-              {getDisplayedErrorMessages(errorMessage).map((message, index) => (
-                <li
-                  key={`${message}-${index}`}
-                  className="signup-form__error-item"
-                >
-                  {message}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        ) : null}
+        <AuthErrorList messages={errorMessages} />
 
         <motion.button
           type="submit"

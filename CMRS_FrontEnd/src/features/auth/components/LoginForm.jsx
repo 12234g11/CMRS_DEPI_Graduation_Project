@@ -3,9 +3,11 @@ import { motion } from 'motion/react';
 import { Link, useLocation } from 'react-router-dom';
 import { FiHome } from 'react-icons/fi';
 import PasswordInput from './PasswordInput';
+import AuthErrorList from './AuthErrorList';
 import { ROUTES } from '../../../shared/navigation';
 import { useAuthenticationFlow } from '../hooks/useAuthenticationFlow';
 import { loginUser } from '../api/authApi';
+import { getApiErrorMessages, validateEmail, validatePassword } from '../utils/authValidation';
 import GoogleAuthSection from './GoogleAuthSection';
 
 const initialValues = {
@@ -45,7 +47,7 @@ function LoginForm() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessages, setErrorMessages] = useState([]);
   const [successMessage, setSuccessMessage] = useState(
     location.state?.message || ''
   );
@@ -58,8 +60,8 @@ function LoginForm() {
       [name]: value,
     }));
 
-    if (errorMessage) {
-      setErrorMessage('');
+    if (errorMessages.length > 0) {
+      setErrorMessages([]);
     }
 
     if (successMessage) {
@@ -67,23 +69,37 @@ function LoginForm() {
     }
   }
 
+  function validateForm() {
+    return [
+      ...validateEmail(formData.email),
+      ...validatePassword(formData.password, {
+        strong: false,
+        requiredMessage: 'كلمة المرور مطلوبة.',
+      }),
+    ];
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!formData.email.trim() || !formData.password.trim()) {
-      setErrorMessage('من فضلك املأ البريد الإلكتروني وكلمة المرور.');
+    const validationErrors = validateForm();
+
+    if (validationErrors.length > 0) {
+      setErrorMessages(validationErrors);
       return;
     }
 
     try {
       setIsSubmitting(true);
-      setErrorMessage('');
+      setErrorMessages([]);
       setSuccessMessage('');
 
       const response = await loginUser(formData);
       completeAuthentication(response);
     } catch (error) {
-      setErrorMessage(error?.message || 'حدث خطأ أثناء تسجيل الدخول.');
+      setErrorMessages(
+        getApiErrorMessages(error, 'تعذر تسجيل الدخول. راجع بياناتك وحاول مرة أخرى.')
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -150,16 +166,10 @@ function LoginForm() {
           </Link>
         </motion.div>
 
-        {errorMessage ? (
-          <motion.p
-            className="login-form__error"
-            role="alert"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            {errorMessage}
-          </motion.p>
-        ) : null}
+        <AuthErrorList
+          messages={errorMessages}
+          className="auth-error-list--compact"
+        />
 
         {successMessage ? (
           <motion.p

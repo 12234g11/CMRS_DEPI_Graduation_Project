@@ -3,6 +3,8 @@ import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../../shared/navigation';
 import { requestPasswordReset } from '../api/authApi';
+import AuthErrorList from './AuthErrorList';
+import { getApiErrorMessages, validateEmail } from '../utils/authValidation';
 
 const initialValues = {
   email: '',
@@ -32,7 +34,7 @@ const itemVariants = {
 function ForgotPasswordForm() {
   const [formData, setFormData] = useState(initialValues);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessages, setErrorMessages] = useState([]);
   const [successMessage, setSuccessMessage] = useState('');
 
   function handleChange(event) {
@@ -43,42 +45,39 @@ function ForgotPasswordForm() {
       [name]: value,
     }));
 
-    if (errorMessage) setErrorMessage('');
+    if (errorMessages.length > 0) setErrorMessages([]);
     if (successMessage) setSuccessMessage('');
-  }
-
-  function validateForm() {
-    if (!formData.email.trim()) {
-      return 'من فضلك اكتب البريد الإلكتروني.';
-    }
-
-    return '';
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    const validationError = validateForm();
+    const validationErrors = validateEmail(formData.email, {
+      requiredMessage: 'اكتب البريد الإلكتروني أولًا.',
+    });
 
-    if (validationError) {
-      setErrorMessage(validationError);
+    if (validationErrors.length > 0) {
+      setErrorMessages(validationErrors);
       return;
     }
 
     try {
       setIsSubmitting(true);
-      setErrorMessage('');
+      setErrorMessages([]);
       setSuccessMessage('');
 
-      const response = await requestPasswordReset(formData.email);
+      const response = await requestPasswordReset(formData.email.trim());
 
       setSuccessMessage(
         response?.message ||
           'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.'
       );
     } catch (error) {
-      setErrorMessage(
-        error?.message || 'حدث خطأ أثناء إرسال رابط إعادة تعيين كلمة المرور.'
+      setErrorMessages(
+        getApiErrorMessages(
+          error,
+          'تعذر إرسال رابط إعادة تعيين كلمة المرور. حاول مرة أخرى.'
+        )
       );
     } finally {
       setIsSubmitting(false);
@@ -119,16 +118,10 @@ function ForgotPasswordForm() {
           />
         </motion.div>
 
-        {errorMessage ? (
-          <motion.p
-            className="forgot-form__error"
-            role="alert"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            {errorMessage}
-          </motion.p>
-        ) : null}
+        <AuthErrorList
+          messages={errorMessages}
+          className="auth-error-list--compact"
+        />
 
         {successMessage ? (
           <motion.p
