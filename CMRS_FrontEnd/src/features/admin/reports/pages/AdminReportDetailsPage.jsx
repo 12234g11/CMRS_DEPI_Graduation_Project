@@ -109,10 +109,6 @@ function mergeStoredReassignment(report, storedReassignment) {
         report.adminDecision?.companyResponseId ||
         storedReassignment.companyResponseId ||
         '',
-      adminNote:
-        report.adminDecision?.adminNote ||
-        storedReassignment.adminNote ||
-        '',
     },
   };
 }
@@ -273,14 +269,14 @@ function AdminReportDetailsPage() {
     });
   }
 
-  async function handleReassign(payload = {}) {
+  async function handleReassign() {
     const previousCompanyId = report.assignedCompanyId || '';
     const previousCompanyName =
       report.assignedCompanyName ||
       report.assignedCompany ||
       report.concernedCompanyName ||
       '';
-    const updatedReport = await prepareCompanyReassignment(report.id, payload);
+    const updatedReport = await prepareCompanyReassignment(report.id);
     const preparedReport = {
       ...updatedReport,
       adminDecision: {
@@ -297,11 +293,6 @@ function AdminReportDetailsPage() {
           report.companyResponse?.submissionId ||
           report.companyResponse?.id ||
           '',
-        adminNote:
-          updatedReport.adminDecision?.adminNote ||
-          payload.adminNote ||
-          payload.companyMessage ||
-          '',
       },
     };
 
@@ -317,7 +308,6 @@ function AdminReportDetailsPage() {
           report.companyResponse?.submissionId ||
           report.companyResponse?.id ||
           '',
-        adminNote: payload.adminNote || payload.companyMessage || '',
       }),
     );
     setReport(preparedReport);

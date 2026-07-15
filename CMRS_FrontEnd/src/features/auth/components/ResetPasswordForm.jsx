@@ -151,7 +151,7 @@ function ResetPasswordForm() {
       setIsSubmitting(true);
       setErrorMessage('');
       setSuccessMessage('');
-      console.log('Token الذي سيتم إرساله:', resetToken);
+
       const response = await resetPassword({
         email: formData.email.trim(),
 
@@ -327,4 +327,4 @@ function ResetPasswordForm() {
   );
 }
 
-export default ResetPasswordForm;
+export default ResetPasswordForm;   

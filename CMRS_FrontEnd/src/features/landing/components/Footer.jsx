@@ -16,8 +16,8 @@ const QUICK_LINKS = [
 ];
 
 const CONTACT_ITEMS = [
-  { icon: FaEnvelope, text: 'info@cmrsapp.com', href: 'mailto:info@cmrsapp.com' },
-  { icon: FaPhoneAlt, text: '0123456789', href: 'tel:0123456789' },
+  { icon: FaEnvelope, text: 'yaserkhaled171999@gmail.com', href: 'mailto:yaserkhaled171999@gmail.com' },
+  { icon: FaPhoneAlt, text: '01100150673', href: 'tel:01100150673' },
   { icon: FaMapMarkerAlt, text: 'القاهرة الكبرى، مصر', href: '#' },
 ];
 

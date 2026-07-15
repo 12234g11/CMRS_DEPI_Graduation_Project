@@ -26,7 +26,12 @@ function createImagePreview(file) {
   };
 }
 
-function SolutionUploadForm({ report, onSubmitSolution, onFilePickerOpen }) {
+function SolutionUploadForm({
+  report,
+  onSubmitSolution,
+  onFilePickerOpen,
+  onRequestTeamSelection,
+}) {
   const [note, setNote] = useState('');
   const [selectedImages, setSelectedImages] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -52,6 +57,13 @@ function SolutionUploadForm({ report, onSubmitSolution, onFilePickerOpen }) {
   }, []);
 
   if (!report) return null;
+
+  const hasAssignedTeam = Boolean(
+    report.assignedTeam &&
+      (report.assignedTeam.id ||
+        report.assignedTeam.teamId ||
+        report.assignedTeam.name),
+  );
 
   function clearFieldError(fieldName) {
     setErrors((currentErrors) => {
@@ -137,6 +149,10 @@ function SolutionUploadForm({ report, onSubmitSolution, onFilePickerOpen }) {
 
   function validateForm() {
     const nextErrors = {};
+
+    if (!hasAssignedTeam) {
+      nextErrors.team = 'يجب تعيين فرقة صيانة للبلاغ قبل إرسال الحل للأدمن.';
+    }
     const noteError = validateRequiredText(note, {
       label: 'ملاحظة التنفيذ',
       minLength: 10,
@@ -208,10 +224,27 @@ function SolutionUploadForm({ report, onSubmitSolution, onFilePickerOpen }) {
               {report.adminReview?.companyMessage ||
                 report.adminReview?.note ||
                 report.adminReview?.completionRequirements ||
+                report.adminNote ||
                 'لا توجد بيانات للعرض'}
             </p>
           </div>
         </div>
+      ) : null}
+
+      {!hasAssignedTeam ? (
+        <div className="company-start-team-required" role="alert">
+          <FiAlertCircle />
+          <div>
+            <strong>يجب تعيين فرقة صيانة قبل إرسال الحل</strong>
+            <p>لن يسمح النظام بإرسال الحل للأدمن قبل تحديد الفرقة المسؤولة عن التنفيذ.</p>
+          </div>
+          <button type="button" onClick={onRequestTeamSelection}>
+            اختيار فرقة صيانة
+          </button>
+        </div>
+      ) : null}
+      {errors.team ? (
+        <small className="company-report-field-error">{errors.team}</small>
       ) : null}
 
       <label className="company-report-form-field">
@@ -354,7 +387,12 @@ function SolutionUploadForm({ report, onSubmitSolution, onFilePickerOpen }) {
         </p>
       ) : null}
 
-      <button type="submit" className="company-submit-solution-btn" disabled={isSaving}>
+      <button
+        type="submit"
+        className="company-submit-solution-btn"
+        disabled={isSaving || !hasAssignedTeam}
+        title={!hasAssignedTeam ? 'يجب تعيين فرقة صيانة قبل إرسال الحل.' : undefined}
+      >
         <FiCheckCircle />
         {isSaving ? 'جاري إرسال الحل...' : 'إرسال الحل لمراجعة الأدمن'}
       </button>

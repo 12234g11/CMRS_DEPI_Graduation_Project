@@ -789,7 +789,6 @@ export async function assignCompanyToReport(reportId, payload = {}) {
     buildAdminUrl(`/reports/${reportId}/assign-company`),
     {
       companyId: payload.companyId,
-      adminNote: payload.adminNote || null,
     },
   );
 
@@ -976,12 +975,11 @@ export async function rejectCompanyCannotFix(reportId, payload = {}) {
   };
 }
 
-export async function prepareCompanyReassignment(reportId, payload = {}) {
-  const adminNote = payload.adminNote || payload.companyMessage || '';
-
+export async function prepareCompanyReassignment(reportId) {
+  // الحقل مطلوب من الـAPI لتسجيل القرار إداريًا فقط، ولا يُعرض أو يُرسل لأي شركة.
   await reviewCannotFixResponse(reportId, {
     decision: 'reassign',
-    adminNote,
+    adminNote: 'تم اختيار إعادة إسناد البلاغ إلى شركة أخرى.',
   });
 
   const updatedReport = await getAdminReportById(reportId);
@@ -994,8 +992,6 @@ export async function prepareCompanyReassignment(reportId, payload = {}) {
         updatedReport.adminDecision?.decisionType || 'reassign',
       decisionLabel:
         updatedReport.adminDecision?.decisionLabel || 'بانتظار تعيين شركة جديدة',
-      adminNote:
-        updatedReport.adminDecision?.adminNote || adminNote,
       isFinal: updatedReport.adminDecision?.isFinal ?? false,
     },
   };

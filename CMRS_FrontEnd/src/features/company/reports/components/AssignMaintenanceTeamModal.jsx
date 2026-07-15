@@ -124,7 +124,12 @@ function AssignMaintenanceTeamModal({ report, isOpen, onClose, onAssigned }) {
       const updatedReport = await assignMaintenanceTeamToReport(report.id, {
         teamId: selectedTeamId,
       });
-      onAssigned?.(updatedReport);
+      onAssigned?.({
+        ...report,
+        ...updatedReport,
+        assignedTeam:
+          updatedReport?.assignedTeam || selectedTeam || report.assignedTeam || null,
+      });
       setIsConfirming(false);
       onClose?.();
     } catch (requestError) {

@@ -1664,26 +1664,6 @@
   font-weight: 950;
 }
 
-.admin-assignment-note {
-  margin-top: 14px;
-  color: var(--color-text);
-  display: grid;
-  gap: 8px;
-  font-weight: 900;
-}
-
-.admin-assignment-note textarea {
-  width: 100%;
-  resize: vertical;
-  min-height: 110px;
-  padding: 12px 14px;
-  border: 1.5px solid rgba(2, 95, 72, 0.16);
-  border-radius: 14px;
-  color: var(--color-text);
-  font-weight: 850;
-  outline: 0;
-}
-
 .admin-assignment-modal__actions {
   margin-top: 18px;
   display: flex;
@@ -2574,45 +2554,14 @@
   line-height: 1.8;
 }
 
-.admin-assignment-note {
-  display: grid;
-  gap: 8px;
-  color: var(--color-primary);
-  font-size: 0.88rem;
-  font-weight: 950;
-}
-
-.admin-assignment-note > span {
-  color: var(--color-primary);
-  font-size: 0.88rem;
-  font-weight: 950;
-}
-
-.admin-assignment-note textarea {
-  width: 100%;
-  min-height: 120px;
-  padding: 14px 16px;
-  border: 1.5px solid rgba(2, 95, 72, 0.16);
-  border-radius: 16px;
-  color: var(--color-text);
-  font-size: 0.9rem;
-  font-weight: 850;
-  line-height: 1.8;
-  resize: vertical;
-  outline: none;
-}
-
-.admin-assignment-note textarea:focus {
-  border-color: rgba(2, 95, 72, 0.48);
-  box-shadow: 0 10px 24px rgba(2, 95, 72, 0.08);
-}
-
-.admin-assignment-reassignment-note {
+.admin-assignment-confirmation-note {
   padding: 14px 16px;
   border: 1px solid rgba(2, 95, 72, 0.16);
   border-radius: 16px;
   background: rgba(2, 95, 72, 0.06);
   color: var(--color-primary);
+  display: grid;
+  gap: 6px;
   font-size: 0.86rem;
   font-weight: 850;
   line-height: 1.9;
@@ -2694,11 +2643,7 @@
     justify-items: center;
   }
 
-  .admin-assignment-note {
-    text-align: center;
-  }
-
-  .admin-assignment-modal__actions {
+    .admin-assignment-modal__actions {
     padding: 12px 16px 18px;
     display: grid;
     gap: 10px;

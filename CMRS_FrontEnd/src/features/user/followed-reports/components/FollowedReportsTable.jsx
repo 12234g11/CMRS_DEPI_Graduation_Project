@@ -139,7 +139,7 @@ function FollowedReportsTable({
                     isHighlighted ? 'dashboard-table__row--highlighted' : ''
                   }
                 >
-                  <td className="user-reports-table__action-cell">
+                  <td className="user-reports-table__action-cell" data-label="الإجراء">
                     <div className="followed-reports-table__actions">
                       <button
                         type="button"
@@ -175,7 +175,7 @@ function FollowedReportsTable({
                     </div>
                   </td>
 
-                  <td className="user-reports-table__report-cell">
+                  <td className="user-reports-table__report-cell" data-label="البلاغ">
                     <div className="followed-reports-table__report-summary">
                       <FollowedImagePreview report={report} />
 
@@ -189,19 +189,19 @@ function FollowedReportsTable({
                     </div>
                   </td>
 
-                  <td className="user-reports-table__category-cell">
+                  <td className="user-reports-table__category-cell" data-label="نوع المشكلة">
                     <span title={report.issueCategoryName}>
                       {report.issueCategoryName || '—'}
                     </span>
                   </td>
 
-                  <td className="user-reports-table__status-cell">
+                  <td className="user-reports-table__status-cell" data-label="الحالة">
                     <ReportStatusBadge tone={report.statusTone}>
                       {report.statusLabel || 'غير محدد'}
                     </ReportStatusBadge>
                   </td>
 
-                  <td className="user-reports-table__date-cell">
+                  <td className="user-reports-table__date-cell" data-label="تاريخ المتابعة">
                     {formatDate(report.followedAt)}
                   </td>
                 </tr>

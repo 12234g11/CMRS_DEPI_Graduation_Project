@@ -1708,3 +1708,117 @@
     padding: 10px 11px;
   }
 }
+
+/* ===== Mobile followed reports table: keep the normal table layout ===== */
+@media (max-width: 640px) {
+  .followed-reports-table-wrap {
+    width: 100%;
+    overflow-x: auto !important;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .followed-reports-table {
+    width: 100% !important;
+    min-width: 880px !important;
+    border-collapse: collapse !important;
+    table-layout: fixed !important;
+  }
+
+  .followed-reports-table thead {
+    display: table-header-group !important;
+  }
+
+  .followed-reports-table tbody {
+    display: table-row-group !important;
+  }
+
+  .followed-reports-table thead tr,
+  .followed-reports-table tbody tr {
+    display: table-row !important;
+  }
+
+  .followed-reports-table th,
+  .followed-reports-table td {
+    position: static !important;
+    display: table-cell !important;
+    height: auto !important;
+    padding: 14px 12px !important;
+    overflow: hidden !important;
+    vertical-align: middle !important;
+    white-space: normal !important;
+    text-align: center !important;
+  }
+
+  .followed-reports-table tbody td::before {
+    content: none !important;
+    display: none !important;
+  }
+
+  .followed-reports-table .user-reports-table__action-col,
+  .followed-reports-table .user-reports-table__action-cell {
+    width: 190px !important;
+  }
+
+  .followed-reports-table .user-reports-table__report-col,
+  .followed-reports-table .user-reports-table__report-cell {
+    width: 310px !important;
+  }
+
+  .followed-reports-table .user-reports-table__category-col,
+  .followed-reports-table .user-reports-table__category-cell {
+    width: 150px !important;
+  }
+
+  .followed-reports-table .user-reports-table__status-col,
+  .followed-reports-table .user-reports-table__status-cell {
+    width: 120px !important;
+  }
+
+  .followed-reports-table .user-reports-table__date-col,
+  .followed-reports-table .user-reports-table__date-cell {
+    width: 110px !important;
+  }
+
+  .followed-reports-table__report-summary {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: 64px minmax(0, 1fr);
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+  }
+
+  .followed-reports-table__report-summary > div,
+  .followed-reports-table__report-summary strong,
+  .followed-reports-table__report-summary small,
+  .followed-reports-table__report-summary p {
+    text-align: center !important;
+  }
+
+  .followed-reports-table__report-summary strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .followed-reports-table__report-summary small {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .followed-reports-table__report-summary p {
+    overflow-wrap: anywhere;
+  }
+
+  .followed-reports-table__actions {
+    width: 100%;
+    justify-content: center;
+    gap: 7px;
+  }
+
+  .followed-reports-table__actions > button {
+    min-width: 0;
+  }
+}

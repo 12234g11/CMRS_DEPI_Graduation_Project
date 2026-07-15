@@ -83,19 +83,6 @@ const WORKFLOW_STEPS = [
   { id: 4, title: 'القرار النهائي', description: 'قبول الحل أو طلب استكمال', icon: FiCheckCircle },
 ];
 
-function getMeaningfulAdminNote(note) {
-  if (typeof note !== 'string') return '';
-
-  const normalizedNote = note.trim();
-  const placeholderValues = new Set(['null', 'undefined', 'string']);
-
-  if (!normalizedNote || placeholderValues.has(normalizedNote.toLowerCase())) {
-    return '';
-  }
-
-  return normalizedNote;
-}
-
 function getReportPosition(report) {
   const latitude = Number(
     report?.position?.lat ??
@@ -221,8 +208,8 @@ function CompanyReportDetailsPage() {
       return {
         status: 'needs_completion',
         label: 'مطلوب استكمال التنفيذ',
-        companyMessage: '',
-        completionRequirements: '',
+        companyMessage: report?.adminNote || '',
+        completionRequirements: report?.adminNote || '',
         reviewedAt: null,
       };
     }
@@ -238,11 +225,29 @@ function CompanyReportDetailsPage() {
     }
 
     return null;
-  }, [report?.adminReview, report?.status]);
+  }, [report?.adminNote, report?.adminReview, report?.status]);
   const adminReviewPresentation = useMemo(
     () => getAdminReviewPresentation(effectiveAdminReview, report?.companyResponse),
     [effectiveAdminReview, report?.companyResponse],
   );
+  const completionMessage = useMemo(() => {
+    const candidates = [
+      effectiveAdminReview?.companyMessage,
+      effectiveAdminReview?.note,
+      effectiveAdminReview?.completionRequirements,
+      report?.adminNote,
+    ];
+
+    return (
+      candidates
+        .find((value) => {
+          if (typeof value !== 'string') return false;
+          const normalizedValue = value.trim().toLowerCase();
+          return normalizedValue && !['null', 'undefined', 'string'].includes(normalizedValue);
+        })
+        ?.trim() || ''
+    );
+  }, [effectiveAdminReview, report?.adminNote]);
   const reportMapMarker = useMemo(
     () => buildReportDetailsMapMarker(report),
     [report],
@@ -305,13 +310,38 @@ function CompanyReportDetailsPage() {
     );
   }
 
+  const latestCompanyResponseType = String(
+    report.companyResponse?.responseType ||
+      report.companyResponse?.status ||
+      report.pendingReviewType ||
+      '',
+  )
+    .trim()
+    .toLowerCase();
+  const latestAdminDecision = String(
+    report.adminReview?.decisionType ||
+      report.adminReview?.status ||
+      '',
+  )
+    .trim()
+    .toLowerCase();
+  const isReturnedCannotFix =
+    report.status === 'مطلوب استكمال' &&
+    (latestCompanyResponseType.includes('cannot_fix') ||
+      latestCompanyResponseType.includes('cannotfix') ||
+      latestCompanyResponseType.includes('unabletoexecute') ||
+      latestCompanyResponseType.includes('تعذر') ||
+      latestAdminDecision.includes('reject_and_continue') ||
+      latestAdminDecision.includes('rejectandcontinue') ||
+      latestAdminDecision.includes('cannot_fix_rejected') ||
+      latestAdminDecision.includes('cannotfixrejected') ||
+      (!latestCompanyResponseType && Boolean(report.companyResponse?.reason)));
+  const isCannotFixRejected = isReturnedCannotFix;
   const isCannotFixAccepted =
-    report.status === 'متعذر التنفيذ' ||
-    report.adminReview?.status === 'cannot_fix_accepted';
+    !isCannotFixRejected &&
+    (report.status === 'متعذر التنفيذ' ||
+      report.adminReview?.status === 'cannot_fix_accepted');
   const isReassigned = report.adminReview?.status === 'reassigned';
-  const isCannotFixRejected =
-    ['cannot_fix_rejected', 'needs_completion'].includes(report.adminReview?.status) &&
-    report.companyResponse?.status === 'cannot_fix';
   const isResolved =
     report.status === 'تم الحل' ||
     report.adminReview?.status === 'accepted' ||
@@ -319,13 +349,14 @@ function CompanyReportDetailsPage() {
     isReassigned;
   const canSubmitSolution =
     !isResolved &&
+    !isCannotFixRejected &&
     ['جاري التنفيذ', 'مطلوب استكمال'].includes(report.status);
   const isWaitingForAdmin =
     !isResolved && report.status === 'بانتظار مراجعة الأدمن';
   const canManageExecution =
     !isResolved &&
-    ['تم التعيين', 'جاري التنفيذ', 'مطلوب استكمال'].includes(report.status);
-  const adminAssignmentNote = getMeaningfulAdminNote(report.adminNote);
+    (isCannotFixRejected ||
+      ['تم التعيين', 'جاري التنفيذ', 'مطلوب استكمال'].includes(report.status));
 
   return (
     <div className="dashboard-page company-report-details-page">
@@ -532,10 +563,7 @@ function CompanyReportDetailsPage() {
                   <div className="company-admin-decision-card__requirements">
                     <b>الأعمال المطلوب استكمالها</b>
                     <p>
-                      {effectiveAdminReview.companyMessage ||
-                        effectiveAdminReview.note ||
-                        effectiveAdminReview.completionRequirements ||
-                        'لا توجد بيانات للعرض'}
+                      {completionMessage || 'لا توجد بيانات للعرض'}
                     </p>
                   </div>
                 ) : (
@@ -602,10 +630,7 @@ function CompanyReportDetailsPage() {
                     <div>
                       <b>المطلوب استكماله</b>
                       <p>
-                        {report.adminReview.companyMessage ||
-                          report.adminReview.note ||
-                          report.adminReview.completionRequirements ||
-                          'لا توجد بيانات للعرض'}
+                        {completionMessage || 'لا توجد بيانات للعرض'}
                       </p>
                     </div>
                   ) : (
@@ -696,6 +721,16 @@ function CompanyReportDetailsPage() {
                     </>
                   )}
                 </div>
+
+                {!report.assignedTeam ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsAssignModalOpen(true)}
+                  >
+                    <FiUsers />
+                    اختيار فرقة صيانة
+                  </button>
+                ) : null}
               </div>
 
               {canSubmitSolution ? (
@@ -704,6 +739,7 @@ function CompanyReportDetailsPage() {
                     report={report}
                     onSubmitSolution={handleSubmitSolution}
                     onFilePickerOpen={markFilePickerInteraction}
+                    onRequestTeamSelection={() => setIsAssignModalOpen(true)}
                   />
                 </div>
               ) : null}
@@ -809,21 +845,6 @@ function CompanyReportDetailsPage() {
             </div>
           </section>
 
-          <section className="company-report-details-card company-assignment-note-card">
-            <header className="company-report-section-header">
-              <div>
-                <h2>ملاحظة الإسناد</h2>
-                <p>تعليمات الأدمن عند إسناد البلاغ.</p>
-              </div>
-              <span>
-                <FiMessageSquare />
-              </span>
-            </header>
-            <p className={adminAssignmentNote ? '' : 'is-empty'}>
-              {adminAssignmentNote || 'لم يرسل الأدمن أي ملاحظة عند إسناد هذا البلاغ.'}
-            </p>
-          </section>
-
           <section className="company-report-details-card">
             <header className="company-report-section-header">
               <div>
@@ -874,8 +895,14 @@ function CompanyReportDetailsPage() {
         isOpen={isAssignModalOpen}
         onClose={() => setIsAssignModalOpen(false)}
         onAssigned={(updatedReport) => {
-          setReport(updatedReport);
+          setReport((currentReport) => ({
+            ...currentReport,
+            ...updatedReport,
+            assignedTeam:
+              updatedReport?.assignedTeam || currentReport?.assignedTeam || null,
+          }));
           setIsAssignModalOpen(false);
+          setReloadKey((current) => current + 1);
         }}
       />
     </div>

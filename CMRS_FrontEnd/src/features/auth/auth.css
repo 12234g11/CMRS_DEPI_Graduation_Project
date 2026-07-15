@@ -1503,15 +1503,24 @@
 }
 
 .google-auth-button__target {
-  overflow: hidden;
+  box-sizing: border-box;
+  padding-inline: 12px;
+  overflow: visible;
   transition: none;
+}
+
+.google-auth-button__target > div {
+  overflow: visible !important;
+}
+
+.google-auth-button__target iframe {
+  display: block;
 }
 
 .google-auth-button__target > div,
 .google-auth-button__target iframe {
-  width: 100% !important;
   height: 44px !important;
-  max-width: 400px !important;
+  max-width: 100% !important;
 }
 
 .auth-page--signup .google-auth-section {

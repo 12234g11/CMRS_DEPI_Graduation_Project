@@ -66,12 +66,32 @@ function UpdateReportStatusForm({
 
   if (!report) return null;
 
+  const latestCompanyResponseType = String(
+    report.companyResponse?.responseType ||
+      report.companyResponse?.status ||
+      report.pendingReviewType ||
+      '',
+  )
+    .trim()
+    .toLowerCase();
+  const latestAdminDecision = String(
+    report.adminReview?.decisionType ||
+      report.adminReview?.status ||
+      '',
+  )
+    .trim()
+    .toLowerCase();
   const isReturnedCannotFix =
     report.status === 'مطلوب استكمال' &&
-    report.companyResponse?.status === 'cannot_fix' &&
-    ['cannot_fix_rejected', 'needs_completion', 'rejected'].includes(
-      report.adminReview?.status,
-    );
+    (latestCompanyResponseType.includes('cannot_fix') ||
+      latestCompanyResponseType.includes('cannotfix') ||
+      latestCompanyResponseType.includes('unabletoexecute') ||
+      latestCompanyResponseType.includes('تعذر') ||
+      latestAdminDecision.includes('reject_and_continue') ||
+      latestAdminDecision.includes('rejectandcontinue') ||
+      latestAdminDecision.includes('cannot_fix_rejected') ||
+      latestAdminDecision.includes('cannotfixrejected') ||
+      (!latestCompanyResponseType && Boolean(report.companyResponse?.reason)));
   const canStart = report.status === 'تم التعيين' || isReturnedCannotFix;
   const canSendCannotFix = ['تم التعيين', 'جاري التنفيذ', 'مطلوب استكمال'].includes(
     report.status,

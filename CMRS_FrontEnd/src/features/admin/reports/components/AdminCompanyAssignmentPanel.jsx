@@ -145,7 +145,6 @@ function AdminCompanyAssignmentPanel({ report, onAssigned, allowReassignment = f
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [adminNote, setAdminNote] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isCheckingCompany, setIsCheckingCompany] = useState(false);
@@ -185,12 +184,6 @@ function AdminCompanyAssignmentPanel({ report, onAssigned, allowReassignment = f
     '';
   const reportHasExistingAssignment = hasExistingAssignment(report);
   const canReassign = allowReassignment;
-  const reassignmentCompanyMessage = String(
-    report.adminDecision?.adminNote ||
-      report.adminDecision?.companyMessage ||
-      report.reassignmentMessage ||
-      '',
-  ).trim();
   const isAssignmentLocked = reportHasExistingAssignment && !canReassign;
 
   const excludedCompanyIds = useMemo(
@@ -385,15 +378,6 @@ function AdminCompanyAssignmentPanel({ report, onAssigned, allowReassignment = f
     try {
       const result = await assignCompanyToReport(report.id, {
         companyId: selectedCompany.id,
-        adminNote: canReassign ? reassignmentCompanyMessage || null : adminNote,
-        assignmentSource: canReassign ? 'reassignment' : 'manual',
-        isReassignment: canReassign,
-        previousCompanyId: previousCompanyId || null,
-        companyResponseId:
-          report.adminDecision?.companyResponseId ||
-          report.companyResponse?.submissionId ||
-          report.companyResponse?.id ||
-          null,
       });
 
       onAssigned?.(result);
@@ -582,30 +566,14 @@ function AdminCompanyAssignmentPanel({ report, onAssigned, allowReassignment = f
                     </p>
                   </div>
 
-                  {canReassign ? (
-                    <div className="admin-assignment-reassignment-note">
-                      <strong>ما الذي سيحدث بعد التأكيد؟</strong>
-                      <p>
-                        ستصل رسالة إعادة الإسناد إلى الشركة الجديدة مع البلاغ، وسيُحذف البلاغ
-                        نهائيًا من قائمة وتفاصيل الشركة القديمة، ولن تُرسل أي رسالة للمستخدمين.
-                      </p>
-                      <p>
-                        <b>الرسالة المرسلة للشركة الجديدة:</b>{' '}
-                        {reassignmentCompanyMessage || 'لا توجد بيانات للعرض'}
-                      </p>
-                    </div>
-                  ) : (
-                    <label className="admin-assignment-note">
-                      <span>ملاحظات للأدمن / تعليمات للشركة</span>
-
-                      <textarea
-                        value={adminNote}
-                        onChange={(event) => setAdminNote(event.target.value)}
-                        placeholder="اكتب أي تعليمات أو ملاحظات مطلوبة للشركة..."
-                        rows={4}
-                      />
-                    </label>
-                  )}
+                  <div className="admin-assignment-confirmation-note">
+                    <strong>ما الذي سيحدث بعد التأكيد؟</strong>
+                    <p>
+                      {canReassign
+                        ? 'سيتم إسناد البلاغ إلى الشركة الجديدة وحذفه نهائيًا من قائمة وتفاصيل الشركة القديمة، بدون إرسال أي رسالة إسناد.'
+                        : 'سيتم إسناد البلاغ إلى الشركة المختارة لتبدأ إجراءات التنفيذ، بدون إرسال أي رسالة إسناد.'}
+                    </p>
+                  </div>
                 </div>
 
                 <footer className="admin-assignment-modal__actions">

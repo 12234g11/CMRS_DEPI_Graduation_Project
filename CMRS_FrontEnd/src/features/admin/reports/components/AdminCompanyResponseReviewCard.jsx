@@ -143,13 +143,13 @@ function getDecisionModalConfig(action, scenario) {
       tone: 'danger',
     },
     reassign: {
-      title: 'تهيئة إعادة الإسناد',
+      title: 'تأكيد إعادة الإسناد',
       description:
-        'اكتب رسالة واحدة ستصل إلى الشركة الجديدة بعد اختيارها وتعيين البلاغ لها.',
-      fieldLabel: 'الرسالة الموجهة للشركة الجديدة',
+        'أكد إنهاء الإسناد الحالي والانتقال إلى خطوة اختيار شركة جديدة.',
+      destinationTitle: 'ما الذي سيحدث؟',
       destination:
-        'ستصل هذه الرسالة إلى الشركة الجديدة بعد تعيينها. لن تُرسل إلى الشركة القديمة أو إلى أي مستخدم، وسيُحذف البلاغ نهائيًا من قائمة وتفاصيل الشركة القديمة بعد نجاح التعيين.',
-      placeholder: 'مثال: تم إسناد البلاغ لشركتكم، برجاء مراجعة التفاصيل وبدء التنفيذ في أقرب وقت.',
+        'لن تُرسل أي رسالة إسناد إلى الشركة القديمة أو الشركة الجديدة أو المستخدمين. بعد اختيار الشركة الجديدة وتأكيد التعيين، سيُحذف البلاغ نهائيًا من قائمة وتفاصيل الشركة القديمة.',
+      requiresMessage: false,
       confirmLabel: 'تأكيد وفتح اختيار الشركة',
       tone: 'reassign',
     },
@@ -265,7 +265,7 @@ function AdminCompanyResponseReviewCard({
             <div>
               <strong>{existingDecision.decisionLabel || 'تم تسجيل قرار الأدمن'}</strong>
               {isExistingReassignment ? (
-                <p>تم تجهيز إعادة الإسناد، وستصل الرسالة إلى الشركة الجديدة بعد تعيينها، وسيُحذف البلاغ نهائيًا من الشركة القديمة.</p>
+                <p>تم تجهيز إعادة الإسناد. اختر شركة جديدة لإكمال نقل البلاغ، ولن تُرسل أي رسالة إسناد.</p>
               ) : (
                 <>
                   {isExistingCompletionRequest ? (
@@ -362,9 +362,10 @@ function AdminCompanyResponseReviewCard({
   async function confirmFixedDecision() {
     const trimmedNote = fixedDecisionNote.trim();
     const trimmedUserMessage = fixedDecisionUserMessage.trim();
+    const requiresMessage = fixedDecisionModal !== 'reassign';
     const requiresUserMessage = fixedDecisionModal === 'close-cannot-fix';
 
-    if (!trimmedNote) {
+    if (requiresMessage && !trimmedNote) {
       setFixedDecisionNoteError(
         decisionModalConfig?.fieldLabel
           ? `اكتب ${decisionModalConfig.fieldLabel} قبل تنفيذ القرار.`
@@ -373,7 +374,7 @@ function AdminCompanyResponseReviewCard({
       return;
     }
 
-    if (trimmedNote.length > 1000) {
+    if (requiresMessage && trimmedNote.length > 1000) {
       setFixedDecisionNoteError('يجب ألا تتجاوز الملاحظة 1000 حرف.');
       return;
     }
@@ -420,13 +421,14 @@ function AdminCompanyResponseReviewCard({
   async function handleDecision(action, modalMessage = '', modalUserMessage = '') {
     const trimmedMessage = modalMessage.trim();
     const trimmedPublicMessage = modalUserMessage.trim();
+    const requiresMessage = action !== 'reassign';
 
-    if (!trimmedMessage) {
+    if (requiresMessage && !trimmedMessage) {
       setFixedDecisionNoteError('اكتب الرسالة أو الملاحظة المطلوبة قبل تنفيذ القرار.');
       return false;
     }
 
-    if (trimmedMessage.length > 1000) {
+    if (requiresMessage && trimmedMessage.length > 1000) {
       setFixedDecisionNoteError('يجب ألا تتجاوز الرسالة 1000 حرف.');
       return false;
     }
@@ -446,8 +448,8 @@ function AdminCompanyResponseReviewCard({
     }
 
     const payload = {
-      adminNote: trimmedMessage,
-      companyMessage: trimmedMessage,
+      adminNote: requiresMessage ? trimmedMessage : undefined,
+      companyMessage: requiresMessage ? trimmedMessage : undefined,
       userMessage: isAcceptedCannotFix ? trimmedPublicMessage : undefined,
       publicUserMessage: isAcceptedCannotFix ? trimmedPublicMessage : undefined,
       submissionId: response.submissionId || response.id,
@@ -826,7 +828,7 @@ function AdminCompanyResponseReviewCard({
             </strong>
 
             {reviewedDecisionType.includes('reassign') ? (
-              <p>تم تجهيز إعادة الإسناد، وستصل الرسالة إلى الشركة الجديدة بعد تعيينها، وسيُحذف البلاغ نهائيًا من الشركة القديمة.</p>
+              <p>تم تجهيز إعادة الإسناد. اختر شركة جديدة لإكمال نقل البلاغ، ولن تُرسل أي رسالة إسناد.</p>
             ) : (
               <>
                 {reviewedDecisionType.includes('requestcompletion') ||
@@ -912,40 +914,42 @@ function AdminCompanyResponseReviewCard({
             <div className="admin-company-decision-modal__destination">
               <FiInfo />
               <div>
-                <strong>مكان ظهور الرسالة</strong>
+                <strong>{decisionModalConfig.destinationTitle || 'مكان ظهور الرسالة'}</strong>
                 <p>{decisionModalConfig.destination}</p>
               </div>
             </div>
 
-            <label className="admin-company-decision-modal__field">
-              <span className="admin-company-decision-modal__field-title">
-                {decisionModalConfig.fieldLabel}
-              </span>
+            {decisionModalConfig.requiresMessage !== false ? (
+              <label className="admin-company-decision-modal__field">
+                <span className="admin-company-decision-modal__field-title">
+                  {decisionModalConfig.fieldLabel}
+                </span>
 
-              {fixedDecisionModal === 'close-cannot-fix' ? (
-                <small className="admin-company-decision-modal__field-hint">
-                  ستصل هذه الرسالة إلى الشركة التي قدمت طلب التعذر.
-                </small>
-              ) : null}
+                {fixedDecisionModal === 'close-cannot-fix' ? (
+                  <small className="admin-company-decision-modal__field-hint">
+                    ستصل هذه الرسالة إلى الشركة التي قدمت طلب التعذر.
+                  </small>
+                ) : null}
 
-              <textarea
-                autoFocus
-                value={fixedDecisionNote}
-                onChange={(event) => {
-                  setFixedDecisionNote(event.target.value.slice(0, 1000));
-                  if (fixedDecisionNoteError) setFixedDecisionNoteError('');
-                  if (actionError) setActionError('');
-                }}
-                rows={5}
-                maxLength={1000}
-                className={fixedDecisionNoteError ? 'is-invalid' : ''}
-                placeholder={decisionModalConfig.placeholder}
-              />
+                <textarea
+                  autoFocus
+                  value={fixedDecisionNote}
+                  onChange={(event) => {
+                    setFixedDecisionNote(event.target.value.slice(0, 1000));
+                    if (fixedDecisionNoteError) setFixedDecisionNoteError('');
+                    if (actionError) setActionError('');
+                  }}
+                  rows={5}
+                  maxLength={1000}
+                  className={fixedDecisionNoteError ? 'is-invalid' : ''}
+                  placeholder={decisionModalConfig.placeholder}
+                />
 
-              <span className="admin-company-decision-modal__counter">
-                {fixedDecisionNote.length} / 1000
-              </span>
-            </label>
+                <span className="admin-company-decision-modal__counter">
+                  {fixedDecisionNote.length} / 1000
+                </span>
+              </label>
+            ) : null}
 
             {fixedDecisionModal === 'close-cannot-fix' ? (
               <label className="admin-company-decision-modal__field admin-company-decision-modal__field--user-message">

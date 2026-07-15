@@ -4045,16 +4045,6 @@
   line-height: 1.75;
 }
 
-.company-assignment-note-card > p {
-  margin: 14px 0 0;
-  padding: 13px;
-  border-radius: 13px;
-  background: rgba(2, 95, 72, 0.045);
-  color: var(--color-text);
-  font-weight: 850;
-  line-height: 1.8;
-}
-
 .company-report-timeline article {
   position: relative;
   padding-inline-start: 28px;
@@ -4771,13 +4761,6 @@
 
 .company-assigned-team-panel {
   grid-template-columns: auto minmax(0, 1fr);
-}
-
-.company-assignment-note-card > p.is-empty {
-  border: 1px dashed rgba(2, 95, 72, 0.16);
-  background: rgba(2, 95, 72, 0.025);
-  color: var(--color-subtitle);
-  font-weight: 850;
 }
 
 @media (max-width: 1100px) {
@@ -5762,7 +5745,6 @@
   .company-company-response-card__details > div,
   .company-reporter-box,
   .company-report-timeline article,
-  .company-assignment-note-card > p,
   .company-company-response-card__reason,
   .company-company-response-card__note {
     min-width: 0;

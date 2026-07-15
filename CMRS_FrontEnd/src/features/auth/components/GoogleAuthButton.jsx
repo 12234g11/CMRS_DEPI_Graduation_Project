@@ -104,11 +104,15 @@ function GoogleAuthButton({ onCredential, onError, isLoading = false }) {
           const container = buttonContainerRef.current;
           if (isDisposed || !container) return;
 
-          const measuredWidth = Math.floor(container.clientWidth);
-          const buttonWidth = Math.min(
-            Math.max(measuredWidth || 280, 240),
-            400
+          // Google renders the personalized button inside an iframe.
+          // Keep a clear inset on both sides so browser zoom / fractional-pixel
+          // rounding cannot crop the left border beside the Google logo.
+          const horizontalInset = 12;
+          const measuredWidth = Math.floor(
+            container.getBoundingClientRect().width
           );
+          const safeWidth = Math.max(measuredWidth - horizontalInset * 2, 200);
+          const buttonWidth = Math.min(safeWidth, 400);
 
           google.accounts.id.renderButton(container, {
             type: 'standard',

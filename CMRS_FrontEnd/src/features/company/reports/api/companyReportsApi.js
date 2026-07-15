@@ -699,6 +699,35 @@ function normalizeReport(report) {
     report.companyResponses ||
     [];
 
+  const normalizedAdminReview = normalizeAdminReview(
+    report.adminReview || report.AdminReview || report.adminDecision || report.AdminDecision,
+    companyResponse,
+  );
+  const completionMessage =
+    status.label === 'مطلوب استكمال'
+      ? cleanApiText(
+          normalizedAdminReview?.companyMessage ||
+            normalizedAdminReview?.note ||
+            normalizedAdminReview?.completionRequirements ||
+            report.adminNote,
+        )
+      : '';
+  const adminReview =
+    status.label === 'مطلوب استكمال'
+      ? {
+          ...(normalizedAdminReview || {}),
+          status: 'needs_completion',
+          decisionType: normalizedAdminReview?.decisionType || 'request_completion',
+          label: normalizedAdminReview?.label || 'مطلوب استكمال التنفيذ',
+          companyMessage: completionMessage,
+          note: completionMessage,
+          completionRequirements:
+            normalizedAdminReview?.completionRequirements || completionMessage,
+          reviewedAt: normalizedAdminReview?.reviewedAt || null,
+          isFinal: false,
+        }
+      : normalizedAdminReview;
+
   return {
     ...reportData,
     id: reportId,
@@ -715,10 +744,7 @@ function normalizeReport(report) {
           normalizeCompanyResponse(submission, report),
         )
       : [],
-    adminReview: normalizeAdminReview(
-      report.adminReview || report.AdminReview || report.adminDecision || report.AdminDecision,
-      companyResponse,
-    ),
+    adminReview,
     pendingReviewType:
       cleanApiText(report.pendingReviewType) ||
       companyResponse?.responseType ||
